@@ -1,0 +1,7 @@
+vendor/**
+**/.DS_Store
+/metrics-agent
+/cmd/debug.test
+**/debug.test
+.vscode
+.idea

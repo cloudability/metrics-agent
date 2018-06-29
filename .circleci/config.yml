@@ -1,0 +1,54 @@
+version: 2
+jobs:
+  build:
+    docker:
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.10
+
+    working_directory: /go/src/github.com/cloudability/metrics-agent
+
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+    steps:
+      - checkout
+
+      - run: mkdir -p $TEST_RESULTS
+
+      - run:
+          name: Install / run dep
+          command: |
+            go get -u github.com/golang/dep/cmd/dep
+            dep ensure -v
+
+      - run:
+          name: Install gometalinter
+          command: |
+            go get -u gopkg.in/alecthomas/gometalinter.v2
+            gometalinter.v2 --install -u
+
+      - run: 
+          name: Lint
+          command: make lint
+
+      - run:
+          name: Run Tests
+          command: make test
+
+      - setup_remote_docker:
+            version: 17.07.0-ce
+
+      - run:
+          name: build docker container
+          command:  make -e circleci-container
+
+      - run:
+          name: push to dockerhub
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+                docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} 
+                make -e dockerhub-push
+            fi
+
+      - store_test_results:
+          path: /tmp/test-results
