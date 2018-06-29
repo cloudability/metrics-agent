@@ -20,9 +20,7 @@ Here are some items to check when submitting your PR:
     changes, cross-referencing any related bugs/PRs.
   * open your PR against the `master` branch.
 
-Pull request must pass all CI tests before we will merge it. If you're seeing
-an error and don't think it's your fault, it may not be! [Join us on Slack][slack]
-or send  us an email, and together we'll get it sorted out.
+Pull request must pass all CI tests before we will merge it.
 
 ### Keep it small, focused
 
