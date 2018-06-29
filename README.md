@@ -1,8 +1,9 @@
 # metrics-agent
 
-The metrics-agent collects allocation metrics from a container orchestration system (currently Kubernetes) and sends them to cloudability to help you reduce costs and increase efficiency across your infrastructure.  The agent is designed to run as a docker container in each cluster inside your orchestration system.
+The metrics-agent collects allocation metrics from a container orchestration system (currently Kubernetes) and sends them to cloudability to help you gain visibility, reduce costs and increase efficiency across your infrastructure.  The agent is designed to run as a docker container in each cluster inside your orchestration system.
 
 [![CircleCI](https://circleci.com/gh/cloudability/metrics-agent/tree/master.svg?style=svg&circle-token=20abaff9f051614fc494fb11daa1af104ccaf98d)](https://circleci.com/gh/cloudability/metrics-agent/tree/master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cloudability/metrics-agent)](https://goreportcard.com/report/github.com/cloudability/metrics-agent)
 
 ## Kubernetes
 
