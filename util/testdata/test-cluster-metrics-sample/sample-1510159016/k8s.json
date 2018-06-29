@@ -1,0 +1,733 @@
+[
+  {
+    "name": "kube_namespace",
+    "tags": {
+      "name": "default",
+      "namespace_id": "5315aa8b-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "ns"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_namespace",
+    "tags": {
+      "name": "kube-system",
+      "namespace_id": "5399ba7d-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "ns"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_service",
+    "tags": {
+      "app": "heapster",
+      "kind": "",
+      "name": "heapster",
+      "namespace_name": "default",
+      "service_id": "c844a0dd-c007-11e7-8201-08002751ec84",
+      "source": "k8s",
+      "type": "svc"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_service",
+    "tags": {
+      "app": "kube-state-metrics",
+      "kind": "",
+      "name": "kube-state-metrics",
+      "namespace_name": "default",
+      "prometheus_io/scrape": "true",
+      "service_id": "ab80b682-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "svc"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_service",
+    "tags": {
+      "component": "apiserver",
+      "kind": "",
+      "name": "kubernetes",
+      "namespace_name": "default",
+      "provider": "kubernetes",
+      "service_id": "5394b577-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "svc"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_service",
+    "tags": {
+      "kind": "",
+      "kubernetes_io/cluster-service": "true",
+      "kubernetes_io/name": "Heapster",
+      "name": "heapster",
+      "namespace_name": "kube-system",
+      "service_id": "553ace7b-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "svc"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_service",
+    "tags": {
+      "k8s-app": "kube-dns",
+      "kind": "",
+      "kubernetes_io/cluster-service": "true",
+      "kubernetes_io/name": "KubeDNS",
+      "name": "kube-dns",
+      "namespace_name": "kube-system",
+      "service_id": "55221bea-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "svc"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_service",
+    "tags": {
+      "k8s-app": "kubernetes-dashboard",
+      "kind": "",
+      "kubernetes_io/cluster-service": "true",
+      "name": "kubernetes-dashboard",
+      "namespace_name": "kube-system",
+      "service_id": "5554ab16-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "svc"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_deployment",
+    "tags": {
+      "app": "heapster",
+      "deployment_id": "c83d54b2-c007-11e7-8201-08002751ec84",
+      "deployment_kubernetes_io/revision": "1",
+      "name": "heapster",
+      "namespace_name": "default",
+      "source": "k8s",
+      "type": "deploy"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_deployment",
+    "tags": {
+      "deployment_id": "906e3467-b5c4-11e7-b3bd-08002751ec84",
+      "deployment_kubernetes_io/revision": "1",
+      "name": "hello-yo",
+      "namespace_name": "default",
+      "source": "k8s",
+      "test": "10",
+      "type": "deploy"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_deployment",
+    "tags": {
+      "deployment_id": "908792da-b5c4-11e7-b3bd-08002751ec84",
+      "deployment_kubernetes_io/revision": "1",
+      "name": "hello-yo2",
+      "namespace_name": "default",
+      "source": "k8s",
+      "test": "11",
+      "type": "deploy"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_deployment",
+    "tags": {
+      "app": "kube-state-metrics",
+      "deployment_id": "ab778299-b5c4-11e7-b3bd-08002751ec84",
+      "deployment_kubernetes_io/revision": "1",
+      "name": "kube-state-metrics",
+      "namespace_name": "default",
+      "source": "k8s",
+      "type": "deploy"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_deployment",
+    "tags": {
+      "deployment_id": "5531a4cb-b5c4-11e7-b3bd-08002751ec84",
+      "deployment_kubernetes_io/revision": "2",
+      "k8s-app": "heapster",
+      "kubernetes_io/cluster-service": "true",
+      "name": "heapster-v1.2.0",
+      "namespace_name": "kube-system",
+      "source": "k8s",
+      "type": "deploy",
+      "version": "v1.2.0"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_deployment",
+    "tags": {
+      "deployment_id": "551dbab1-b5c4-11e7-b3bd-08002751ec84",
+      "deployment_kubernetes_io/revision": "1",
+      "k8s-app": "kube-dns",
+      "kubernetes_io/cluster-service": "true",
+      "name": "kube-dns",
+      "namespace_name": "kube-system",
+      "source": "k8s",
+      "type": "deploy"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_deployment",
+    "tags": {
+      "deployment_id": "55291a88-b5c4-11e7-b3bd-08002751ec84",
+      "deployment_kubernetes_io/revision": "1",
+      "k8s-app": "kube-dns-autoscaler",
+      "kubernetes_io/cluster-service": "true",
+      "name": "kube-dns-autoscaler",
+      "namespace_name": "kube-system",
+      "source": "k8s",
+      "type": "deploy"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_deployment",
+    "tags": {
+      "deployment_id": "55431b69-b5c4-11e7-b3bd-08002751ec84",
+      "deployment_kubernetes_io/revision": "1",
+      "k8s-app": "kubernetes-dashboard",
+      "kubernetes_io/cluster-service": "true",
+      "name": "kubernetes-dashboard",
+      "namespace_name": "kube-system",
+      "source": "k8s",
+      "type": "deploy"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "app": "cloudability-agent",
+      "deployment_kubernetes_io/desired-replicas": "0",
+      "deployment_kubernetes_io/max-replicas": "1",
+      "deployment_kubernetes_io/revision": "2",
+      "deployment_kubernetes_io/revision-history": "1",
+      "namespace_name": "default",
+      "pod-template-hash": "3122389781",
+      "replicaset_id": "8121cc6c-b5d6-11e7-b3bd-08002751ec84",
+      "rs_name": "cloudability-agent-3122389781",
+      "source": "k8s",
+      "type": "rs"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "app": "heapster",
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "1",
+      "namespace_name": "default",
+      "pod-template-hash": "1210110913",
+      "replicaset_id": "c83ddfec-c007-11e7-8201-08002751ec84",
+      "rs_name": "heapster-1210110913",
+      "source": "k8s",
+      "type": "rs"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "1",
+      "namespace_name": "default",
+      "pod-template-hash": "3655452860",
+      "replicaset_id": "906efac8-b5c4-11e7-b3bd-08002751ec84",
+      "rs_name": "hello-yo-3655452860",
+      "source": "k8s",
+      "test": "10",
+      "type": "rs"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "1",
+      "namespace_name": "default",
+      "pod-template-hash": "3540830447",
+      "replicaset_id": "90885b17-b5c4-11e7-b3bd-08002751ec84",
+      "rs_name": "hello-yo2-3540830447",
+      "source": "k8s",
+      "test": "11",
+      "type": "rs"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "app": "kube-state-metrics",
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "1",
+      "namespace_name": "default",
+      "pod-template-hash": "3229993571",
+      "replicaset_id": "ab7828a6-b5c4-11e7-b3bd-08002751ec84",
+      "rs_name": "kube-state-metrics-3229993571",
+      "source": "k8s",
+      "type": "rs"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "1",
+      "k8s-app": "heapster",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "216693398",
+      "replicaset_id": "553330bc-b5c4-11e7-b3bd-08002751ec84",
+      "rs_name": "heapster-v1.2.0-216693398",
+      "source": "k8s",
+      "type": "rs",
+      "version": "v1.2.0"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "2",
+      "k8s-app": "heapster",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "4088228293",
+      "replicaset_id": "b900c105-c007-11e7-8201-08002751ec84",
+      "rs_name": "heapster-v1.2.0-4088228293",
+      "source": "k8s",
+      "type": "rs",
+      "version": "v1.2.0"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "1",
+      "k8s-app": "kube-dns",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "782804071",
+      "replicaset_id": "551fec41-b5c4-11e7-b3bd-08002751ec84",
+      "rs_name": "kube-dns-782804071",
+      "source": "k8s",
+      "type": "rs"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "1",
+      "k8s-app": "kube-dns-autoscaler",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "2715466192",
+      "replicaset_id": "55307f40-b5c4-11e7-b3bd-08002751ec84",
+      "rs_name": "kube-dns-autoscaler-2715466192",
+      "source": "k8s",
+      "type": "rs"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicaset",
+    "tags": {
+      "deployment_kubernetes_io/desired-replicas": "1",
+      "deployment_kubernetes_io/max-replicas": "2",
+      "deployment_kubernetes_io/revision": "1",
+      "k8s-app": "kubernetes-dashboard",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "3543765157",
+      "replicaset_id": "554f76db-b5c4-11e7-b3bd-08002751ec84",
+      "rs_name": "kubernetes-dashboard-3543765157",
+      "source": "k8s",
+      "type": "rs"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicationcontroller",
+    "tags": {
+      "name": "heapster",
+      "namespace_name": "default",
+      "rc_name": "monitoring-heapster-controller",
+      "replication_controller_id": "90be6b71-b5c4-11e7-b3bd-08002751ec84",
+      "selector": "name=heapster",
+      "source": "k8s",
+      "type": "rc"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_replicationcontroller",
+    "tags": {
+      "k8s-app": "kubernetes-dashboard",
+      "kubernetes_io/cluster-service": "true",
+      "namespace_name": "kube-system",
+      "rc_name": "kubernetes-dashboard-v1.4.1",
+      "replication_controller_id": "903c69c3-b5c4-11e7-b3bd-08002751ec84",
+      "selector": "k8s-app=kubernetes-dashboard",
+      "source": "k8s",
+      "type": "rc",
+      "version": "v1.4.1"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "app": "heapster",
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicaSet,namespace:default,name:heapster-1210110913,uid:c83ddfec-c007-11e7-8201-08002751ec84,apiVersion:extensions,resourceVersion:286030\n",
+      "name": "heapster-1210110913-d0gf8",
+      "namespace_name": "default",
+      "pod-template-hash": "1210110913",
+      "pod_id": "c8408665-c007-11e7-8201-08002751ec84",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicaSet,namespace:default,name:hello-yo-3655452860,uid:906efac8-b5c4-11e7-b3bd-08002751ec84,apiVersion:extensions,resourceVersion:574\n",
+      "name": "hello-yo-3655452860-72s0r",
+      "namespace_name": "default",
+      "pod-template-hash": "3655452860",
+      "pod_id": "907173a8-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "test": "10",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicaSet,namespace:default,name:hello-yo2-3540830447,uid:90885b17-b5c4-11e7-b3bd-08002751ec84,apiVersion:extensions,resourceVersion:587\n",
+      "name": "hello-yo2-3540830447-13mx2",
+      "namespace_name": "default",
+      "pod-template-hash": "3540830447",
+      "pod_id": "90899ea9-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "test": "11",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "app": "kube-state-metrics",
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicaSet,namespace:default,name:kube-state-metrics-3229993571,uid:ab7828a6-b5c4-11e7-b3bd-08002751ec84,apiVersion:extensions,resourceVersion:726\n",
+      "name": "kube-state-metrics-3229993571-qzf1k",
+      "namespace_name": "default",
+      "pod-template-hash": "3229993571",
+      "pod_id": "ab7d5b60-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicationController,namespace:default,name:monitoring-heapster-controller,uid:90be6b71-b5c4-11e7-b3bd-08002751ec84,apiVersion:v1,resourceVersion:604\n",
+      "name": "heapster",
+      "namespace_name": "default",
+      "pod_id": "90c0fe30-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "k8s-app": "heapster",
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicaSet,namespace:kube-system,name:heapster-v1.2.0-4088228293,uid:b900c105-c007-11e7-8201-08002751ec84,apiVersion:extensions,resourceVersion:285962\n",
+      "name": "heapster-v1.2.0-4088228293-xwjf6",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "4088228293",
+      "pod_id": "b905de60-c007-11e7-8201-08002751ec84",
+      "scheduler_alpha_kubernetes_io/critical-pod": "",
+      "scheduler_alpha_kubernetes_io/tolerations": "[key:CriticalAddonsOnly, operator:Exists]",
+      "source": "k8s",
+      "type": "pod",
+      "version": "v1.2.0"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/config_hash": "f740d8ed773445332d24816093561ae5",
+      "kubernetes_io/config_mirror": "f740d8ed773445332d24816093561ae5",
+      "kubernetes_io/config_seen": "2017-10-20T18:26:06.587026663Z",
+      "kubernetes_io/config_source": "file",
+      "name": "kube-apiserver-172.17.4.101",
+      "namespace_name": "kube-system",
+      "pod_id": "539d5db5-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/config_hash": "dcede539ae95f7105d48e636183efb2b",
+      "kubernetes_io/config_mirror": "dcede539ae95f7105d48e636183efb2b",
+      "kubernetes_io/config_seen": "2017-10-20T18:26:06.587016622Z",
+      "kubernetes_io/config_source": "file",
+      "name": "kube-controller-manager-172.17.4.101",
+      "namespace_name": "kube-system",
+      "pod_id": "844f871b-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "k8s-app": "kube-dns",
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicaSet,namespace:kube-system,name:kube-dns-782804071,uid:551fec41-b5c4-11e7-b3bd-08002751ec84,apiVersion:extensions,resourceVersion:73\n",
+      "name": "kube-dns-782804071-qtcwv",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "782804071",
+      "pod_id": "5521b349-b5c4-11e7-b3bd-08002751ec84",
+      "scheduler_alpha_kubernetes_io/critical-pod": "",
+      "scheduler_alpha_kubernetes_io/tolerations": "[key:CriticalAddonsOnly, operator:Exists]",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "k8s-app": "kube-dns-autoscaler",
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicaSet,namespace:kube-system,name:kube-dns-autoscaler-2715466192,uid:55307f40-b5c4-11e7-b3bd-08002751ec84,apiVersion:extensions,resourceVersion:89\n",
+      "name": "kube-dns-autoscaler-2715466192-qkxr9",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "2715466192",
+      "pod_id": "553860bd-b5c4-11e7-b3bd-08002751ec84",
+      "scheduler_alpha_kubernetes_io/critical-pod": "",
+      "scheduler_alpha_kubernetes_io/tolerations": "[key:CriticalAddonsOnly, operator:Exists]",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/config_hash": "bd25d8264f87e9754439039c0ce98b17",
+      "kubernetes_io/config_mirror": "bd25d8264f87e9754439039c0ce98b17",
+      "kubernetes_io/config_seen": "2017-10-20T18:26:06.58702318Z",
+      "kubernetes_io/config_source": "file",
+      "name": "kube-proxy-172.17.4.101",
+      "namespace_name": "kube-system",
+      "pod_id": "8023e6b7-b5c4-11e7-b3bd-08002751ec84",
+      "rkt_alpha_kubernetes_io/stage1-name-override": "coreos.com/rkt/stage1-fly",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/config_hash": "d5c1e703b82acb9a97a0dcefbd93f800",
+      "kubernetes_io/config_mirror": "d5c1e703b82acb9a97a0dcefbd93f800",
+      "kubernetes_io/config_seen": "2017-10-20T18:26:34.235990228Z",
+      "kubernetes_io/config_source": "file",
+      "name": "kube-proxy-172.17.4.201",
+      "namespace_name": "kube-system",
+      "pod_id": "5dcff650-b5c4-11e7-b3bd-08002751ec84",
+      "rkt_alpha_kubernetes_io/stage1-name-override": "coreos.com/rkt/stage1-fly",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/config_hash": "d5c1e703b82acb9a97a0dcefbd93f800",
+      "kubernetes_io/config_mirror": "d5c1e703b82acb9a97a0dcefbd93f800",
+      "kubernetes_io/config_seen": "2017-10-20T18:27:05.61992772Z",
+      "kubernetes_io/config_source": "file",
+      "name": "kube-proxy-172.17.4.202",
+      "namespace_name": "kube-system",
+      "pod_id": "71e67e3e-b5c4-11e7-b3bd-08002751ec84",
+      "rkt_alpha_kubernetes_io/stage1-name-override": "coreos.com/rkt/stage1-fly",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/config_hash": "d5c1e703b82acb9a97a0dcefbd93f800",
+      "kubernetes_io/config_mirror": "d5c1e703b82acb9a97a0dcefbd93f800",
+      "kubernetes_io/config_seen": "2017-10-20T18:27:55.851305996Z",
+      "kubernetes_io/config_source": "file",
+      "name": "kube-proxy-172.17.4.203",
+      "namespace_name": "kube-system",
+      "pod_id": "674a38e6-b5c4-11e7-b3bd-08002751ec84",
+      "rkt_alpha_kubernetes_io/stage1-name-override": "coreos.com/rkt/stage1-fly",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "kubernetes_io/config_hash": "ba168fc60624c2fdfeba73a7d085531b",
+      "kubernetes_io/config_mirror": "ba168fc60624c2fdfeba73a7d085531b",
+      "kubernetes_io/config_seen": "2017-10-20T18:26:06.587025089Z",
+      "kubernetes_io/config_source": "file",
+      "name": "kube-scheduler-172.17.4.101",
+      "namespace_name": "kube-system",
+      "pod_id": "8154cfdc-b5c4-11e7-b3bd-08002751ec84",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "k8s-app": "kubernetes-dashboard",
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicaSet,namespace:kube-system,name:kubernetes-dashboard-3543765157,uid:554f76db-b5c4-11e7-b3bd-08002751ec84,apiVersion:extensions,resourceVersion:115\n",
+      "name": "kubernetes-dashboard-3543765157-k23lk",
+      "namespace_name": "kube-system",
+      "pod-template-hash": "3543765157",
+      "pod_id": "55553b17-b5c4-11e7-b3bd-08002751ec84",
+      "scheduler_alpha_kubernetes_io/critical-pod": "",
+      "scheduler_alpha_kubernetes_io/tolerations": "[key:CriticalAddonsOnly, operator:Exists]",
+      "source": "k8s",
+      "type": "pod"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_pod",
+    "tags": {
+      "k8s-app": "kubernetes-dashboard",
+      "kubernetes_io/cluster-service": "true",
+      "kubernetes_io/created-by": "kind:SerializedReference,apiVersion:v1,reference:kind:ReplicationController,namespace:kube-system,name:kubernetes-dashboard-v1.4.1,uid:903c69c3-b5c4-11e7-b3bd-08002751ec84,apiVersion:v1,resourceVersion:563\n",
+      "name": "kubernetes-dashboard-v1.4.1-11c4k",
+      "namespace_name": "kube-system",
+      "pod_id": "903d836b-b5c4-11e7-b3bd-08002751ec84",
+      "scheduler_alpha_kubernetes_io/critical-pod": "",
+      "scheduler_alpha_kubernetes_io/tolerations": "[key:CriticalAddonsOnly, operator:Exists]",
+      "source": "k8s",
+      "type": "pod",
+      "version": "v1.4.1"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_nodes",
+    "tags": {
+      "beta_kubernetes_io/arch": "amd64",
+      "beta_kubernetes_io/os": "linux",
+      "external_id": "172.17.4.101",
+      "host_id": "",
+      "kubernetes_io/hostname": "172.17.4.101",
+      "namespace_name": "",
+      "node_id": "551161a1-b5c4-11e7-b3bd-08002751ec84",
+      "node_name": "172.17.4.101",
+      "source": "k8s",
+      "type": "node",
+      "volumes_kubernetes_io/controller-managed-attach-detach": "true"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_nodes",
+    "tags": {
+      "beta_kubernetes_io/arch": "amd64",
+      "beta_kubernetes_io/os": "linux",
+      "external_id": "172.17.4.201",
+      "host_id": "",
+      "kubernetes_io/hostname": "172.17.4.201",
+      "namespace_name": "",
+      "node_id": "54f6f50e-b5c4-11e7-b3bd-08002751ec84",
+      "node_name": "172.17.4.201",
+      "source": "k8s",
+      "type": "node",
+      "volumes_kubernetes_io/controller-managed-attach-detach": "true"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_nodes",
+    "tags": {
+      "beta_kubernetes_io/arch": "amd64",
+      "beta_kubernetes_io/os": "linux",
+      "external_id": "172.17.4.202",
+      "host_id": "",
+      "kubernetes_io/hostname": "172.17.4.202",
+      "namespace_name": "",
+      "node_id": "5674f4cf-b5c4-11e7-b3bd-08002751ec84",
+      "node_name": "172.17.4.202",
+      "source": "k8s",
+      "type": "node",
+      "volumes_kubernetes_io/controller-managed-attach-detach": "true"
+    },
+    "ts": 1510155992
+  },
+  {
+    "name": "kube_nodes",
+    "tags": {
+      "beta_kubernetes_io/arch": "amd64",
+      "beta_kubernetes_io/os": "linux",
+      "external_id": "172.17.4.203",
+      "host_id": "",
+      "kubernetes_io/hostname": "172.17.4.203",
+      "namespace_name": "",
+      "node_id": "6461b6c8-b5c4-11e7-b3bd-08002751ec84",
+      "node_name": "172.17.4.203",
+      "source": "k8s",
+      "type": "node",
+      "volumes_kubernetes_io/controller-managed-attach-detach": "true"
+    },
+    "ts": 1510155992
+  }
+]

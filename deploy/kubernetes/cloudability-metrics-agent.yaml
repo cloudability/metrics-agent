@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudability
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloudability
+  namespace: cloudability
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    name: "metrics-agent"
+  name: "metrics-agent"
+  namespace: cloudability
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: metrics-agent
+    spec:
+      serviceAccount: "cloudability"
+      containers:
+        - image: cloudability/metrics-agent:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: ".1"
+            limits:
+              memory: "512Mi"
+              cpu: ".5"
+          name: "metrics-agent"
+          args:
+            - 'kubernetes'
+          env:
+            - name: CLOUDABILITY_API_KEY
+              value: "XXXXXXXXX"
+            - name: CLOUDABILITY_CLUSTER_NAME
+              value: "NNNNNNNNN"
+            - name: CLOUDABILITY_POLL_INTERVAL
+              value: "180"

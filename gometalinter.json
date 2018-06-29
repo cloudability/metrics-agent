@@ -1,0 +1,34 @@
+{
+  "Vendor": true,
+  "Deadline": "4m",
+  "Sort": [
+    "linter",
+    "severity",
+    "path"
+  ],
+  "Exclude": [],
+  "VendoredLinters": true,
+  "DisableAll": true,
+  "Enable": [
+    "deadcode",
+    "gocyclo",
+    "golint",
+    "goconst",
+    "misspell",
+    "ineffassign",
+    "interfacer",
+    "lll",
+    "vet",
+    "gas",
+    "dupl",
+    "unconvert",
+    "errcheck",
+    "structcheck",
+    "varcheck",
+    "maligned",
+    "megacheck",
+    "gofmt"
+  ],
+  "Cyclo": 12,
+  "LineLength": 120
+}
