@@ -47,37 +47,11 @@ Flags:
 
 ### Dependency management
 
-We're using [dep](https://github.com/golang/dep) to manage our Go dependencies. Install it with:
-
-On macOS with Homebrew:
-
-```sh
-brew install dep
-brew upgrade dep
-```
-
-Alternatively:
-
-```sh
-go get -u github.com/golang/dep/cmd/dep
-```
-
-To download dependencies or if you introduce a new package, just run:
-
-```sh
-dep ensure
-```
+We're using [dep](https://github.com/golang/dep) to manage our Go dependencies.
 
 ### Source Code Analysis
 
 We're using [Go Meta Linter](https://github.com/alecthomas/gometalinter) for static source code analysis.
-
-Install it with:
-
-```bash
-go get -u github.com/alecthomas/gometalinter
-gometalinter --install -u
-```
 
 ## Contributing code
 
