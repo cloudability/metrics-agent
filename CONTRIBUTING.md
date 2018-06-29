@@ -22,7 +22,7 @@ Here are some items to check when submitting your PR:
 
 Pull request must pass all CI tests before we will merge it.
 
-### Keep it small, focused
+### Keep it focused
 
 Avoid changing too many things at once.
 
