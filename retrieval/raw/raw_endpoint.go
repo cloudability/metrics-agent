@@ -48,7 +48,8 @@ func (c *Client) createRequest(method, url string, body io.Reader) (*http.Reques
 }
 
 //GetRawEndPoint retrives the body of HTTP response from a given sourcename, working directory, and URL
-func (c *Client) GetRawEndPoint(sourceName string, workDir *os.File, URL string, retries uint) (rawRespFile *os.File, err error) {
+func (c *Client) GetRawEndPoint(sourceName string,
+	workDir *os.File, URL string, retries uint) (rawRespFile *os.File, err error) {
 
 	attempts := retries + 1
 
@@ -64,7 +65,8 @@ func (c *Client) GetRawEndPoint(sourceName string, workDir *os.File, URL string,
 	return &os.File{}, err
 }
 
-func downloadToFile(c *Client, sourceName string, workDir *os.File, URL string, retryCount uint) (rawRespFile *os.File, rerr error) {
+func downloadToFile(c *Client, sourceName string,
+	workDir *os.File, URL string, retryCount uint) (rawRespFile *os.File, rerr error) {
 
 	var empty os.File
 	var fileExt string
