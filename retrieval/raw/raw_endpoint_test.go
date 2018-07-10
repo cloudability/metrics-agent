@@ -63,7 +63,6 @@ func TestGetRawEndPoint(t *testing.T) {
 		workingDir, _ := os.Open(wd)
 
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// w.Write(body)
 			w.WriteHeader(404)
 		}))
 		defer ts.Close()
@@ -87,12 +86,6 @@ func TestGetRawEndPoint(t *testing.T) {
 
 		wd, _ := ioutil.TempDir("", "raw_endpoint_test")
 		workingDir, _ := os.Open(wd)
-
-		// ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 	// w.Write(body)
-		// 	w.WriteHeader(404)
-		// }))
-		// defer ts.Close()
 
 		_, err := client.GetRawEndPoint("heapster", workingDir, "http://localhost:1234", 2)
 		if err != nil {
