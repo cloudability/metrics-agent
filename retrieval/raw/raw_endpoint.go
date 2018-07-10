@@ -4,10 +4,12 @@ import (
 	"errors"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cloudability/metrics-agent/util"
 )
@@ -54,6 +56,7 @@ func (c *Client) GetRawEndPoint(sourceName string, workDir *os.File, URL string,
 		rawRespFile, err := downloadToFile(c, sourceName, workDir, URL, i)
 		if err != nil {
 			log.Printf("%v URL: %s retrying: %v", err, URL, i)
+			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
 			continue
 		}
 		return rawRespFile, err
