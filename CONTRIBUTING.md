@@ -38,3 +38,7 @@ working on for a day.
 
 Please rebase your changes on `master` and squash your commits whenever possible,
 it keeps history cleaner and it's easier to revert things.
+
+### Increment the agent version number
+
+Currently the agent version is managed manually in [this file](version.go) please us [Semantic Versioning 2.0.0](https://semver.org/) as your guideline.
