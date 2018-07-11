@@ -181,7 +181,7 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	//Create Raw Client
-	rawClient := raw.NewClient(config.HTTPClient, config.Insecure, config.BearerToken)
+	rawClient := raw.NewClient(config.HTTPClient, config.Insecure, config.BearerToken, 3)
 
 	// get raw Heapster metric sample
 	hme, err := rawClient.GetRawEndPoint("heapster-metrics-export", metricSampleDir, config.HeapsterURL)
@@ -508,7 +508,7 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 	defer util.SafeClose(ed.Close, &rerr)
 
 	//Create Raw Client
-	rawClient := raw.NewClient(config.HTTPClient, config.Insecure, config.BearerToken)
+	rawClient := raw.NewClient(config.HTTPClient, config.Insecure, config.BearerToken, 3)
 
 	// get baseline metric sample
 	_, err = rawClient.GetRawEndPoint("baseline-metrics-export", ed, config.HeapsterURL)

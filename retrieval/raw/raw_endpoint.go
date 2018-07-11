@@ -2,11 +2,14 @@ package raw
 
 import (
 	"errors"
-	"fmt"
 	"io"
+	"log"
+	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cloudability/metrics-agent/util"
 )
@@ -16,14 +19,16 @@ type Client struct {
 	HTTPClient  *http.Client
 	insecure    bool
 	bearerToken string
+	retries     uint
 }
 
 //NewClient creates a new raw.Client
-func NewClient(HTTPClient http.Client, insecure bool, bearerToken string) Client {
+func NewClient(HTTPClient http.Client, insecure bool, bearerToken string, retries uint) Client {
 	return Client{
 		HTTPClient:  &HTTPClient,
 		insecure:    insecure,
 		bearerToken: bearerToken,
+		retries:     retries,
 	}
 }
 
@@ -43,7 +48,25 @@ func (c *Client) createRequest(method, url string, body io.Reader) (*http.Reques
 }
 
 //GetRawEndPoint retrives the body of HTTP response from a given sourcename, working directory, and URL
-func (c *Client) GetRawEndPoint(sourceName string, workDir *os.File, URL string) (rawRespFile *os.File, rerr error) {
+func (c *Client) GetRawEndPoint(sourceName string,
+	workDir *os.File, URL string) (rawRespFile *os.File, err error) {
+
+	attempts := c.retries + 1
+
+	for i := uint(0); i < attempts; i++ {
+		rawRespFile, err := downloadToFile(c, sourceName, workDir, URL, i)
+		if err != nil {
+			log.Printf("%v URL: %s retrying: %v", err, URL, i)
+			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
+			continue
+		}
+		return rawRespFile, err
+	}
+	return &os.File{}, err
+}
+
+func downloadToFile(c *Client, sourceName string,
+	workDir *os.File, URL string, retryCount uint) (rawRespFile *os.File, rerr error) {
 
 	var empty os.File
 	var fileExt string
@@ -55,7 +78,9 @@ func (c *Client) GetRawEndPoint(sourceName string, workDir *os.File, URL string)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return &empty, err
+		return &empty, errors.New("Unable to connect to")
+	} else if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
+		return &empty, errors.New("Invalid response " + strconv.Itoa(resp.StatusCode))
 	}
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
@@ -77,7 +102,6 @@ func (c *Client) GetRawEndPoint(sourceName string, workDir *os.File, URL string)
 
 	_, err = io.Copy(rawRespFile, resp.Body)
 	if err != nil {
-		fmt.Print(err)
 		return &empty, errors.New("Error writing file: " + rawRespFile.Name())
 	}
 
