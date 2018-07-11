@@ -1,4 +1,4 @@
 package version
 
 //VERSION is the current version of the agent
-var VERSION = "0.0.12"
+var VERSION = "0.0.13"
