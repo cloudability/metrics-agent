@@ -2,6 +2,7 @@ package raw
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -54,7 +55,7 @@ func (c *Client) GetRawEndPoint(sourceName string,
 	attempts := c.retries + 1
 
 	for i := uint(0); i < attempts; i++ {
-		rawRespFile, err := downloadToFile(c, sourceName, workDir, URL, i)
+		rawRespFile, err = downloadToFile(c, sourceName, workDir, URL, i)
 		if err != nil {
 			log.Printf("%v URL: %s retrying: %v", err, URL, i)
 			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
@@ -62,25 +63,24 @@ func (c *Client) GetRawEndPoint(sourceName string,
 		}
 		return rawRespFile, err
 	}
-	return &os.File{}, err
+	return nil, err
 }
 
 func downloadToFile(c *Client, sourceName string,
 	workDir *os.File, URL string, retryCount uint) (rawRespFile *os.File, rerr error) {
 
-	var empty os.File
 	var fileExt string
 
 	req, err := c.createRequest("GET", URL, nil)
 	if err != nil {
-		return &empty, errors.New("Unable to create raw request for " + sourceName)
+		return rawRespFile, errors.New("Unable to create raw request for " + sourceName)
 	}
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return &empty, errors.New("Unable to connect to")
+		return rawRespFile, errors.New("Unable to connect ")
 	} else if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
-		return &empty, errors.New("Invalid response " + strconv.Itoa(resp.StatusCode))
+		return rawRespFile, fmt.Errorf("Invalid response %s", strconv.Itoa(resp.StatusCode))
 	}
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
@@ -97,12 +97,12 @@ func downloadToFile(c *Client, sourceName string,
 
 	rawRespFile, err = os.Create(workDir.Name() + "/" + sourceName + fileExt)
 	if err != nil {
-		return &empty, errors.New("Unable to create raw metric file")
+		return rawRespFile, errors.New("Unable to create raw metric file")
 	}
 
 	_, err = io.Copy(rawRespFile, resp.Body)
 	if err != nil {
-		return &empty, errors.New("Error writing file: " + rawRespFile.Name())
+		return rawRespFile, errors.New("Error writing file: " + rawRespFile.Name())
 	}
 
 	return rawRespFile, err

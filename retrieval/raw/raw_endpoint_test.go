@@ -50,7 +50,7 @@ func TestGetRawEndPoint(t *testing.T) {
 
 	})
 
-	t.Run("ensure retry when non http 200-299 returned", func(t *testing.T) {
+	t.Run("ensure error when non http 200-299 returned", func(t *testing.T) {
 
 		httpClient := http.DefaultClient
 
@@ -70,13 +70,13 @@ func TestGetRawEndPoint(t *testing.T) {
 		defer ts.Close()
 
 		_, err := client.GetRawEndPoint("heapster", workingDir, ts.URL)
-		if err != nil {
-			t.Error(err)
+		if err == nil {
+			t.Error("Server returned invalid response code but function did not raise error")
 		}
 
 	})
 
-	t.Run("ensure retry when error returned", func(t *testing.T) {
+	t.Run("ensure error when unabble to connect", func(t *testing.T) {
 
 		httpClient := http.DefaultClient
 
@@ -91,8 +91,8 @@ func TestGetRawEndPoint(t *testing.T) {
 		workingDir, _ := os.Open(wd)
 
 		_, err := client.GetRawEndPoint("heapster", workingDir, "http://localhost:1234")
-		if err != nil {
-			t.Error(err)
+		if err == nil {
+			t.Error("Unable to to connect to server but function did not raise error")
 		}
 
 	})
