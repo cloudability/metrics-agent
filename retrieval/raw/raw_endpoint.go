@@ -55,13 +55,14 @@ func (c *Client) GetRawEndPoint(sourceName string,
 	attempts := c.retries + 1
 
 	for i := uint(0); i < attempts; i++ {
-		rawRespFile, err = downloadToFile(c, sourceName, workDir, URL, i)
-		if err != nil {
-			log.Printf("%v URL: %s retrying: %v", err, URL, i)
+		if i > 0 {
 			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
-			continue
 		}
-		return rawRespFile, err
+		rawRespFile, err = downloadToFile(c, sourceName, workDir, URL, i)
+		if err == nil {
+			return rawRespFile, nil
+		}
+		log.Printf("%v URL: %s retrying: %v", err, URL, i+1)
 	}
 	return nil, err
 }
@@ -78,12 +79,14 @@ func downloadToFile(c *Client, sourceName string,
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return rawRespFile, errors.New("Unable to connect ")
-	} else if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
-		return rawRespFile, fmt.Errorf("Invalid response %s", strconv.Itoa(resp.StatusCode))
+		return rawRespFile, errors.New("Unable to connect")
 	}
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
+
+	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
+		return rawRespFile, fmt.Errorf("Invalid response %s", strconv.Itoa(resp.StatusCode))
+	}
 
 	ct := resp.Header.Get("Content-Type")
 

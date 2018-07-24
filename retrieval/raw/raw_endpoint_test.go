@@ -76,7 +76,7 @@ func TestGetRawEndPoint(t *testing.T) {
 
 	})
 
-	t.Run("ensure error when unabble to connect", func(t *testing.T) {
+	t.Run("ensure error when unable to connect", func(t *testing.T) {
 
 		httpClient := http.DefaultClient
 
