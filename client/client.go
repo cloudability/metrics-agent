@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/url"
 	"strings"
+
 	// nolint gas
 	"crypto/md5"
 	"crypto/tls"
@@ -29,7 +30,7 @@ import (
 )
 
 const defaultBaseURL = "https://metrics-collector.cloudability.com"
-const defaultTimeout = 10 * time.Second
+const defaultTimeout = 1 * time.Minute
 const defaultMaxRetries = 5
 
 const authHeader = "token"
@@ -388,7 +389,7 @@ func (c httpMetricClient) GetUploadURL(
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", "", errors.New("Unable to retrieve upload URI")
+		return "", "", fmt.Errorf("Unable to retrieve upload URI: %v", err)
 	}
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
