@@ -172,7 +172,6 @@ func (ka KubeAgentConfig) collectMetrics(
 	config KubeAgentConfig, clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
 
 	sampleStartTime := time.Now().UTC()
-	baselineMetricSample := path.Dir(config.msExportDirectory.Name()) + "/baseline-metrics-export.json"
 
 	//create metric sample directory
 	msd, metricSampleDir, err := createMSD(config.msExportDirectory.Name(), sampleStartTime)
@@ -186,14 +185,18 @@ func (ka KubeAgentConfig) collectMetrics(
 	// get raw Heapster metric sample
 	hme, err := rawClient.GetRawEndPoint("heapster-metrics-export", metricSampleDir, config.HeapsterURL)
 	if err != nil {
-		return fmt.Errorf("error retrieving Raw Heapster metrics: %s", err)
+		return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
 	}
 
 	defer util.SafeClose(hme.Close, &rerr)
 
-	err = handleBaselineHeapsterMetrics(msd, baselineMetricSample, hme.Name())
-	if err != nil {
-		return err
+	baselineMetricSample, err := filepath.Glob(path.Dir(config.msExportDirectory.Name()) + "/baseline-metrics-export*")
+
+	if len(baselineMetricSample[0]) >= 1 {
+		err = handleBaselineHeapsterMetrics(msd, baselineMetricSample[0], hme.Name())
+		if err != nil {
+			return err
+		}
 	}
 
 	if config.IncludeNodeBaseline {
@@ -233,7 +236,7 @@ func (ka KubeAgentConfig) collectMetrics(
 
 func handleBaselineHeapsterMetrics(msd, baselineMetricSample, heapsterMetricExport string) error {
 	// copy in the baseline metric export with the most recent sample
-	err := util.CopyFileContents(msd+"/baseline-metrics-export.json", baselineMetricSample)
+	err := util.CopyFileContents(msd+"/"+filepath.Base(baselineMetricSample), baselineMetricSample)
 	if err != nil {
 		return fmt.Errorf("error copying in the last baseline metric export: %s", err)
 	}
