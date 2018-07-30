@@ -196,7 +196,7 @@ func (ka KubeAgentConfig) collectMetrics(
 		log.Printf("Error encountered reading export directory: %v", err)
 	}
 
-	if len(baselineMetricSample[0]) >= 1 {
+	if len(baselineMetricSample) >= 1 {
 		err = handleBaselineHeapsterMetrics(msd, baselineMetricSample[0], hme.Name())
 		if err != nil {
 			return err
