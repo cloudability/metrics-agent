@@ -190,7 +190,9 @@ func (ka KubeAgentConfig) collectMetrics(
 
 	defer util.SafeClose(hme.Close, &rerr)
 
-	baselineMetricSample, err := filepath.Glob(path.Dir(config.msExportDirectory.Name()) + "/baseline-metrics-export*")
+	baselineMetricSample := make([]string, 1)
+
+	baselineMetricSample, err = filepath.Glob(path.Dir(config.msExportDirectory.Name()) + "/baseline-metrics-export*")
 
 	if err != nil {
 		log.Printf("Error encountered reading export directory: %v", err)
