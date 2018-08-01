@@ -224,7 +224,7 @@ func TestCreateMetricSample(t *testing.T) {
 
 func TestMatchOneFile(t *testing.T) {
 	dir := os.TempDir()
-	_ = ioutil.WriteFile(dir+"shouldBeHere.file", []byte(nil), 0644)
+	_ = ioutil.WriteFile(dir+"/shouldBeHere.file", []byte(nil), 0644)
 
 	t.Run("Ensure that one file is matched", func(t *testing.T) {
 
