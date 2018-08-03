@@ -191,10 +191,10 @@ func (ka KubeAgentConfig) collectMetrics(
 	defer util.SafeClose(hme.Close, &rerr)
 
 	baselineMetricSample, err := util.MatchOneFile(path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
-	if err == nil {
+	if err != nil || baselineMetricSample != "" {
 		err = handleBaselineHeapsterMetrics(msd, baselineMetricSample, hme.Name())
 		if err != nil {
-			return err
+			log.Printf("Error updating Heapster Baseline: %v", err)
 		}
 	}
 
