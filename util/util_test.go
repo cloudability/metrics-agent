@@ -223,12 +223,14 @@ func TestCreateMetricSample(t *testing.T) {
 }
 
 func TestMatchOneFile(t *testing.T) {
-	dir := os.TempDir()
+	dir := os.TempDir() + "/cldy-test" + strconv.FormatInt(
+		time.Now().Unix(), 10)
+	_ = os.MkdirAll(dir, 0777)
 	_ = ioutil.WriteFile(dir+"/shouldBeHere.file", []byte(nil), 0644)
 
 	t.Run("Ensure that one file is matched", func(t *testing.T) {
 
-		pattern := "shouldBeHere.file*"
+		pattern := "/shouldBeHere.file*"
 		file, fileCount, err := MatchOneFile(dir, pattern)
 		if err != nil || filepath.Base(file) != "shouldBeHere.file" || fileCount != 1 {
 			t.Errorf("Did not match pattern when looking in the directory: %s for the pattern: %s found files: %v error: %v",
@@ -260,7 +262,6 @@ func TestMatchOneFile(t *testing.T) {
 	})
 
 	//clean up
-	_ = os.Remove(dir + "shouldBeHere.file")
-	_ = os.Remove(dir + "shouldBeHere.file2")
+	_ = os.RemoveAll(dir)
 
 }
