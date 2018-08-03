@@ -342,7 +342,8 @@ func handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample,
 	}
 	// update the baseline metric export with the most recent sample from this collection
 	err = util.CopyFileContents(
-		filepath.Dir(msExportDirectory)+"/"+"baseline-metrics-export"+filepath.Ext(heapsterMetricExport), heapsterMetricExport)
+		filepath.Dir(msExportDirectory)+"/"+"baseline-metrics-export"+filepath.Ext(
+			heapsterMetricExport), heapsterMetricExport)
 	if err != nil {
 		return fmt.Errorf("error updating baseline metric export: %s", err)
 	}
