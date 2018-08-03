@@ -143,7 +143,7 @@ func TestLauchHeapster(t *testing.T) {
 
 func TestHandleBaselineHeapsterMetrics(t *testing.T) {
 
-	msExportDirectory := os.TempDir() + "cldy-metrics" + strconv.FormatInt(
+	msExportDirectory := os.TempDir() + "/cldy-metrics" + strconv.FormatInt(
 		time.Now().Unix(), 10) + "/" + "21260ee7-4e52-11e8-87d9-025000000001_20180803183652"
 	msd := msExportDirectory + "/20180803184251/1533321771/"
 	baselineMetricSample := msExportDirectory + "/" + "baseline-metrics-export.json"

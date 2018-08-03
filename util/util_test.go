@@ -230,8 +230,7 @@ func TestMatchOneFile(t *testing.T) {
 
 		pattern := "shouldBeHere.file*"
 		file, fileCount, err := MatchOneFile(dir, pattern)
-		if err != nil || file != dir+"shouldBeHere.file" || fileCount != 1 {
-			t.Logf("name: %v", file)
+		if err != nil || filepath.Base(file) != "shouldBeHere.file" || fileCount != 1 {
 			t.Errorf("Did not match pattern when looking in the directory: %s for the pattern: %s found files: %v error: %v",
 				dir, pattern, fileCount, err)
 		}
