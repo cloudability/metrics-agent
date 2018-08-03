@@ -190,11 +190,10 @@ func (ka KubeAgentConfig) collectMetrics(
 
 	defer util.SafeClose(hme.Close, &rerr)
 
-	baselineMetricSample, err := util.MatchOneFile(path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
-	if err != nil || baselineMetricSample != "" {
-		err = handleBaselineHeapsterMetrics(msd, baselineMetricSample, hme.Name())
-		if err != nil {
-			log.Printf("Error updating Heapster Baseline: %v", err)
+	baselineMetricSample, fileCount, err := util.MatchOneFile(path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
+	if err == nil || fileCount == 0 {
+		if err = handleBaselineHeapsterMetrics(config.msExportDirectory.Name(), msd, baselineMetricSample, hme.Name()); err != nil {
+			log.Printf("Warning: updating Heapster Baseline failed: %v", err)
 		}
 	}
 
@@ -231,22 +230,6 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	return err
-}
-
-func handleBaselineHeapsterMetrics(msd, baselineMetricSample, heapsterMetricExport string) error {
-	// copy in the baseline metric export with the most recent sample
-	err := util.CopyFileContents(msd+"/"+filepath.Base(baselineMetricSample), baselineMetricSample)
-	if err != nil {
-		return fmt.Errorf("error copying in the last baseline metric export: %s", err)
-	}
-
-	// update the baseline metric export with the most recent sample from this collection
-	err = util.CopyFileContents(baselineMetricSample, heapsterMetricExport)
-	if err != nil {
-		return fmt.Errorf("error updating baseline metric export: %s", err)
-	}
-
-	return nil
 }
 
 func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, error) {

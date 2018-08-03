@@ -1,10 +1,14 @@
 package kubernetes
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strconv"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -134,5 +138,57 @@ func TestLauchHeapster(t *testing.T) {
 			t.Errorf("Error launching heapster with incluster config: %v", err)
 		}
 	})
+
+}
+
+func TestHandleBaselineHeapsterMetrics(t *testing.T) {
+
+	msExportDirectory := os.TempDir() + "cldy-metrics" + strconv.FormatInt(time.Now().Unix(), 10) + "/" + "21260ee7-4e52-11e8-87d9-025000000001_20180803183652"
+	msd := msExportDirectory + "/20180803184251/1533321771/"
+	baselineMetricSample := msExportDirectory + "/" + "baseline-metrics-export.json"
+	heapsterMetricExport := msd + "heapster-metrics-export.json"
+
+	_ = os.MkdirAll(msd, 0777)
+	_ = ioutil.WriteFile(baselineMetricSample, []byte("baseline"), 0777)
+	_ = ioutil.WriteFile(heapsterMetricExport, []byte("export"), 0777)
+
+	t.Run("Ensure that heapster baseline is copied into metric sample directory ", func(t *testing.T) {
+		bme1, err := ioutil.ReadFile(baselineMetricSample)
+		err = handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample, heapsterMetricExport)
+		bme2, err := ioutil.ReadFile(msd + "/baseline-metrics-export.json")
+
+		if !bytes.Equal(bme1, bme2) || err != nil {
+			t.Errorf("Heapster baseline was not correcly copied into metric sample directory: %v", err)
+		}
+
+	})
+
+	t.Run("Ensure that the baseline metric export is updated with the most recent sample from the collection", func(t *testing.T) {
+
+		err := handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample, heapsterMetricExport)
+
+		bme1, err := ioutil.ReadFile(baselineMetricSample)
+		bme2, err := ioutil.ReadFile(heapsterMetricExport)
+
+		if bytes.Equal(bme1, bme2) {
+			t.Errorf("Heapster baseline was not correcly updated with the most recent sample from the collection: %v", err)
+		}
+
+	})
+
+	t.Run("Ensure that a baseline without a json extention is removed", func(t *testing.T) {
+
+		_ = os.Remove(baselineMetricSample)
+		baselineMetricSample := msExportDirectory + "/" + "baseline-metrics-export"
+		_ = ioutil.WriteFile(baselineMetricSample, []byte("baseline"), 0777)
+		_ = handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample, heapsterMetricExport)
+		if _, err := os.Stat(baselineMetricSample); err == nil {
+			t.Errorf("Heapster baseline without a json extention was not removed: %v", err)
+		}
+
+	})
+
+	// cleanup
+	os.RemoveAll(msExportDirectory)
 
 }

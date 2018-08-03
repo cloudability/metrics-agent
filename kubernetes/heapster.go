@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -323,4 +325,27 @@ func getService(namespace string) *apiv1.Service {
 		},
 	}
 	return service
+}
+
+func handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample, heapsterMetricExport string) error {
+	// copy into the current sample directory tthe most recent baseline metric export
+	err := util.CopyFileContents(msd+"/"+filepath.Base(baselineMetricSample), baselineMetricSample)
+	if err != nil {
+		log.Println("Warning: Previous baseline not found or incomplete")
+	}
+
+	// remove the baseline metric if it is not json
+	if baselineMetricSample != "" && filepath.Base(baselineMetricSample) != "baseline-metrics-export.json" {
+		if err = os.Remove(baselineMetricSample); err != nil {
+			return fmt.Errorf("error cleaning up invalid baseline metric export: %s", err)
+		}
+	}
+	// update the baseline metric export with the most recent sample from this collection
+	err = util.CopyFileContents(
+		filepath.Dir(msExportDirectory)+"/"+"baseline-metrics-export"+filepath.Ext(heapsterMetricExport), heapsterMetricExport)
+	if err != nil {
+		return fmt.Errorf("error updating baseline metric export: %s", err)
+	}
+
+	return nil
 }
