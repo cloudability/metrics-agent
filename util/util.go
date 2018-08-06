@@ -293,17 +293,17 @@ func SafeClose(closer func() error, err *error) {
 // MatchOneFile returns the name of one file based on a given directory and pattern
 // returning an error if more or less than one match is found. The syntax of patterns is the same
 // as in filepath.Glob & Match.
-func MatchOneFile(directory string, pattern string) (fileName string, count int, err error) {
+func MatchOneFile(directory string, pattern string) (fileName string, err error) {
 	results, err := filepath.Glob(directory + pattern)
 	if err != nil {
-		return "", len(results), fmt.Errorf("Error encountered reading directory: %v", err)
+		return "", fmt.Errorf("Error encountered reading directory: %v", err)
 	}
 
 	if len(results) == 1 {
-		return results[0], 1, nil
+		return results[0], nil
 	} else if len(results) > 1 {
-		return "", len(results), fmt.Errorf("More than one file matched the pattern: %+v", results)
+		return "", fmt.Errorf("More than one file matched the pattern: %+v", results)
 	}
 
-	return "", len(results), fmt.Errorf("No matches found")
+	return "", fmt.Errorf("No matches found")
 }

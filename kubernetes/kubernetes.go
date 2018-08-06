@@ -190,9 +190,9 @@ func (ka KubeAgentConfig) collectMetrics(
 
 	defer util.SafeClose(hme.Close, &rerr)
 
-	baselineMetricSample, fileCount, err := util.MatchOneFile(
+	baselineMetricSample, err := util.MatchOneFile(
 		path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
-	if err == nil || fileCount == 0 {
+	if err == nil || err.Error() == "No matches found" {
 		if err = handleBaselineHeapsterMetrics(
 			config.msExportDirectory.Name(), msd, baselineMetricSample, hme.Name()); err != nil {
 			log.Printf("Warning: updating Heapster Baseline failed: %v", err)
