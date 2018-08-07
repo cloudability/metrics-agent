@@ -231,10 +231,10 @@ func TestMatchOneFile(t *testing.T) {
 	t.Run("Ensure that one file is matched", func(t *testing.T) {
 
 		pattern := "/shouldBeHere.file*"
-		file, fileCount, err := MatchOneFile(dir, pattern)
-		if err != nil || filepath.Base(file) != "shouldBeHere.file" || fileCount != 1 {
-			t.Errorf("Did not match pattern when looking in the directory: %s for the pattern: %s found files: %v error: %v",
-				dir, pattern, fileCount, err)
+		file, err := MatchOneFile(dir, pattern)
+		if err != nil || filepath.Base(file) != "shouldBeHere.file" {
+			t.Errorf("Did not match pattern when looking in the directory: %s for the pattern: %s error: %v",
+				dir, pattern, err)
 		}
 
 	})
@@ -243,8 +243,8 @@ func TestMatchOneFile(t *testing.T) {
 
 		_ = ioutil.WriteFile(dir+"/shouldBeHere.file2", []byte(nil), 0644)
 		pattern := "/shouldBeHere.file*"
-		file, fileCount, err := MatchOneFile(dir, pattern)
-		if err == nil || file != "" || fileCount != 2 {
+		file, err := MatchOneFile(dir, pattern)
+		if err == nil || file != "" {
 			t.Errorf("Should have raised an error when looking in the directory: %s for pattern: %s error: %v",
 				dir, pattern, err)
 		}
@@ -253,8 +253,8 @@ func TestMatchOneFile(t *testing.T) {
 
 	t.Run("Ensure that zero matches return an error", func(t *testing.T) {
 		pattern := "/shouldNOtBeHere" + strconv.Itoa(time.Now().Nanosecond()) + "*"
-		file, fileCount, err := MatchOneFile(dir, pattern)
-		if err == nil || file != "" || fileCount != 0 {
+		file, err := MatchOneFile(dir, pattern)
+		if err == nil || file != "" {
 			t.Errorf("Should have raised an error when looking in the directory: %s for a non-matching pattern: %s error: %v",
 				dir, pattern, err)
 		}
