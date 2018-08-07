@@ -127,8 +127,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				log.Fatalf("Error creating metric sample: %s\n", err)
 			}
 			//Send metric sample
-			fmt.Println("Uploading Metrics")
-			kubeAgent.sendMetrics(metricSample)
+			log.Println("Uploading Metrics")
+			go kubeAgent.sendMetrics(metricSample)
 
 		case <-pollChan.C:
 			err := kubeAgent.collectMetrics(kubeAgent, kubeAgent.Clientset, clientSetNodeSource)
