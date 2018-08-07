@@ -172,7 +172,6 @@ func (ka KubeAgentConfig) collectMetrics(
 	config KubeAgentConfig, clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
 
 	sampleStartTime := time.Now().UTC()
-	baselineMetricSample := path.Dir(config.msExportDirectory.Name()) + "/baseline-metrics-export.json"
 
 	//create metric sample directory
 	msd, metricSampleDir, err := createMSD(config.msExportDirectory.Name(), sampleStartTime)
@@ -186,14 +185,18 @@ func (ka KubeAgentConfig) collectMetrics(
 	// get raw Heapster metric sample
 	hme, err := rawClient.GetRawEndPoint("heapster-metrics-export", metricSampleDir, config.HeapsterURL)
 	if err != nil {
-		return fmt.Errorf("error retrieving Raw Heapster metrics: %s", err)
+		return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
 	}
 
 	defer util.SafeClose(hme.Close, &rerr)
 
-	err = handleBaselineHeapsterMetrics(msd, baselineMetricSample, hme.Name())
-	if err != nil {
-		return err
+	baselineMetricSample, err := util.MatchOneFile(
+		path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
+	if err == nil || err.Error() == "No matches found" {
+		if err = handleBaselineHeapsterMetrics(
+			config.msExportDirectory.Name(), msd, baselineMetricSample, hme.Name()); err != nil {
+			log.Printf("Warning: updating Heapster Baseline failed: %v", err)
+		}
 	}
 
 	if config.IncludeNodeBaseline {
@@ -229,22 +232,6 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	return err
-}
-
-func handleBaselineHeapsterMetrics(msd, baselineMetricSample, heapsterMetricExport string) error {
-	// copy in the baseline metric export with the most recent sample
-	err := util.CopyFileContents(msd+"/baseline-metrics-export.json", baselineMetricSample)
-	if err != nil {
-		return fmt.Errorf("error copying in the last baseline metric export: %s", err)
-	}
-
-	// update the baseline metric export with the most recent sample from this collection
-	err = util.CopyFileContents(baselineMetricSample, heapsterMetricExport)
-	if err != nil {
-		return fmt.Errorf("error updating baseline metric export: %s", err)
-	}
-
-	return nil
 }
 
 func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, error) {
