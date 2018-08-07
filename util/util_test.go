@@ -1,6 +1,7 @@
 package util
 
 import (
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	_ "strconv"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -217,5 +219,49 @@ func TestCreateMetricSample(t *testing.T) {
 		}
 
 	})
+
+}
+
+func TestMatchOneFile(t *testing.T) {
+	dir := os.TempDir() + "/cldy-test" + strconv.FormatInt(
+		time.Now().Unix(), 10)
+	_ = os.MkdirAll(dir, 0777)
+	_ = ioutil.WriteFile(dir+"/shouldBeHere.file", []byte(nil), 0644)
+
+	t.Run("Ensure that one file is matched", func(t *testing.T) {
+
+		pattern := "/shouldBeHere.file*"
+		file, err := MatchOneFile(dir, pattern)
+		if err != nil || filepath.Base(file) != "shouldBeHere.file" {
+			t.Errorf("Did not match pattern when looking in the directory: %s for the pattern: %s error: %v",
+				dir, pattern, err)
+		}
+
+	})
+
+	t.Run("Ensure that more than one file returns an error", func(t *testing.T) {
+
+		_ = ioutil.WriteFile(dir+"/shouldBeHere.file2", []byte(nil), 0644)
+		pattern := "/shouldBeHere.file*"
+		file, err := MatchOneFile(dir, pattern)
+		if err == nil || file != "" {
+			t.Errorf("Should have raised an error when looking in the directory: %s for pattern: %s error: %v",
+				dir, pattern, err)
+		}
+
+	})
+
+	t.Run("Ensure that zero matches return an error", func(t *testing.T) {
+		pattern := "/shouldNOtBeHere" + strconv.Itoa(time.Now().Nanosecond()) + "*"
+		file, err := MatchOneFile(dir, pattern)
+		if err == nil || file != "" {
+			t.Errorf("Should have raised an error when looking in the directory: %s for a non-matching pattern: %s error: %v",
+				dir, pattern, err)
+		}
+
+	})
+
+	//clean up
+	_ = os.RemoveAll(dir)
 
 }
