@@ -117,7 +117,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 	if err != nil {
 		log.Printf("Warning non-fatal error: Agent error occurred retrieving runtime diagnostics: %s ", err)
-		log.Println("See https://support.cloudability.com/hc/en-us/articles/360008368193-Kubernetes-Metrics-Agent-Error-Messages for more information")
+		log.Println("For more information see: ")
+		log.Println("https://support.cloudability.com/hc/en-us/articles/360008368193-Kubernetes-Metrics-Agent-Error-Messages")
 	}
 
 	err = downloadBaselineMetricExport(kubeAgent, clientSetNodeSource)
