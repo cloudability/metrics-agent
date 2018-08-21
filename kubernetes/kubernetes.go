@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -31,9 +32,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+const namespace string = "cloudability"
 
 //ClusterVersion contains a concatenated version number as well as the k8s version discovery info
 type ClusterVersion struct {
@@ -71,7 +75,7 @@ type KubeAgentConfig struct {
 }
 
 const uploadInterval time.Duration = 10
-const retryCount uint = 9
+const retryCount uint = 10
 
 //CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
 func CollectKubeMetrics(config KubeAgentConfig) {
@@ -109,13 +113,22 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 	pollChan := time.NewTicker(time.Duration(config.PollInterval) * time.Second)
 
-	err := downloadBaselineMetricExport(kubeAgent, clientSetNodeSource)
+	err := fetchDiagnostics(kubeAgent.Clientset, kubeAgent.msExportDirectory)
+
+	if err != nil {
+		log.Printf("Warning non-fatal error: Agent error occurred retrieving runtime diagnostics: %s ", err)
+		log.Println("For more information see: ")
+		log.Println("https://support.cloudability.com/hc/en-us/articles/360008368193-Kubernetes-Metrics-Agent-Error-Messages")
+	}
+
+	err = downloadBaselineMetricExport(kubeAgent, clientSetNodeSource)
 
 	if err != nil {
 		log.Fatalf("Error retrieving baseline metric export: %s\n", err)
 	}
 
 	log.Printf("Cloudability Metrics Agent successfully started.")
+
 	for {
 		select {
 
@@ -651,4 +664,62 @@ func getNodeName(prefix, fileName string) string {
 		return name
 	}
 	return ""
+}
+
+func getPodLogs(clientset kubernetes.Interface,
+	namespace, podName, containerName string, previous bool, dst io.Writer) (err error) {
+
+	req := clientset.CoreV1().Pods(namespace).GetLogs(podName,
+		&v1.PodLogOptions{
+			Container: containerName,
+			Previous:  previous,
+		})
+
+	readCloser, err := req.Stream()
+	if err != nil {
+		return err
+	}
+
+	defer util.SafeClose(readCloser.Close, &err)
+
+	_, err = io.Copy(dst, readCloser)
+	return err
+}
+
+func fetchDiagnostics(clientset kubernetes.Interface, msExportDirectory *os.File) (err error) {
+
+	pods, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("Unable to retrieve Pod list: %v", err)
+	}
+
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "metrics-agent") && time.Since(pod.Status.StartTime.Time) > (time.Minute*3) {
+			for _, c := range pod.Status.ContainerStatuses {
+
+				f, err := os.Create(msExportDirectory.Name() + "/agent.diag")
+				if err != nil {
+					return err
+				}
+
+				defer util.SafeClose(f.Close, &err)
+
+				_, err = f.WriteString(
+					fmt.Sprintf(
+						"Agent Diagnostics for Pod: %v container: %v restarted %v times \n state: %+v \n Previous runtime log: \n",
+						pod.Name, c.Name, c.RestartCount, c.LastTerminationState))
+				if err != nil {
+					return err
+				}
+
+				err = getPodLogs(clientset, namespace, pod.Name, c.Name, false, f)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+
 }
