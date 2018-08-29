@@ -88,7 +88,7 @@ func init() {
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.IncludeNodeBaseline,
 		"include_node_baseline",
-		false,
+		true,
 		"When true, includes node baseline metrics in metric collection. Default: False",
 	)
 

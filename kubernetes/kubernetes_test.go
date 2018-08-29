@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cloudability/metrics-agent/retrieval/raw"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/pkg/api/v1"
@@ -166,7 +167,12 @@ func TestCollectMetrics(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	cs := fake.NewSimpleClientset()
+	cs := fake.NewSimpleClientset(
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node0", Namespace: v1.NamespaceDefault}},
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node1", Namespace: v1.NamespaceDefault}},
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node2", Namespace: v1.NamespaceDefault}},
+	)
+
 	sv, _ := cs.Discovery().ServerVersion()
 	dir, _ := ioutil.TempDir("", "TestCollectMetrics")
 	tDir, _ := os.Open(dir)
@@ -186,8 +192,9 @@ func TestCollectMetrics(t *testing.T) {
 		BearerToken:         "",
 		IncludeNodeBaseline: true,
 	}
-	fns := fakeNodeSource{}
-	fns.Nodes = []string{"node0", "node1", "node2"}
+
+	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)
+	fns := NewClientsetNodeSource(cs)
 
 	t.Run("Ensure that a collection occurs", func(t *testing.T) {
 		// download the initial baseline...like a typical CollectKubeMetrics would
@@ -255,12 +262,4 @@ func TestSetProxyURL(t *testing.T) {
 		}
 	})
 
-}
-
-type fakeNodeSource struct {
-	Nodes []string
-}
-
-func (fns fakeNodeSource) GetNodes() ([]string, error) {
-	return fns.Nodes, nil
 }

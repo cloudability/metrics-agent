@@ -32,7 +32,7 @@ func IsValidURL(toTest string) bool {
 //a given client / URL(string) / bearerToken(string)/ retries count (int)
 //and returns true if response code is 2xx.
 func TestHTTPConnection(testClient rest.HTTPClient,
-	URL string, bearerToken string, retries uint) (successful bool, body *[]byte, err error) {
+	URL string, bearerToken string, retries uint, verbose bool) (successful bool, body *[]byte, err error) {
 	IsValidURL(URL)
 	attempts := retries + 1
 
@@ -47,7 +47,9 @@ func TestHTTPConnection(testClient rest.HTTPClient,
 	for i := uint(0); i < attempts; i++ {
 		resp, err := testClient.Do(req)
 		if err != nil {
-			log.Printf("Unable to connect to URL: %s retrying: %v", URL, i+1)
+			if verbose {
+				log.Printf("Unable to connect to URL: %s retrying: %v", URL, i+1)
+			}
 			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
 			continue
 		}
