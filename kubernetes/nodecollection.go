@@ -105,7 +105,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	clientSetNodeSource := NewClientsetNodeSource(config.Clientset)
 
-	nodeClient := raw.NewClient(nodeHTTPClient, true, "", 0)
+	nodeClient := raw.NewClient(nodeHTTPClient, true, config.BearerToken, 0)
 
 	nodes, err := clientSetNodeSource.GetNodes()
 	if err != nil {
