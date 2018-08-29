@@ -86,10 +86,10 @@ func init() {
 		"When true, does not verify certificates when making TLS connections. Default: False",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
-		&config.IncludeNodeBaseline,
-		"include_node_baseline",
+		&config.RetrieveNodeSummaries,
+		"retrieve_node_summaries",
 		true,
-		"When true, includes node baseline metrics in metric collection. Default: False",
+		"When true, includes node summary metrics in metric collection. Default: True",
 	)
 
 	//nolint gas
@@ -103,7 +103,7 @@ func init() {
 	_ = viper.BindPFlag("outbound_proxy_auth", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_auth"))
 	_ = viper.BindPFlag("outbound_proxy_insecure", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_insecure"))
 	_ = viper.BindPFlag("insecure", kubernetesCmd.PersistentFlags().Lookup("insecure"))
-	_ = viper.BindPFlag("include_node_baseline", kubernetesCmd.PersistentFlags().Lookup("include_node_baseline"))
+	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
@@ -125,7 +125,7 @@ func init() {
 		Insecure:              viper.GetBool("insecure"),
 		Cert:                  viper.GetString("certificate_file"),
 		Key:                   viper.GetString("key_file"),
-		IncludeNodeBaseline:   viper.GetBool("include_node_baseline"),
+		RetrieveNodeSummaries: viper.GetBool("retrieve_node_summaries"),
 	}
 
 }

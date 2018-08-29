@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -64,7 +65,7 @@ func downloadNodeData(prefix string,
 
 	for _, n := range nodes.Items {
 		// retrieve node summary directly from node
-		if (config.NodeClient != raw.Client{}) {
+		if config.nodeRetrievalMethod == "direct" {
 
 			ip, port, err := nodeSource.NodeAddress(&n)
 			if err != nil {
@@ -76,7 +77,7 @@ func downloadNodeData(prefix string,
 				failedNodeList[n.Name] = err
 				continue
 			}
-			return failedNodeList, nil
+			continue
 		}
 
 		// retrieve node summary via kube-proxy
@@ -86,6 +87,7 @@ func downloadNodeData(prefix string,
 			failedNodeList[n.Name] = err
 			continue
 		}
+		continue
 	}
 
 	return failedNodeList, nil
@@ -120,6 +122,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	s, _, _ := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, config.BearerToken, 0, false)
 	if s {
 		config.NodeClient = nodeClient
+		config.nodeRetrievalMethod = "direct"
 		return config, nil
 	}
 
@@ -127,10 +130,41 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	nodeStatSum = config.ClusterHostURL + "/api/v1/nodes/" + nodes.Items[0].Name + "/proxy/stats/summary"
 	s, _, err = util.TestHTTPConnection(&config.HTTPClient, nodeStatSum, config.BearerToken, 0, false)
 	if !s && err == nil {
+		config.nodeRetrievalMethod = "proxy"
 		return config, nil
 	}
 
 	config.NodeClient = nodeClient
-	config.IncludeNodeBaseline = false
+	config.nodeRetrievalMethod = "unreachable"
+	config.RetrieveNodeSummaries = false
 	return config, fmt.Errorf("Unable to retrieve node metrics: %v", err)
+}
+
+func retrieveNodeSummaries(
+	config KubeAgentConfig, msd string, metricSampleDir *os.File, nodeSource NodeSource) (err error) {
+
+	config.failedNodeList = map[string]error{}
+
+	// get node stats summaries
+	config.failedNodeList, err = downloadNodeData("node-summary-", config, metricSampleDir, nodeSource)
+	if err != nil {
+		return fmt.Errorf("error downloading node metrics: %s", err)
+	}
+
+	if len(config.failedNodeList) > 0 {
+		log.Printf("Warning: Failed to get node metrics: %+v", config.failedNodeList)
+	}
+
+	// move baseline metrics for each node into sample directory
+	err = fetchNodeBaselines(msd, config.msExportDirectory.Name())
+	if err != nil {
+		return fmt.Errorf("error fetching node baseline files: %s", err)
+	}
+
+	// update node baselines with current sample
+	err = updateNodeBaselines(msd, config.msExportDirectory.Name())
+	if err != nil {
+		return fmt.Errorf("error updating node baseline files: %s", err)
+	}
+	return err
 }

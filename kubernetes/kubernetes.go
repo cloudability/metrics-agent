@@ -56,10 +56,11 @@ type KubeAgentConfig struct {
 	HeapsterOverrideURL   string
 	HeapsterURL           string
 	Key                   string
+	nodeRetrievalMethod   string
 	OutboundProxyAuth     string
 	OutboundProxy         string
 	provisioningID        string
-	IncludeNodeBaseline   bool
+	RetrieveNodeSummaries bool
 	Insecure              bool
 	OutboundProxyInsecure bool
 	UseInClusterConfig    bool
@@ -212,32 +213,13 @@ func (ka KubeAgentConfig) collectMetrics(
 		}
 	}
 
-	// if config.IncludeNodeBaseline {
+	if config.RetrieveNodeSummaries {
 
-	config.failedNodeList = map[string]error{}
-
-	// get node stats summaries
-	config.failedNodeList, err = downloadNodeData("node-summary-", config, metricSampleDir, nodeSource)
-	if err != nil {
-		return fmt.Errorf("error downloading node metrics: %s", err)
+		err = retrieveNodeSummaries(config, msd, metricSampleDir, nodeSource)
+		if err != nil {
+			return fmt.Errorf("Warning: %s", err)
+		}
 	}
-
-	if len(config.failedNodeList) > 0 {
-		log.Printf("Warning: Failed to get node metrics: %+v", config.failedNodeList)
-	}
-
-	// move baseline metrics for each node into sample directory
-	err = fetchNodeBaselines(msd, config.msExportDirectory.Name())
-	if err != nil {
-		return fmt.Errorf("error fetching node baseline files: %s", err)
-	}
-
-	// update node baselines with current sample
-	err = updateNodeBaselines(msd, config.msExportDirectory.Name())
-	if err != nil {
-		return fmt.Errorf("error updating node baseline files: %s", err)
-	}
-	// }
 
 	// export additional metrics from the k8s api to the metric sample directory
 	err = k8s_stats.GetK8sMetrics(
@@ -524,7 +506,7 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 	}
 
 	// get nodes baseline metric sample
-	if config.IncludeNodeBaseline {
+	if config.RetrieveNodeSummaries {
 		config.failedNodeList, err = downloadNodeData("node-baseline-", config, ed, nodeSource)
 		if len(config.failedNodeList) > 0 {
 			log.Printf("Warning: Failed to retrive metric data from %v nodes. Metric samples may be incomplete: %+v",
@@ -652,6 +634,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["poll_interval"] = strconv.Itoa(config.PollInterval)
 	m.Values["provisioning_id"] = config.provisioningID
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
+	m.Values["node_retrieval_method"] = config.nodeRetrievalMethod
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {
