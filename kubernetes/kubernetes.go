@@ -223,7 +223,7 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	if len(config.failedNodeList) > 0 {
-		log.Printf("Failed nodes: %+v", config.failedNodeList)
+		log.Printf("Warning: Failed to get node metrics: %+v", config.failedNodeList)
 	}
 
 	// move baseline metrics for each node into sample directory
