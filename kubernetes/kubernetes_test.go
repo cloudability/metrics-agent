@@ -156,6 +156,7 @@ func TestCreateAgentStatusMetric(t *testing.T) {
 	})
 }
 
+//nolint gocyclo
 func TestCollectMetrics(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -209,28 +210,42 @@ func TestCollectMetrics(t *testing.T) {
 
 		nodeBaselineFiles := []string{}
 		nodeSummaryFiles := []string{}
-		expectedBaselineFiles := []string{"node-baseline-node0.json", "node-baseline-node1.json", "node-baseline-node2.json"}
-		expectedSummaryFiles := []string{"node-summary-node0.json", "node-summary-node1.json", "node-summary-node2.json"}
+		expectedBaselineFiles := []string{
+			"baseline-container-node0.json",
+			"baseline-container-node1.json",
+			"baseline-container-node2.json",
+			"baseline-summary-node0.json",
+			"baseline-summary-node1.json",
+			"baseline-summary-node2.json",
+		}
+		expectedSummaryFiles := []string{
+			"stats-container-node0.json",
+			"stats-container-node1.json",
+			"stats-container-node2.json",
+			"stats-summary-node0.json",
+			"stats-summary-node1.json",
+			"stats-summary-node2.json",
+		}
 
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
 
-			if strings.HasPrefix(info.Name(), "node") {
+			if strings.HasPrefix(info.Name(), "stats-") || strings.HasPrefix(info.Name(), "baseline-") {
 
-				if strings.Contains(info.Name(), "baseline") {
+				if strings.Contains(info.Name(), "baseline-summary") || strings.Contains(info.Name(), "baseline-container-") {
 					nodeBaselineFiles = append(nodeBaselineFiles, info.Name())
 				}
-				if strings.Contains(info.Name(), "summary") {
+				if strings.Contains(info.Name(), "stats-summary") || strings.Contains(info.Name(), "stats-container-") {
 					nodeSummaryFiles = append(nodeSummaryFiles, info.Name())
 				}
 			}
 			return nil
 		})
 		if len(nodeBaselineFiles) != len(expectedBaselineFiles) {
-			t.Errorf("Expected %d baseline node metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
+			t.Errorf("Expected %d baseline metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
 			return
 		}
 		if len(nodeSummaryFiles) != len(expectedSummaryFiles) {
-			t.Errorf("Expected %d baseline node metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
+			t.Errorf("Expected %d summary metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
 			return
 		}
 		for i, n := range expectedBaselineFiles {

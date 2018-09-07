@@ -261,7 +261,7 @@ func fetchNodeBaselines(msd, exportDirectory string) error {
 		if info.IsDir() && filePath != path.Dir(exportDirectory) {
 			return filepath.SkipDir
 		}
-		if strings.HasPrefix(info.Name(), "node-baseline-") {
+		if strings.HasPrefix(info.Name(), "baseline-summary") || strings.HasPrefix(info.Name(), "baseline-container") {
 			err = os.Rename(filePath, filepath.Join(msd, info.Name()))
 			if err != nil {
 				return err
@@ -270,7 +270,7 @@ func fetchNodeBaselines(msd, exportDirectory string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error updating node baseline metrics: %s", err)
+		return fmt.Errorf("error updating baseline metrics: %s", err)
 	}
 	return nil
 }
@@ -280,12 +280,12 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 		if err != nil {
 			return err
 		}
-		if strings.HasPrefix(info.Name(), "node-summary-") {
+		if strings.HasPrefix(info.Name(), "stats-") {
 			if err != nil {
 				return err
 			}
-			nodeName := getNodeName("node-summary-", info.Name())
-			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/node-baseline-%s.json", nodeName)
+			nodeName := getNodeName("stats", info.Name())
+			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s.json", nodeName)
 
 			// update baseline metric for this node with most recent sample from this collection
 			err = util.CopyFileContents(baselineNodeMetric, filePath)
@@ -296,7 +296,7 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error updating node baseline metrics: %s", err)
+		return fmt.Errorf("error updating baseline metrics: %s", err)
 	}
 	return nil
 }
@@ -505,9 +505,9 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 		return fmt.Errorf("error retrieving initial baseline metrics: %s", err)
 	}
 
-	// get nodes baseline metric sample
+	// get baseline metric sample
 	if config.RetrieveNodeSummaries {
-		config.failedNodeList, err = downloadNodeData("node-baseline-", config, ed, nodeSource)
+		config.failedNodeList, err = downloadNodeData("baseline", config, ed, nodeSource)
 		if len(config.failedNodeList) > 0 {
 			log.Printf("Warning: Failed to retrive metric data from %v nodes. Metric samples may be incomplete: %+v",
 				len(config.failedNodeList), config.failedNodeList)

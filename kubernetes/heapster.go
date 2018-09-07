@@ -328,7 +328,7 @@ func getService(namespace string) *apiv1.Service {
 }
 
 func handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample, heapsterMetricExport string) error {
-	// copy into the current sample directory tthe most recent baseline metric export
+	// copy into the current sample directory the most recent baseline metric export
 	err := util.CopyFileContents(msd+"/"+filepath.Base(baselineMetricSample), baselineMetricSample)
 	if err != nil {
 		log.Println("Warning: Previous baseline not found or incomplete")

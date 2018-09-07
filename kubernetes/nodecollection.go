@@ -72,20 +72,28 @@ func downloadNodeData(prefix string,
 				return nil, fmt.Errorf("error: %s", err)
 			}
 			nodeStatSum := "https://" + ip + ":" + strconv.FormatInt(int64(port), 10) + "/stats/summary"
-			_, err = config.NodeClient.GetRawEndPoint(prefix+n.Name, workDir, nodeStatSum)
+			_, err = config.NodeClient.GetRawEndPoint(prefix+"-summary-"+n.Name, workDir, nodeStatSum)
 			if err != nil {
 				failedNodeList[n.Name] = err
-				continue
+			}
+			containerStats := "https://" + ip + ":" + strconv.FormatInt(int64(port), 10) + "/stats/container"
+			_, err = config.NodeClient.GetRawEndPoint(prefix+"-container-"+n.Name, workDir, containerStats)
+			if err != nil {
+				failedNodeList[n.Name] = err
 			}
 			continue
 		}
 
 		// retrieve node summary via kube-proxy
 		nodeStatSum := config.ClusterHostURL + "/api/v1/nodes/" + n.Name + "/proxy/stats/summary"
-		_, err = config.InClusterClient.GetRawEndPoint(prefix+n.Name, workDir, nodeStatSum)
+		_, err = config.InClusterClient.GetRawEndPoint(prefix+"-summary-"+n.Name, workDir, nodeStatSum)
 		if err != nil {
 			failedNodeList[n.Name] = err
-			continue
+		}
+		containerStats := config.ClusterHostURL + "/api/v1/nodes/" + n.Name + "/proxy/stats/container"
+		_, err = config.InClusterClient.GetRawEndPoint(prefix+"-container-"+n.Name, workDir, containerStats)
+		if err != nil {
+			failedNodeList[n.Name] = err
 		}
 		continue
 	}
@@ -145,8 +153,8 @@ func retrieveNodeSummaries(
 
 	config.failedNodeList = map[string]error{}
 
-	// get node stats summaries
-	config.failedNodeList, err = downloadNodeData("node-summary-", config, metricSampleDir, nodeSource)
+	// get node stats data
+	config.failedNodeList, err = downloadNodeData("stats", config, metricSampleDir, nodeSource)
 	if err != nil {
 		return fmt.Errorf("error downloading node metrics: %s", err)
 	}
