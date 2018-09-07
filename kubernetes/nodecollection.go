@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"github.com/cloudability/metrics-agent/util"
@@ -71,12 +70,12 @@ func downloadNodeData(prefix string,
 			if err != nil {
 				return nil, fmt.Errorf("error: %s", err)
 			}
-			nodeStatSum := "https://" + ip + ":" + strconv.FormatInt(int64(port), 10) + "/stats/summary"
+			nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
 			_, err = config.NodeClient.GetRawEndPoint(prefix+"-summary-"+n.Name, workDir, nodeStatSum)
 			if err != nil {
 				failedNodeList[n.Name] = err
 			}
-			containerStats := "https://" + ip + ":" + strconv.FormatInt(int64(port), 10) + "/stats/container"
+			containerStats := fmt.Sprintf("https://%s:%v/stats/container", ip, int64(port))
 			_, err = config.NodeClient.GetRawEndPoint(prefix+"-container-"+n.Name, workDir, containerStats)
 			if err != nil {
 				failedNodeList[n.Name] = err
@@ -85,12 +84,12 @@ func downloadNodeData(prefix string,
 		}
 
 		// retrieve node summary via kube-proxy
-		nodeStatSum := config.ClusterHostURL + "/api/v1/nodes/" + n.Name + "/proxy/stats/summary"
+		nodeStatSum := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, n.Name)
 		_, err = config.InClusterClient.GetRawEndPoint(prefix+"-summary-"+n.Name, workDir, nodeStatSum)
 		if err != nil {
 			failedNodeList[n.Name] = err
 		}
-		containerStats := config.ClusterHostURL + "/api/v1/nodes/" + n.Name + "/proxy/stats/container"
+		containerStats := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container", config.ClusterHostURL, n.Name)
 		_, err = config.InClusterClient.GetRawEndPoint(prefix+"-container-"+n.Name, workDir, containerStats)
 		if err != nil {
 			failedNodeList[n.Name] = err
@@ -115,6 +114,8 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	nodeClient := raw.NewClient(nodeHTTPClient, true, config.BearerToken, 0)
 
+	config.NodeClient = nodeClient
+
 	nodes, err := clientSetNodeSource.GetNodes()
 	if err != nil {
 		return config, fmt.Errorf("error retrieving nodes: %s", err)
@@ -126,23 +127,22 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	}
 
 	// test node direct connectivity
-	nodeStatSum := "https://" + ip + ":" + strconv.FormatInt(int64(port), 10) + "/stats/summary"
+	nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
 	s, _, _ := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, config.BearerToken, 0, false)
 	if s {
-		config.NodeClient = nodeClient
 		config.nodeRetrievalMethod = "direct"
 		return config, nil
 	}
 
 	// test node connectivity via kube-proxy
-	nodeStatSum = config.ClusterHostURL + "/api/v1/nodes/" + nodes.Items[0].Name + "/proxy/stats/summary"
+	nodeStatSum = fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, nodes.Items[0].Name)
 	s, _, err = util.TestHTTPConnection(&config.HTTPClient, nodeStatSum, config.BearerToken, 0, false)
 	if !s && err == nil {
+		config.NodeClient = raw.Client{}
 		config.nodeRetrievalMethod = "proxy"
 		return config, nil
 	}
 
-	config.NodeClient = nodeClient
 	config.nodeRetrievalMethod = "unreachable"
 	config.RetrieveNodeSummaries = false
 	return config, fmt.Errorf("Unable to retrieve node metrics: %v", err)
@@ -174,5 +174,5 @@ func retrieveNodeSummaries(
 	if err != nil {
 		return fmt.Errorf("error updating node baseline files: %s", err)
 	}
-	return err
+	return nil
 }

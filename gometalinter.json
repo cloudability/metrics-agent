@@ -19,7 +19,6 @@
     "interfacer",
     "lll",
     "vet",
-    "gas",
     "dupl",
     "unconvert",
     "errcheck",
