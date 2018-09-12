@@ -191,6 +191,7 @@ func createTGZ(src os.File, writers ...io.Writer) (rerr error) {
 		}
 
 		// open files for taring
+		//nolint gogas
 		f, err := os.Open(file)
 		if err != nil {
 			return err
@@ -229,7 +230,7 @@ func CreateMSWorkingDirectory(uid string) (*os.File, error) {
 	if err != nil {
 		log.Printf("Error creating metric sample export directory : %v", err)
 	}
-
+	//nolint gogas
 	exportDir, err := os.Open(ed)
 	if err != nil {
 		log.Fatalln("Unable to open metric sample export directory")
@@ -239,6 +240,7 @@ func CreateMSWorkingDirectory(uid string) (*os.File, error) {
 }
 
 func removeDirectoryContents(dir string) (err error) {
+	//nolint gogas
 	d, err := os.Open(dir)
 	if err != nil {
 		return err
@@ -264,6 +266,7 @@ func removeDirectoryContents(dir string) (err error) {
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
 func CopyFileContents(dst, src string) (rerr error) {
+	//nolint gogas
 	in, err := os.Open(src)
 	if err != nil {
 		return err

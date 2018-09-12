@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,6 +25,12 @@ type NodeSource interface {
 // ClientsetNodeSource implements NodeSource interface
 type ClientsetNodeSource struct {
 	clientSet kubernetes.Interface
+}
+
+type cadvisorStatsRequest struct {
+	ContainerName string `json:"containerName,omitempty"`
+	NumStats      int    `json:"num_stats,omitempty"`
+	Subcontainers bool   `json:"subcontainers,omitempty"`
 }
 
 // NewClientsetNodeSource returns a ClientsetNodeSource with the given clientSet
@@ -62,6 +69,12 @@ func downloadNodeData(prefix string,
 		return nil, fmt.Errorf("cloudability metric agent is unable to get a list of nodes: %v", err)
 	}
 
+	containersRequest, err := buildContainersRequest()
+
+	if err != nil {
+		return nil, fmt.Errorf("Error occurred requesting container statistics: %v", err)
+	}
+
 	for _, n := range nodes.Items {
 		// retrieve node summary directly from node
 		if config.nodeRetrievalMethod == "direct" {
@@ -71,12 +84,13 @@ func downloadNodeData(prefix string,
 				return nil, fmt.Errorf("error: %s", err)
 			}
 			nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
-			_, err = config.NodeClient.GetRawEndPoint(prefix+"-summary-"+n.Name, workDir, nodeStatSum)
+			_, err = config.NodeClient.GetRawEndPoint(http.MethodGet, prefix+"-summary-"+n.Name, workDir, nodeStatSum, nil)
 			if err != nil {
 				failedNodeList[n.Name] = err
 			}
-			containerStats := fmt.Sprintf("https://%s:%v/stats/container", ip, int64(port))
-			_, err = config.NodeClient.GetRawEndPoint(prefix+"-container-"+n.Name, workDir, containerStats)
+			containerStats := fmt.Sprintf("https://%s:%v/stats/container/", ip, int64(port))
+			_, err = config.NodeClient.GetRawEndPoint(
+				http.MethodPost, prefix+"-container-"+n.Name, workDir, containerStats, containersRequest)
 			if err != nil {
 				failedNodeList[n.Name] = err
 			}
@@ -84,13 +98,14 @@ func downloadNodeData(prefix string,
 		}
 
 		// retrieve node summary via kube-proxy
-		nodeStatSum := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, n.Name)
-		_, err = config.InClusterClient.GetRawEndPoint(prefix+"-summary-"+n.Name, workDir, nodeStatSum)
+		nodeStatSum := fmt.Sprintf("%s/api/v1/nodes/%s:10255/proxy/stats/summary", config.ClusterHostURL, n.Name)
+		_, err = config.InClusterClient.GetRawEndPoint(http.MethodGet, prefix+"-summary-"+n.Name, workDir, nodeStatSum, nil)
 		if err != nil {
 			failedNodeList[n.Name] = err
 		}
-		containerStats := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container", config.ClusterHostURL, n.Name)
-		_, err = config.InClusterClient.GetRawEndPoint(prefix+"-container-"+n.Name, workDir, containerStats)
+		containerStats := fmt.Sprintf("%s/api/v1/nodes/%s:10255/proxy/stats/container/", config.ClusterHostURL, n.Name)
+		_, err = config.InClusterClient.GetRawEndPoint(
+			http.MethodPost, prefix+"-container-"+n.Name, workDir, containerStats, containersRequest)
 		if err != nil {
 			failedNodeList[n.Name] = err
 		}
@@ -128,8 +143,8 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	// test node direct connectivity
 	nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
-	s, _, _ := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, config.BearerToken, 0, false)
-	if s {
+	s, _, err := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, config.BearerToken, 0, false)
+	if s && err == nil {
 		config.nodeRetrievalMethod = "direct"
 		return config, nil
 	}
@@ -175,4 +190,17 @@ func retrieveNodeSummaries(
 		return fmt.Errorf("error updating node baseline files: %s", err)
 	}
 	return nil
+}
+
+func buildContainersRequest() ([]byte, error) {
+	// Request all containers.
+	request := &cadvisorStatsRequest{
+		Subcontainers: true,
+		NumStats:      1,
+	}
+	body, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }

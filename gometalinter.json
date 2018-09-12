@@ -14,6 +14,7 @@
     "gocyclo",
     "golint",
     "goconst",
+    "gosec",
     "misspell",
     "ineffassign",
     "interfacer",

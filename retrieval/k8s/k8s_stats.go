@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
@@ -14,7 +15,7 @@ func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.Fi
 
 	// get v1 sources
 	for _, v1s := range v1Sources {
-		_, err := rawClient.GetRawEndPoint(v1s, workDir, clusterHostURL+"/api/v1/"+v1s)
+		_, err := rawClient.GetRawEndPoint(http.MethodGet, v1s, workDir, clusterHostURL+"/api/v1/"+v1s, nil)
 		if err != nil {
 			log.Printf("Error retrieving "+v1s+" metric endpoint: %s", err)
 			return err
@@ -23,7 +24,8 @@ func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.Fi
 
 	// get v1beta1 sources
 	for _, v1b1s := range v1beta1Sources {
-		_, err := rawClient.GetRawEndPoint(v1b1s, workDir, clusterHostURL+"/apis/extensions/v1beta1/"+v1b1s)
+		_, err := rawClient.GetRawEndPoint(
+			http.MethodGet, v1b1s, workDir, clusterHostURL+"/apis/extensions/v1beta1/"+v1b1s, nil)
 		if err != nil {
 			log.Printf("Error retrieving "+v1b1s+" metric endpoint: %s", err)
 			return err
@@ -31,7 +33,7 @@ func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.Fi
 	}
 
 	// get jobs
-	_, err = rawClient.GetRawEndPoint("jobs", workDir, clusterHostURL+"/apis/batch/v1/jobs")
+	_, err = rawClient.GetRawEndPoint(http.MethodGet, "jobs", workDir, clusterHostURL+"/apis/batch/v1/jobs", nil)
 	if err != nil {
 		log.Printf("Error retrieving jobs metric endpoint: %s", err)
 		return err

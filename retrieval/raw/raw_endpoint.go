@@ -1,6 +1,7 @@
 package raw
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -42,23 +43,25 @@ func (c *Client) createRequest(method, url string, body io.Reader) (*http.Reques
 	}
 
 	if c.bearerToken != "" {
-		request.Header.Add("Authorization", "Bearer "+c.bearerToken)
+		request.Header.Add("Authorization", "bearer "+c.bearerToken)
 	}
 
 	return request, err
 }
 
-//GetRawEndPoint retrives the body of HTTP response from a given sourcename, working directory, and URL
-func (c *Client) GetRawEndPoint(sourceName string,
-	workDir *os.File, URL string) (rawRespFile *os.File, err error) {
+//GetRawEndPoint retrives the body of HTTP response from a given method ,
+// sourcename, working directory, URL, and request body
+func (c *Client) GetRawEndPoint(method, sourceName string,
+	workDir *os.File, URL string, body []byte) (rawRespFile *os.File, err error) {
 
 	attempts := c.retries + 1
+	b := bytes.NewBuffer(body)
 
 	for i := uint(0); i < attempts; i++ {
 		if i > 0 {
 			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
 		}
-		rawRespFile, err = downloadToFile(c, sourceName, workDir, URL, i)
+		rawRespFile, err = downloadToFile(c, method, sourceName, workDir, URL, b, i)
 		if err == nil {
 			return rawRespFile, nil
 		}
@@ -67,14 +70,18 @@ func (c *Client) GetRawEndPoint(sourceName string,
 	return nil, err
 }
 
-func downloadToFile(c *Client, sourceName string,
-	workDir *os.File, URL string, retryCount uint) (rawRespFile *os.File, rerr error) {
+func downloadToFile(c *Client, method, sourceName string,
+	workDir *os.File, URL string, body io.Reader, retryCount uint) (rawRespFile *os.File, rerr error) {
 
 	var fileExt string
 
-	req, err := c.createRequest("GET", URL, nil)
+	req, err := c.createRequest(method, URL, body)
 	if err != nil {
 		return rawRespFile, errors.New("Unable to create raw request for " + sourceName)
+	}
+
+	if method == http.MethodPost {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
 	resp, err := c.HTTPClient.Do(req)

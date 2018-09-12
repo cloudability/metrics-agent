@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	//nolint gosec
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
@@ -197,7 +198,8 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	// get raw Heapster metric sample
-	hme, err := config.InClusterClient.GetRawEndPoint("heapster-metrics-export", metricSampleDir, config.HeapsterURL)
+	hme, err := config.InClusterClient.GetRawEndPoint(
+		http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
 	}
@@ -244,7 +246,7 @@ func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, e
 	if err != nil {
 		return msd, nil, fmt.Errorf("error creating metric sample directory : %v", err)
 	}
-
+	//nolint gosec
 	metricSampleDir, err := os.Open(msd)
 	if err != nil {
 		return msd, metricSampleDir, fmt.Errorf("unable to open metric sample export directory")
@@ -483,7 +485,7 @@ func getClusterVersion(clientset kubernetes.Interface) (cv ClusterVersion, err e
 
 // returns the provisioningID (SHA1 value) generated from a given string
 func getProvisioningID(s string) (string, error) {
-
+	//nolint gosec
 	h := sha1.New()
 	_, err := h.Write([]byte(s))
 	sha1Hash := hex.EncodeToString(h.Sum(nil))
@@ -500,7 +502,7 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 	defer util.SafeClose(ed.Close, &rerr)
 
 	// get baseline metric sample
-	_, err = config.InClusterClient.GetRawEndPoint("baseline-metrics-export", ed, config.HeapsterURL)
+	_, err = config.InClusterClient.GetRawEndPoint(http.MethodGet, "baseline-metrics-export", ed, config.HeapsterURL, nil)
 	if err != nil {
 		return fmt.Errorf("error retrieving initial baseline metrics: %s", err)
 	}

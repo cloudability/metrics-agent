@@ -416,6 +416,7 @@ func (c httpMetricClient) GetUploadURL(
 
 //GetB64MD5Hash returns base64 encoded MD5 Hash
 func GetB64MD5Hash(name string) (b64Hash string, rerr error) {
+	//nolint gosec
 	f, err := os.Open(name)
 	if err != nil {
 		log.Fatal(err)
