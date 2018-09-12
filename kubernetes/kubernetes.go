@@ -219,7 +219,7 @@ func (ka KubeAgentConfig) collectMetrics(
 
 		err = retrieveNodeSummaries(config, msd, metricSampleDir, nodeSource)
 		if err != nil {
-			return fmt.Errorf("Warning: %s", err)
+			log.Printf("Warning: %s", err)
 		}
 	}
 
