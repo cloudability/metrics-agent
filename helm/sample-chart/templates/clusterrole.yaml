@@ -1,0 +1,38 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.configuration.appname }}
+  labels:
+    app: {{ .Values.configuration.appname }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  - "extensions"
+  - "apps"
+  - "batch"
+  resources:
+    - "namespaces"
+    - "replicationcontrollers"
+    - "services"
+    - "nodes"
+    - "pods"
+    - "jobs"
+    - "cronjobs"
+    - "persistentvolumes"
+    - "persistentvolumeclaims"
+    - "deployments"
+    - "replicasets"
+    - "daemonsets"
+  verbs:
+    - "get"
+    - "watch"
+    - "list"
+- apiGroups: [""]
+  resources:
+    - "services/proxy"
+    - "pods/proxy"
+  verbs:
+    - "get"

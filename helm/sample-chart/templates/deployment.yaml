@@ -1,0 +1,41 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    name: {{ .Values.configuration.appname }}
+  name: {{ .Values.configuration.appname }}
+  namespace: {{ .Values.configuration.name }}
+spec:
+  replicas: {{ .Values.configuration.replicaNumber }}
+  selector:
+    matchLabels:
+      app: {{ .Values.configuration.appname }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.configuration.appname }}
+    spec:
+      serviceAccount: {{ .Values.configuration.name }}
+      containers:
+        - image: {{ .Values.configuration.image }}
+          imagePullPolicy: {{ .Values.configuration.pullPolicy }}
+          resources:
+            requests:
+              memory: {{ .Values.resources.memoryRequest }}
+              cpu: {{ .Values.resources.cpuRequest }}
+            limits:
+              memory: {{ .Values.resources.memoryLimit }}
+              cpu: {{ .Values.resources.cpuLimit }}
+          name: {{ .Values.configuration.appname }}
+          args:
+            - "kubernetes"
+          env:
+            - name: "CLOUDABILITY_API_KEY"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.configuration.appname }}
+                  key: CLOUDABILITY_API_KEY
+            - name: CLOUDABILITY_CLUSTER_NAME
+              value: {{ .Values.cluster }}
+            - name: CLOUDABILITY_POLL_INTERVAL
+              value: "180"

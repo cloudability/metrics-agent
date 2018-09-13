@@ -1,0 +1,17 @@
+configuration:
+   replicaNumber: 1
+   appname: cloudability-metrics-agent
+   name: cloudability
+   pullPolicy: Always
+   image: cloudability/metrics-agent:latest
+
+resources:
+  memoryRequest:  "128Mi"
+  memoryLimit: "512Mi"
+  cpuRequest: ".1"
+  cpuLimit : ".5"
+  
+cluster: default
+
+secrets:
+  CLOUDABILITY_API_KEY: ''

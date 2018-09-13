@@ -1,0 +1,5 @@
+
+
+Run the command below to label your cluster. Substituting the values appropriately. The clusters must be labelled in the format below to enable metrics collection. 
+
+gcloud beta container clusters update <cluster-name> --update-labels gke-cluster=<cluster-name> --zone=${cluster-zone} --project=${project-containing-clusters}
