@@ -1,0 +1,19 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.configuration.appname  }}
+  namespace: {{ .Values.configuration.name }}
+  labels:
+    app: {{ .Values.configuration.appname  }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups: ["*"]
+  resources:
+    - "services"
+    - "pods"
+    - "deployments"
+    - "replicasets"
+  verbs: ["get","list"]
+
