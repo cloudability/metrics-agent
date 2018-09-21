@@ -88,8 +88,8 @@ func init() {
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.RetrieveNodeSummaries,
 		"retrieve_node_summaries",
-		true,
-		"When true, includes node summary metrics in metric collection. Default: True",
+		false,
+		"When true, includes node summary metrics in metric collection. Default: False",
 	)
 
 	//nolint gas
