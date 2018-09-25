@@ -115,8 +115,8 @@ func downloadNodeData(prefix string,
 	return failedNodeList, nil
 }
 
-//ensureNodeSource validates connectivity to the cadvisor summary endpoint.
-// If unable to directly connect to the node summary endpoint, attempts to connect via kube-proxy
+//ensureNodeSource validates connectivity to the kubelet metrics endpoints.
+// If unable to directly connect to the node summary & container stats endpoint, attempts to connect via kube-proxy
 func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	nodeHTTPClient := http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
@@ -152,7 +152,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	// test node connectivity via kube-proxy
 	nodeStatSum = fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, nodes.Items[0].Name)
 	s, _, err = util.TestHTTPConnection(&config.HTTPClient, nodeStatSum, config.BearerToken, 0, false)
-	if !s && err == nil {
+	if s && err == nil {
 		config.NodeClient = raw.Client{}
 		config.nodeRetrievalMethod = "proxy"
 		return config, nil
