@@ -59,7 +59,7 @@ func TestTestHTTPConnection(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		b, _, _ := TestHTTPConnection(testClient, ts.URL, "", 10, true)
+		b, _, _ := TestHTTPConnection(testClient, ts.URL, http.MethodGet, "", 10, true)
 		log.Print(strconv.FormatBool(b))
 		if !b {
 			t.Error("invalid connection")
@@ -75,7 +75,7 @@ func TestTestHTTPConnection(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		b, _, err := TestHTTPConnection(testClient, ts.URL, "", 10, true)
+		b, _, err := TestHTTPConnection(testClient, ts.URL, http.MethodGet, "", 10, true)
 		log.Print(strconv.FormatBool(b))
 		if b {
 			t.Errorf("Non 200 should return false : %v", err)

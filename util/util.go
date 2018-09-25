@@ -32,11 +32,11 @@ func IsValidURL(toTest string) bool {
 //a given client / URL(string) / bearerToken(string)/ retries count (int)
 //and returns true if response code is 2xx.
 func TestHTTPConnection(testClient rest.HTTPClient,
-	URL string, bearerToken string, retries uint, verbose bool) (successful bool, body *[]byte, err error) {
+	URL, method, bearerToken string, retries uint, verbose bool) (successful bool, body *[]byte, err error) {
 	IsValidURL(URL)
 	attempts := retries + 1
 
-	req, err := http.NewRequest("GET", URL, nil)
+	req, err := http.NewRequest(method, URL, nil)
 	if err != nil {
 		log.Fatalf("Unable to make new request: %v", err)
 	}

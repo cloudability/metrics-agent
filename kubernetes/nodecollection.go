@@ -143,7 +143,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	// test node direct connectivity
 	nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
-	s, _, err := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, config.BearerToken, 0, false)
+	s, _, err := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
 	if s && err == nil {
 		config.nodeRetrievalMethod = "direct"
 		return config, nil
@@ -151,7 +151,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	// test node connectivity via kube-proxy
 	nodeStatSum = fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, nodes.Items[0].Name)
-	s, _, err = util.TestHTTPConnection(&config.HTTPClient, nodeStatSum, config.BearerToken, 0, false)
+	s, _, err = util.TestHTTPConnection(&config.HTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
 	if s && err == nil {
 		config.NodeClient = raw.Client{}
 		config.nodeRetrievalMethod = "proxy"
