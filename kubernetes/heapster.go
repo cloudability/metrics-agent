@@ -136,7 +136,8 @@ func ensureValidHeapster(config KubeAgentConfig) (KubeAgentConfig, error) {
 	if err != nil {
 		return config, fmt.Errorf("Error launching heapster in the %s namespace: %+v", err, namespace)
 	}
-	innerTest, _, err := util.TestHTTPConnection(client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
+	innerTest, _, err := util.TestHTTPConnection(
+		client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
 	if innerTest || err == nil {
 		log.Printf("Connected to heapster at: %v", config.HeapsterURL)
 	}
@@ -145,7 +146,8 @@ func ensureValidHeapster(config KubeAgentConfig) (KubeAgentConfig, error) {
 }
 
 func validateHeapster(config KubeAgentConfig, client rest.HTTPClient, namespace string) (KubeAgentConfig, error) {
-	outerTest, body, err := util.TestHTTPConnection(client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
+	outerTest, body, err := util.TestHTTPConnection(
+		client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
 
 	var me heapsterMetricExport
 
@@ -162,7 +164,8 @@ func validateHeapster(config KubeAgentConfig, client rest.HTTPClient, namespace 
 		if err != nil {
 			return config, fmt.Errorf("Error launching heapster in the %s namespace: %+v", err, namespace)
 		}
-		innerTest, _, err := util.TestHTTPConnection(client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
+		innerTest, _, err := util.TestHTTPConnection(
+			client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
 		if innerTest {
 			log.Printf("Connected to heapster at: %v", config.HeapsterURL)
 		}
@@ -176,7 +179,8 @@ func validateHeapster(config KubeAgentConfig, client rest.HTTPClient, namespace 
 		if err != nil {
 			return config, fmt.Errorf("Error launching heapster in the Cloudability namespace: %+v", err)
 		}
-		innerTest, _, err := util.TestHTTPConnection(client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
+		innerTest, _, err := util.TestHTTPConnection(
+			client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
 		if innerTest || err == nil {
 			log.Printf("Connected to heapster at: %v", config.HeapsterURL)
 		}
