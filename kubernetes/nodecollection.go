@@ -144,10 +144,14 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	// test node direct connectivity
 	nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
 	containerStats := fmt.Sprintf("https://%s:%v/stats/container/", ip, int64(port))
-	//nolint gosec
-	ns, _, _ := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
-	//nolint gosec
-	cs, _, _ := util.TestHTTPConnection(&nodeHTTPClient, containerStats, http.MethodPost, config.BearerToken, 0, false)
+	ns, _, err := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
+	if err != nil {
+		return config, err
+	}
+	cs, _, err := util.TestHTTPConnection(&nodeHTTPClient, containerStats, http.MethodPost, config.BearerToken, 0, false)
+	if err != nil {
+		return config, err
+	}
 	if ns && cs {
 		config.nodeRetrievalMethod = "direct"
 		return config, nil
@@ -156,10 +160,14 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	// test node connectivity via kube-proxy
 	nodeStatSum = fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, nodes.Items[0].Name)
 	containerStats = fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container/", config.ClusterHostURL, nodes.Items[0].Name)
-	//nolint gosec
-	ns, _, _ = util.TestHTTPConnection(&config.HTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
-	//nolint gosec
-	cs, _, _ = util.TestHTTPConnection(&config.HTTPClient, containerStats, http.MethodPost, config.BearerToken, 0, false)
+	ns, _, err = util.TestHTTPConnection(&config.HTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
+	if err != nil {
+		return config, err
+	}
+	cs, _, err = util.TestHTTPConnection(&config.HTTPClient, containerStats, http.MethodPost, config.BearerToken, 0, false)
+	if err != nil {
+		return config, err
+	}
 	if ns && cs {
 		config.NodeClient = raw.Client{}
 		config.nodeRetrievalMethod = "proxy"
