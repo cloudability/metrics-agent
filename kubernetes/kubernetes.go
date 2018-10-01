@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	//nolint gosec
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
@@ -48,28 +49,32 @@ type ClusterVersion struct {
 //KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
 	APIKey                string
+	BearerToken           string
+	Cert                  string
 	ClusterName           string
-	AgentStartTime        time.Time
 	ClusterHostURL        string
 	clusterUID            string
-	ClusterVersion        ClusterVersion
-	Clientset             kubernetes.Interface
-	HeapsterProxyURL      url.URL
 	HeapsterOverrideURL   string
 	HeapsterURL           string
-	HTTPClient            http.Client
-	OutboundProxy         string
-	OutboundProxyAuth     string
-	OutboundProxyURL      url.URL
-	OutboundProxyInsecure bool
-	Insecure              bool
-	UseInClusterConfig    bool
-	IncludeNodeBaseline   bool
-	PollInterval          int
-	provisioningID        string
-	Cert                  string
 	Key                   string
-	BearerToken           string
+	nodeRetrievalMethod   string
+	OutboundProxyAuth     string
+	OutboundProxy         string
+	provisioningID        string
+	RetrieveNodeSummaries bool
+	Insecure              bool
+	OutboundProxyInsecure bool
+	UseInClusterConfig    bool
+	PollInterval          int
+	failedNodeList        map[string]error
+	AgentStartTime        time.Time
+	Clientset             kubernetes.Interface
+	ClusterVersion        ClusterVersion
+	HeapsterProxyURL      url.URL
+	OutboundProxyURL      url.URL
+	HTTPClient            http.Client
+	NodeClient            raw.Client
+	InClusterClient       raw.Client
 	msExportDirectory     *os.File
 	TLSClientConfig       rest.TLSClientConfig
 }
@@ -192,11 +197,9 @@ func (ka KubeAgentConfig) collectMetrics(
 		return err
 	}
 
-	//Create Raw Client
-	rawClient := raw.NewClient(config.HTTPClient, config.Insecure, config.BearerToken, 3)
-
 	// get raw Heapster metric sample
-	hme, err := rawClient.GetRawEndPoint("heapster-metrics-export", metricSampleDir, config.HeapsterURL)
+	hme, err := config.InClusterClient.GetRawEndPoint(
+		http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
 	}
@@ -212,28 +215,17 @@ func (ka KubeAgentConfig) collectMetrics(
 		}
 	}
 
-	if config.IncludeNodeBaseline {
-		// get node stats summaries
-		err = downloadNodeData("node-summary-", config, metricSampleDir, rawClient, nodeSource)
-		if err != nil {
-			return fmt.Errorf("error downloading node metrics: %s", err)
-		}
+	if config.RetrieveNodeSummaries {
 
-		// move baseline metrics for each node into sample directory
-		err = fetchNodeBaselines(msd, config.msExportDirectory.Name())
+		err = retrieveNodeSummaries(config, msd, metricSampleDir, nodeSource)
 		if err != nil {
-			return fmt.Errorf("error fetching node baseline files: %s", err)
-		}
-
-		// update node baselines with current sample
-		err = updateNodeBaselines(msd, config.msExportDirectory.Name())
-		if err != nil {
-			return fmt.Errorf("error updating node baseline files: %s", err)
+			log.Printf("Warning: %s", err)
 		}
 	}
 
 	// export additional metrics from the k8s api to the metric sample directory
-	err = k8s_stats.GetK8sMetrics(config.ClusterHostURL, config.ClusterVersion.version, metricSampleDir, rawClient)
+	err = k8s_stats.GetK8sMetrics(
+		config.ClusterHostURL, config.ClusterVersion.version, metricSampleDir, config.InClusterClient)
 	if err != nil {
 		return fmt.Errorf("unable to export k8s metrics: %s", err)
 	}
@@ -254,7 +246,7 @@ func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, e
 	if err != nil {
 		return msd, nil, fmt.Errorf("error creating metric sample directory : %v", err)
 	}
-
+	//nolint gosec
 	metricSampleDir, err := os.Open(msd)
 	if err != nil {
 		return msd, metricSampleDir, fmt.Errorf("unable to open metric sample export directory")
@@ -271,7 +263,7 @@ func fetchNodeBaselines(msd, exportDirectory string) error {
 		if info.IsDir() && filePath != path.Dir(exportDirectory) {
 			return filepath.SkipDir
 		}
-		if strings.HasPrefix(info.Name(), "node-baseline-") {
+		if strings.HasPrefix(info.Name(), "baseline-summary") || strings.HasPrefix(info.Name(), "baseline-container") {
 			err = os.Rename(filePath, filepath.Join(msd, info.Name()))
 			if err != nil {
 				return err
@@ -280,7 +272,7 @@ func fetchNodeBaselines(msd, exportDirectory string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error updating node baseline metrics: %s", err)
+		return fmt.Errorf("error updating baseline metrics: %s", err)
 	}
 	return nil
 }
@@ -290,12 +282,12 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 		if err != nil {
 			return err
 		}
-		if strings.HasPrefix(info.Name(), "node-summary-") {
+		if strings.HasPrefix(info.Name(), "stats-") {
 			if err != nil {
 				return err
 			}
-			nodeName := getNodeName("node-summary-", info.Name())
-			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/node-baseline-%s.json", nodeName)
+			nodeName := getNodeName("stats", info.Name())
+			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s.json", nodeName)
 
 			// update baseline metric for this node with most recent sample from this collection
 			err = util.CopyFileContents(baselineNodeMetric, filePath)
@@ -306,7 +298,7 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error updating node baseline metrics: %s", err)
+		return fmt.Errorf("error updating baseline metrics: %s", err)
 	}
 	return nil
 }
@@ -411,17 +403,19 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	if err != nil {
 		return updatedConfig, err
 	}
-	updatedConfig.clusterUID, err = getNamespaceUID(config.Clientset, "default")
+	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure, config.BearerToken, 3)
+
+	updatedConfig.clusterUID, err = getNamespaceUID(updatedConfig.Clientset, "default")
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable to find the default namespace: %v", err)
 	}
 
-	updatedConfig.ClusterVersion, err = getClusterVersion(config.Clientset)
+	updatedConfig.ClusterVersion, err = getClusterVersion(updatedConfig.Clientset)
 	if err != nil {
 		log.Printf("cloudability metric agent is unable to determine the cluster version: %v", err)
 	}
 
-	updatedConfig.provisioningID, err = getProvisioningID(config.APIKey)
+	updatedConfig.provisioningID, err = getProvisioningID(updatedConfig.APIKey)
 
 	return updatedConfig, err
 }
@@ -491,7 +485,7 @@ func getClusterVersion(clientset kubernetes.Interface) (cv ClusterVersion, err e
 
 // returns the provisioningID (SHA1 value) generated from a given string
 func getProvisioningID(s string) (string, error) {
-
+	//nolint gosec
 	h := sha1.New()
 	_, err := h.Write([]byte(s))
 	sha1Hash := hex.EncodeToString(h.Sum(nil))
@@ -507,18 +501,19 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 
 	defer util.SafeClose(ed.Close, &rerr)
 
-	//Create Raw Client
-	rawClient := raw.NewClient(config.HTTPClient, config.Insecure, config.BearerToken, 3)
-
 	// get baseline metric sample
-	_, err = rawClient.GetRawEndPoint("baseline-metrics-export", ed, config.HeapsterURL)
+	_, err = config.InClusterClient.GetRawEndPoint(http.MethodGet, "baseline-metrics-export", ed, config.HeapsterURL, nil)
 	if err != nil {
 		return fmt.Errorf("error retrieving initial baseline metrics: %s", err)
 	}
 
 	// get baseline metric sample
-	if config.IncludeNodeBaseline {
-		err = downloadNodeData("node-baseline-", config, ed, rawClient, nodeSource)
+	if config.RetrieveNodeSummaries {
+		config.failedNodeList, err = downloadNodeData("baseline", config, ed, nodeSource)
+		if len(config.failedNodeList) > 0 {
+			log.Printf("Warning: Failed to retrive metric data from %v nodes. Metric samples may be incomplete: %+v",
+				len(config.failedNodeList), config.failedNodeList)
+		}
 	}
 
 	return err
@@ -540,7 +535,13 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) KubeAgentConfig {
 	config, err := ensureValidHeapster(config)
 	if err != nil {
 		log.Printf("Unable to validate heapster connectivity: %v exiting", err)
-		os.Exit(0)
+		os.Exit(1)
+	}
+	config, err = ensureNodeSource(config)
+	if err != nil {
+		log.Printf("Warning non-fatal error: Agent error occurred retrieving node source metrics: %s ", err)
+		log.Println("For more information see: ")
+		log.Println("https://support.cloudability.com/hc/en-us/articles/360008368193-Kubernetes-Metrics-Agent-Error-Messages")
 	}
 	return config
 }
@@ -614,6 +615,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 		Tags:      make(map[string]string),
 		Metrics:   make(map[string]uint64),
 		Values:    make(map[string]string),
+		Errors:    make([]measurement.ErrorDetail, 0),
 		Timestamp: sampleStartTime.Unix(),
 	}
 
@@ -634,12 +636,23 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["poll_interval"] = strconv.Itoa(config.PollInterval)
 	m.Values["provisioning_id"] = config.provisioningID
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
+	m.Values["node_retrieval_method"] = config.nodeRetrievalMethod
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {
 		m.Values["outbound_proxy_auth"] = "false"
 	}
 	m.Metrics["uptime"] = uint64(now.Sub(config.AgentStartTime).Seconds())
+	if len(config.failedNodeList) > 0 {
+
+		for k, v := range config.failedNodeList {
+			m.Errors = append(m.Errors, measurement.ErrorDetail{
+				Name:    k,
+				Message: v.Error(),
+				Type:    "node_error",
+			})
+		}
+	}
 
 	if err != nil {
 		log.Printf("Error creating Cloudability Agent status m : %v", err)

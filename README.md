@@ -21,6 +21,7 @@ The agent requires that it runs in a namespace named "cloudability" with a servi
 | CLOUDABILITY_OUTBOUND_PROXY_AUTH        | Optional: Basic Authentication credentials to be used with the defined outbound proxy. If your outbound proxy requires basic authentication credentials can be defined in the form username:password |
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE        | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
 | CLOUDABILITY_INSECURE        | Optional: When true, does not verify certificates when making TLS connections. Default: False|
+| CLOUDABILITY_RETRIEVE_NODE_SUMMARIES        | Optional: When true, collects metrics directly from each node in a cluster. Default: False|
 
 ```sh
 
