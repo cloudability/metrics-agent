@@ -32,11 +32,11 @@ func IsValidURL(toTest string) bool {
 //a given client / URL(string) / bearerToken(string)/ retries count (int)
 //and returns true if response code is 2xx.
 func TestHTTPConnection(testClient rest.HTTPClient,
-	URL string, bearerToken string, retries uint) (successful bool, body *[]byte, err error) {
+	URL, method, bearerToken string, retries uint, verbose bool) (successful bool, body *[]byte, err error) {
 	IsValidURL(URL)
 	attempts := retries + 1
 
-	req, err := http.NewRequest("GET", URL, nil)
+	req, err := http.NewRequest(method, URL, nil)
 	if err != nil {
 		log.Fatalf("Unable to make new request: %v", err)
 	}
@@ -47,7 +47,9 @@ func TestHTTPConnection(testClient rest.HTTPClient,
 	for i := uint(0); i < attempts; i++ {
 		resp, err := testClient.Do(req)
 		if err != nil {
-			log.Printf("Unable to connect to URL: %s retrying: %v", URL, i+1)
+			if verbose {
+				log.Printf("Unable to connect to URL: %s retrying: %v", URL, i+1)
+			}
 			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
 			continue
 		}
@@ -189,6 +191,7 @@ func createTGZ(src os.File, writers ...io.Writer) (rerr error) {
 		}
 
 		// open files for taring
+		//nolint gosec
 		f, err := os.Open(file)
 		if err != nil {
 			return err
@@ -227,7 +230,7 @@ func CreateMSWorkingDirectory(uid string) (*os.File, error) {
 	if err != nil {
 		log.Printf("Error creating metric sample export directory : %v", err)
 	}
-
+	//nolint gosec
 	exportDir, err := os.Open(ed)
 	if err != nil {
 		log.Fatalln("Unable to open metric sample export directory")
@@ -237,6 +240,7 @@ func CreateMSWorkingDirectory(uid string) (*os.File, error) {
 }
 
 func removeDirectoryContents(dir string) (err error) {
+	//nolint gosec
 	d, err := os.Open(dir)
 	if err != nil {
 		return err
@@ -262,6 +266,7 @@ func removeDirectoryContents(dir string) (err error) {
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
 func CopyFileContents(dst, src string) (rerr error) {
+	//nolint gosec
 	in, err := os.Open(src)
 	if err != nil {
 		return err

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cloudability/metrics-agent/retrieval/raw"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/pkg/api/v1"
@@ -155,6 +156,7 @@ func TestCreateAgentStatusMetric(t *testing.T) {
 	})
 }
 
+//nolint gocyclo
 func TestCollectMetrics(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +168,12 @@ func TestCollectMetrics(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	cs := fake.NewSimpleClientset()
+	cs := fake.NewSimpleClientset(
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node0", Namespace: v1.NamespaceDefault}},
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node1", Namespace: v1.NamespaceDefault}},
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node2", Namespace: v1.NamespaceDefault}},
+	)
+
 	sv, _ := cs.Discovery().ServerVersion()
 	dir, _ := ioutil.TempDir("", "TestCollectMetrics")
 	tDir, _ := os.Open(dir)
@@ -176,18 +183,19 @@ func TestCollectMetrics(t *testing.T) {
 			version:     1.1,
 			versionInfo: sv,
 		},
-		Clientset:           cs,
-		HTTPClient:          http.Client{},
-		msExportDirectory:   tDir,
-		UseInClusterConfig:  false,
-		ClusterHostURL:      ts.URL,
-		HeapsterURL:         ts.URL,
-		Insecure:            true,
-		BearerToken:         "",
-		IncludeNodeBaseline: true,
+		Clientset:             cs,
+		HTTPClient:            http.Client{},
+		msExportDirectory:     tDir,
+		UseInClusterConfig:    false,
+		ClusterHostURL:        ts.URL,
+		HeapsterURL:           ts.URL,
+		Insecure:              true,
+		BearerToken:           "",
+		RetrieveNodeSummaries: true,
 	}
-	fns := fakeNodeSource{}
-	fns.Nodes = []string{"node0", "node1", "node2"}
+
+	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)
+	fns := NewClientsetNodeSource(cs)
 
 	t.Run("Ensure that a collection occurs", func(t *testing.T) {
 		// download the initial baseline...like a typical CollectKubeMetrics would
@@ -202,28 +210,42 @@ func TestCollectMetrics(t *testing.T) {
 
 		nodeBaselineFiles := []string{}
 		nodeSummaryFiles := []string{}
-		expectedBaselineFiles := []string{"node-baseline-node0.json", "node-baseline-node1.json", "node-baseline-node2.json"}
-		expectedSummaryFiles := []string{"node-summary-node0.json", "node-summary-node1.json", "node-summary-node2.json"}
+		expectedBaselineFiles := []string{
+			"baseline-container-node0.json",
+			"baseline-container-node1.json",
+			"baseline-container-node2.json",
+			"baseline-summary-node0.json",
+			"baseline-summary-node1.json",
+			"baseline-summary-node2.json",
+		}
+		expectedSummaryFiles := []string{
+			"stats-container-node0.json",
+			"stats-container-node1.json",
+			"stats-container-node2.json",
+			"stats-summary-node0.json",
+			"stats-summary-node1.json",
+			"stats-summary-node2.json",
+		}
 
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
 
-			if strings.HasPrefix(info.Name(), "node") {
+			if strings.HasPrefix(info.Name(), "stats-") || strings.HasPrefix(info.Name(), "baseline-") {
 
-				if strings.Contains(info.Name(), "baseline") {
+				if strings.Contains(info.Name(), "baseline-summary") || strings.Contains(info.Name(), "baseline-container-") {
 					nodeBaselineFiles = append(nodeBaselineFiles, info.Name())
 				}
-				if strings.Contains(info.Name(), "summary") {
+				if strings.Contains(info.Name(), "stats-summary") || strings.Contains(info.Name(), "stats-container-") {
 					nodeSummaryFiles = append(nodeSummaryFiles, info.Name())
 				}
 			}
 			return nil
 		})
 		if len(nodeBaselineFiles) != len(expectedBaselineFiles) {
-			t.Errorf("Expected %d baseline node metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
+			t.Errorf("Expected %d baseline metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
 			return
 		}
 		if len(nodeSummaryFiles) != len(expectedSummaryFiles) {
-			t.Errorf("Expected %d baseline node metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
+			t.Errorf("Expected %d summary metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
 			return
 		}
 		for i, n := range expectedBaselineFiles {
@@ -255,12 +277,4 @@ func TestSetProxyURL(t *testing.T) {
 		}
 	})
 
-}
-
-type fakeNodeSource struct {
-	Nodes []string
-}
-
-func (fns fakeNodeSource) GetNodes() ([]string, error) {
-	return fns.Nodes, nil
 }
