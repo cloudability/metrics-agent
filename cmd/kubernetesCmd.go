@@ -110,7 +110,7 @@ func init() {
 	_ = viper.BindPFlag("outbound_proxy_insecure", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_insecure"))
 	_ = viper.BindPFlag("insecure", kubernetesCmd.PersistentFlags().Lookup("insecure"))
 	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
-    _ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
+	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
