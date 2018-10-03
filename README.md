@@ -15,7 +15,7 @@ The agent requires that it runs in a namespace named "cloudability" with a servi
 | --------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------:|
 | CLOUDABILITY_API_KEY                    | Required: Cloudability api key                                                                                                       |
 | CLOUDABILITY_CLUSTER_NAME               | Required: The cluster name to be used for the cluster the agent is running in.                                                       |
-| CLOUDABILITY_POLL_INTERVAL              | Optional: The interval (Seconds) to poll metrics. Default: 300                                                                       |
+| CLOUDABILITY_POLL_INTERVAL              | Optional: The interval (Seconds) to poll metrics. Default: 180                                                                       |
 | CLOUDABILITY_HEAPSTER_URL               | Optional: Only required if heapster is not deployed as a service in your cluster or is only accessable via a specific URL.           |
 | CLOUDABILITY_OUTBOUND_PROXY             | Optional: The URL of an outbound HTTP/HTTPS proxy for the agent to use (eg: http://x.x.x.x:8080). The URL must contain the scheme prefix (http:// or https://)  |
 | CLOUDABILITY_OUTBOUND_PROXY_AUTH        | Optional: Basic Authentication credentials to be used with the defined outbound proxy. If your outbound proxy requires basic authentication credentials can be defined in the form username:password |
