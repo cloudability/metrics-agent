@@ -122,19 +122,18 @@ func ensureValidHeapster(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	client := &config.HTTPClient
 	var err error
-	namespace := "cloudability"
 
 	// if Heapster is found in the cluster, test to make sure we can connect to it
 	// or launch an instance in the cloudability namespace. Make sure and close the returned response body.
 	if config.HeapsterURL != "" {
-		return validateHeapster(config, client, namespace)
+		return validateHeapster(config, client, config.Namespace)
 	}
-	log.Printf("Could not find heapster running in the cluster, launching a copy in the %s namespace.", namespace)
+	log.Printf("Could not find heapster running in the cluster, launching a copy in the %s namespace.", config.Namespace)
 
-	config.HeapsterURL, err = launchHeapster(config.Clientset, config.UseInClusterConfig, namespace)
+	config.HeapsterURL, err = launchHeapster(config.Clientset, config.UseInClusterConfig, config.Namespace)
 
 	if err != nil {
-		return config, fmt.Errorf("Error launching heapster in the %s namespace: %+v", err, namespace)
+		return config, fmt.Errorf("Error launching heapster in the %s namespace: %+v", err, config.Namespace)
 	}
 	innerTest, _, err := util.TestHTTPConnection(
 		client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
