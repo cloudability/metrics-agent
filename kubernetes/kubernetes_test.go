@@ -133,7 +133,7 @@ func TestUpdateConfigWithOverrideNamespace(t *testing.T) {
 		APIKey:       "1234-456-789",
 		PollInterval: 600,
 		Insecure:     false,
-        Namespace:    "testing-namespace",
+		Namespace:    "testing-namespace",
 	}
 	t.Run("ensure that namespace is set correctly", func(t *testing.T) {
 		config, _ := createClusterConfig(config)

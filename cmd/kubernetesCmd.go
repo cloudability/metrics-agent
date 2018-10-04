@@ -91,12 +91,12 @@ func init() {
 		false,
 		"When true, includes node summary metrics in metric collection. Default: False",
 	)
-    kubernetesCmd.PersistentFlags().StringVar(
-        &config.Namespace,
-        "namespace",
-        "",
-        "Kubernetes Namespace that the Agent is Running In",
-    )
+	kubernetesCmd.PersistentFlags().StringVar(
+		&config.Namespace,
+		"namespace",
+		"cloudability",
+		"Kubernetes Namespace that the Agent is Running In",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -133,6 +133,7 @@ func init() {
 		Cert:                  viper.GetString("certificate_file"),
 		Key:                   viper.GetString("key_file"),
 		RetrieveNodeSummaries: viper.GetBool("retrieve_node_summaries"),
+		Namespace:             viper.GetString("namespace"),
 	}
 
 }

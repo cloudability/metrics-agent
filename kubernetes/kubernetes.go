@@ -387,6 +387,9 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	config.Key = thisConfig.KeyFile
 	config.TLSClientConfig.CAFile = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	config.BearerToken = thisConfig.BearerToken
+	if config.Namespace == "" {
+		config.Namespace = "cloudability"
+	}
 
 	config.Clientset, err = kubernetes.NewForConfig(thisConfig)
 	return config, err
