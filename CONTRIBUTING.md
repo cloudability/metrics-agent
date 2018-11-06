@@ -19,6 +19,7 @@ Here are some items to check when submitting your PR:
   * summarize your PR with an explanatory title and a message describing your
     changes, cross-referencing any related bugs/PRs.
   * open your PR against the `master` branch.
+  * Agree to the Contributor License Agreement (CLA) (you will be prompted if you have not done so when you open the PR)
 
 Pull request must pass all CI tests before we will merge it.
 
