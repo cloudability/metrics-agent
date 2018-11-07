@@ -38,8 +38,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const namespace string = "cloudability"
-
 //ClusterVersion contains a concatenated version number as well as the k8s version discovery info
 type ClusterVersion struct {
 	version     float64
@@ -77,6 +75,7 @@ type KubeAgentConfig struct {
 	InClusterClient       raw.Client
 	msExportDirectory     *os.File
 	TLSClientConfig       rest.TLSClientConfig
+	Namespace             string
 }
 
 const uploadInterval time.Duration = 10
@@ -93,7 +92,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 			"Poll interval:\t%v\n"+
 			"Outbound Proxy:\t%v\n"+
 			"Outbound Proxy Insecure:\t%v\n"+
-			"Insecure:\t%v\n",
+			"Insecure:\t%v\n"+
+			"Namespace:\t%v\n",
 		config.APIKey,
 		config.ClusterName,
 		config.HeapsterOverrideURL,
@@ -101,6 +101,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		config.OutboundProxy,
 		config.OutboundProxyInsecure,
 		config.Insecure,
+		config.Namespace,
 	)
 
 	// Create k8s agent
@@ -118,7 +119,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 	pollChan := time.NewTicker(time.Duration(config.PollInterval) * time.Second)
 
-	err := fetchDiagnostics(kubeAgent.Clientset, kubeAgent.msExportDirectory)
+	err := fetchDiagnostics(kubeAgent.Clientset, config.Namespace, kubeAgent.msExportDirectory)
 
 	if err != nil {
 		log.Printf("Warning non-fatal error: Agent error occurred retrieving runtime diagnostics: %s ", err)
@@ -386,6 +387,9 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	config.Key = thisConfig.KeyFile
 	config.TLSClientConfig.CAFile = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	config.BearerToken = thisConfig.BearerToken
+	if config.Namespace == "" {
+		config.Namespace = "cloudability"
+	}
 
 	config.Clientset, err = kubernetes.NewForConfig(thisConfig)
 	return config, err
@@ -699,7 +703,7 @@ func getPodLogs(clientset kubernetes.Interface,
 	return err
 }
 
-func fetchDiagnostics(clientset kubernetes.Interface, msExportDirectory *os.File) (err error) {
+func fetchDiagnostics(clientset kubernetes.Interface, namespace string, msExportDirectory *os.File) (err error) {
 
 	pods, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 	if err != nil {

@@ -126,6 +126,23 @@ func TestUpdateConfigWithOverrideURLs(t *testing.T) {
 
 }
 
+func TestUpdateConfigWithOverrideNamespace(t *testing.T) {
+	t.Parallel()
+
+	config := KubeAgentConfig{
+		APIKey:       "1234-456-789",
+		PollInterval: 600,
+		Insecure:     false,
+		Namespace:    "testing-namespace",
+	}
+	t.Run("ensure that namespace is set correctly", func(t *testing.T) {
+		config, _ := createClusterConfig(config)
+		if config.Namespace != "testing-namespace" {
+			t.Errorf("Expected Namespace to be \"testing-namespace\" but received \"%v\" ", config.Namespace)
+		}
+	})
+}
+
 func TestCreateAgentStatusMetric(t *testing.T) {
 
 	AgentStartTime := time.Now()

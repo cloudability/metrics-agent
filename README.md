@@ -7,7 +7,7 @@ The metrics-agent collects allocation metrics from a container orchestration sys
 
 ## Kubernetes
 
-The agent requires that it runs in a namespace named "cloudability" with a service account, pulling metrics from the Kubernetes API and [Heapster](https://github.com/kubernetes/heapster).  The agent will attempt to connect to heapster, and if unable to communicate with it, the agent will launch Heapster as a service in the cloudability namespace. An example kubernetes deployment can be found [here](deploy/kubernetes/cloudability-metrics-agent.yaml).
+The agent will default to the "cloudability" namespace, but it can be overridden by specifying `CLOUDABILITY_NAMESPACE` or `--namespace=<NAMESPACE>` on the command-line. Once deployed, along with a service account, it will being pulling metrics from the Kubernetes API and [Heapster](https://github.com/kubernetes/heapster).  The agent will attempt to connect to heapster, and if unable to communicate with it, the agent will launch Heapster as a service in the cloudability namespace. An example kubernetes deployment can be found [here](deploy/kubernetes/cloudability-metrics-agent.yaml).
 
 ### Configuration Options
 
@@ -19,9 +19,10 @@ The agent requires that it runs in a namespace named "cloudability" with a servi
 | CLOUDABILITY_HEAPSTER_URL               | Optional: Only required if heapster is not deployed as a service in your cluster or is only accessable via a specific URL.           |
 | CLOUDABILITY_OUTBOUND_PROXY             | Optional: The URL of an outbound HTTP/HTTPS proxy for the agent to use (eg: http://x.x.x.x:8080). The URL must contain the scheme prefix (http:// or https://)  |
 | CLOUDABILITY_OUTBOUND_PROXY_AUTH        | Optional: Basic Authentication credentials to be used with the defined outbound proxy. If your outbound proxy requires basic authentication credentials can be defined in the form username:password |
-| CLOUDABILITY_OUTBOUND_PROXY_INSECURE        | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
-| CLOUDABILITY_INSECURE        | Optional: When true, does not verify certificates when making TLS connections. Default: False|
-| CLOUDABILITY_RETRIEVE_NODE_SUMMARIES        | Optional: When true, collects metrics directly from each node in a cluster. Default: False|
+| CLOUDABILITY_OUTBOUND_PROXY_INSECURE    | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
+| CLOUDABILITY_INSECURE                   | Optional: When true, does not verify certificates when making TLS connections. Default: False|
+| CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. Default: False|
+| CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent is running it Default: `cloudability`|
 
 ```sh
 
@@ -43,6 +44,7 @@ Flags:
       --outbound_proxy_auth string               Outbound proxy basic authentication credentials. Must defined in the form username:password - Optional
       --outbound_proxy_insecure                  When true, does not verify TLS certificates when using the outbound proxy. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
+      --namespace string                         The namespace which the agent is running inside of (default `cloudability`)
 ```
 
 ## Development
