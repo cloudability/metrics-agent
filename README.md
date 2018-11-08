@@ -22,7 +22,7 @@ By default, the agent runs in a namespace named "cloudability" (see options belo
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE    | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
 | CLOUDABILITY_INSECURE                   | Optional: When true, does not verify certificates when making TLS connections. Default: False|
 | CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. Default: False|
-| CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negativly affect the agents ability to collect data. Default: `cloudability`|
+| CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`|
 
 ```sh
 
