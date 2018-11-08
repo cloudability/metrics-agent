@@ -7,7 +7,7 @@ The metrics-agent collects allocation metrics from a container orchestration sys
 
 ## Kubernetes
 
-The agent will default to the "cloudability" namespace, but it can be overridden by specifying `CLOUDABILITY_NAMESPACE` or `--namespace=<NAMESPACE>` on the command-line. Once deployed, along with a service account, it will being pulling metrics from the Kubernetes API and [Heapster](https://github.com/kubernetes/heapster).  The agent will attempt to connect to heapster, and if unable to communicate with it, the agent will launch Heapster as a service in the cloudability namespace. An example kubernetes deployment can be found [here](deploy/kubernetes/cloudability-metrics-agent.yaml).
+By default, the agent runs in a namespace named "cloudability" (see options below).  Once deployed, the agent will pull metrics from the Kubernetes API and [Heapster](https://github.com/kubernetes/heapster).  The agent will attempt to connect to heapster, and if unable to communicate with it, the agent will attempt to launch Heapster as a service in the cloudability namespace. An example kubernetes deployment can be found [here](deploy/kubernetes/cloudability-metrics-agent.yaml). 
 
 ### Configuration Options
 
@@ -22,7 +22,7 @@ The agent will default to the "cloudability" namespace, but it can be overridden
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE    | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
 | CLOUDABILITY_INSECURE                   | Optional: When true, does not verify certificates when making TLS connections. Default: False|
 | CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. Default: False|
-| CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent is running it Default: `cloudability`|
+| CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`|
 
 ```sh
 
@@ -44,14 +44,14 @@ Flags:
       --outbound_proxy_auth string               Outbound proxy basic authentication credentials. Must defined in the form username:password - Optional
       --outbound_proxy_insecure                  When true, does not verify TLS certificates when using the outbound proxy. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
-      --namespace string                         The namespace which the agent is running inside of (default `cloudability`)
+      --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
 ```
 
 ## Development
 
 ### Dependency management
 
-We're using [dep](https://github.com/golang/dep) to manage our Go dependencies.
+We're using [dep](https://github.com/golang/dep) to manage Go dependencies.
 
 ### Source Code Analysis
 
