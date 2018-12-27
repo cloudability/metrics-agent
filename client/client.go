@@ -2,11 +2,6 @@ package client
 
 import (
 	"bytes"
-	"net/url"
-	"strings"
-
-	// nolint gas
-	"crypto/md5"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -19,15 +14,20 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cloudability/metrics-agent/measurement"
 	"github.com/cloudability/metrics-agent/util"
 	"github.com/cloudability/metrics-agent/version"
 )
+
+//nolint gosec
+import "crypto/md5"
 
 const defaultBaseURL = "https://metrics-collector.cloudability.com"
 const defaultTimeout = 1 * time.Minute

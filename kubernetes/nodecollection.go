@@ -10,7 +10,6 @@ import (
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"github.com/cloudability/metrics-agent/util"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/pkg/api/v1"

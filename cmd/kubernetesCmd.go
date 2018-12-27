@@ -3,7 +3,6 @@ package cmd
 import (
 	kubernetes "github.com/cloudability/metrics-agent/kubernetes"
 	util "github.com/cloudability/metrics-agent/util"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

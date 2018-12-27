@@ -7,12 +7,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
-
-	"path/filepath"
-	"strings"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
