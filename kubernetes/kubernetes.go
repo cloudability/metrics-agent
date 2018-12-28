@@ -61,6 +61,7 @@ type KubeAgentConfig struct {
 	Insecure              bool
 	OutboundProxyInsecure bool
 	UseInClusterConfig    bool
+	CollectHeapsterExport bool
 	PollInterval          int
 	failedNodeList        map[string]error
 	AgentStartTime        time.Time
@@ -85,25 +86,9 @@ const kbURL string = "https://support.cloudability.com/hc/en-us/articles/3600083
 //CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
 func CollectKubeMetrics(config KubeAgentConfig) {
 
-	log.Printf(
-		"Starting Cloudability Kubernetes Metric Agent with the following options:\n\n"+
-			"api_key: %v\n"+
-			"Cluster name: %v\n"+
-			"Heapster Override URL:\t%v\n"+
-			"Poll interval:\t%v\n"+
-			"Outbound Proxy:\t%v\n"+
-			"Outbound Proxy Insecure:\t%v\n"+
-			"Insecure:\t%v\n"+
-			"Namespace:\t%v\n",
-		config.APIKey,
-		config.ClusterName,
-		config.HeapsterOverrideURL,
-		config.PollInterval,
-		config.OutboundProxy,
-		config.OutboundProxyInsecure,
-		config.Insecure,
-		config.Namespace,
-	)
+	log.Printf("Starting Cloudability Kubernetes Metric Agent")
+
+	validateMetricCollectionConfig(config.RetrieveNodeSummaries, config.CollectHeapsterExport)
 
 	// Create k8s agent
 	kubeAgent := newKubeAgent(config)
@@ -130,7 +115,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	err = downloadBaselineMetricExport(kubeAgent, clientSetNodeSource)
 
 	if err != nil {
-		log.Fatalf("Error retrieving baseline metric export: %s\n", err)
+		log.Printf("Warning: Non-fatal error occurred retrieving baseline metrics: %s\n", err)
 	}
 
 	log.Printf("Cloudability Metrics Agent successfully started.")
@@ -160,6 +145,20 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		}
 	}
 
+}
+
+func validateMetricCollectionConfig(retrieveNodeSummaries bool, collectHeapsterExport bool) {
+	if !retrieveNodeSummaries && !collectHeapsterExport {
+		log.Fatalf("Invalid agent configuration.")
+	}
+	if retrieveNodeSummaries {
+		log.Printf("Primary metrics collected directly from each node.")
+	}
+	if retrieveNodeSummaries && collectHeapsterExport {
+		log.Printf("Collecting Heapster exports if found in cluster.")
+	} else if collectHeapsterExport {
+		log.Printf("Primary metrics collected from Heapster exports.")
+	}
 }
 
 func newKubeAgent(config KubeAgentConfig) KubeAgentConfig {
@@ -207,7 +206,7 @@ func (ka KubeAgentConfig) collectMetrics(
 	} else {
 		// get raw Heapster metric sample
 		hme, err := config.InClusterClient.GetRawEndPoint(
-			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil)
+			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, true)
 		if err != nil {
 			return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
 		}
@@ -397,7 +396,7 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 }
 
 func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
-	updatedConfig, err := updateConfigurationForServices(config.Clientset, config)
+	updatedConfig, err := updateConfigurationForServices(config)
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable set internal configuration options: %v", err)
 	}
@@ -424,7 +423,7 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	return updatedConfig, err
 }
 
-func updateConfigurationForServices(clientset kubernetes.Interface, config KubeAgentConfig) (
+func updateConfigurationForServices(config KubeAgentConfig) (
 	KubeAgentConfig, error) {
 
 	var err error
@@ -435,8 +434,8 @@ func updateConfigurationForServices(clientset kubernetes.Interface, config KubeA
 
 	config.OutboundProxyURL = proxyRef
 
-	if !config.RetrieveNodeSummaries {
-		config.HeapsterProxyURL, err = getHeapsterURL(clientset, config.ClusterHostURL)
+	if config.CollectHeapsterExport {
+		config.HeapsterProxyURL, err = getHeapsterURL(config.Clientset, config.ClusterHostURL)
 		if err != nil {
 			log.Printf("cloudability metric agent encountered an error while looking for heapster: %v", err)
 		}
@@ -514,15 +513,17 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 			log.Printf("Warning: Failed to retrive metric data from %v nodes. Metric samples may be incomplete: %+v %v",
 				len(config.failedNodeList), config.failedNodeList, err)
 		}
+	}
+
+	if config.CollectHeapsterExport {
+		// get baseline metric sample
+		_, err = config.InClusterClient.GetRawEndPoint(
+			http.MethodGet, "baseline-metrics-export", ed, config.HeapsterURL, nil, false)
+		if err != nil && !config.RetrieveNodeSummaries {
+			return fmt.Errorf("Heapster metrics: %s", err)
+		}
 		return nil
 	}
-
-	// get baseline metric sample
-	_, err = config.InClusterClient.GetRawEndPoint(http.MethodGet, "baseline-metrics-export", ed, config.HeapsterURL, nil)
-	if err != nil {
-		return fmt.Errorf("error retrieving initial baseline metrics: %s", err)
-	}
-
 	return err
 }
 
@@ -538,19 +539,21 @@ func updateConfigWithOverrideURLs(config KubeAgentConfig) KubeAgentConfig {
 }
 
 func ensureMetricServicesAvailable(config KubeAgentConfig) KubeAgentConfig {
+	var err error
 
 	if config.RetrieveNodeSummaries {
-		config, err := ensureNodeSource(config)
+		config, err = ensureNodeSource(config)
 		if err != nil {
 			log.Printf("Warning non-fatal error: Agent error occurred retrieving node source metrics: %s ", err)
 			log.Printf("For more information see: %v", kbURL)
 		}
-		return config
 	}
-	config, err := ensureValidHeapster(config)
-	if err != nil {
-		log.Printf("Unable to validate heapster connectivity: %v exiting", err)
-		os.Exit(1)
+	if config.CollectHeapsterExport {
+		config, err = ensureValidHeapster(config)
+		if err != nil {
+			log.Printf("Unable to validate heapster connectivity: %v exiting", err)
+			os.Exit(1)
+		}
 	}
 	return config
 }
@@ -646,6 +649,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["provisioning_id"] = config.provisioningID
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
 	m.Values["node_retrieval_method"] = config.nodeRetrievalMethod
+	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {

@@ -52,7 +52,7 @@ func (c *Client) createRequest(method, url string, body io.Reader) (*http.Reques
 //GetRawEndPoint retrives the body of HTTP response from a given method ,
 // sourcename, working directory, URL, and request body
 func (c *Client) GetRawEndPoint(method, sourceName string,
-	workDir *os.File, URL string, body []byte) (rawRespFile *os.File, err error) {
+	workDir *os.File, URL string, body []byte, verbose bool) (rawRespFile *os.File, err error) {
 
 	attempts := c.retries + 1
 	b := bytes.NewBuffer(body)
@@ -65,7 +65,9 @@ func (c *Client) GetRawEndPoint(method, sourceName string,
 		if err == nil {
 			return rawRespFile, nil
 		}
-		log.Printf("%v URL: %s retrying: %v", err, URL, i+1)
+		if verbose {
+			log.Printf("%v URL: %s retrying: %v", err, URL, i+1)
+		}
 	}
 	return nil, err
 }

@@ -89,7 +89,6 @@ func getHeapsterURL(clientset kubernetes.Interface, clusterHostURL string) (URL 
 		if strings.Contains(pod.Name, "heapster") {
 			URL.Host = clusterHostURL
 			URL.Path = pod.SelfLink + ":8082/proxy/api/v1/metric-export"
-			log.Printf("Found Heapster at:  %v%v", URL.Host, URL.Path)
 		}
 	}
 
@@ -99,7 +98,7 @@ func getHeapsterURL(clientset kubernetes.Interface, clusterHostURL string) (URL 
 		if service.Name == "heapster" && service.Namespace == "cloudability" {
 			URL.Host = "http://heapster.cloudability:8082"
 			URL.Path = "/api/v1/metric-export"
-			log.Printf("Found Heapster service running in the cloudability namespace at:  %v%v", URL.Host, URL.Path)
+			// log.Printf("Found Heapster service running in the cloudability namespace at:  %v%v", URL.Host, URL.Path)
 			return URL, nil
 		} else if service.Name == "heapster" {
 			URL.Host = clusterHostURL
@@ -109,7 +108,6 @@ func getHeapsterURL(clientset kubernetes.Interface, clusterHostURL string) (URL 
 			} else {
 				URL.Path = service.SelfLink + "/proxy/api/v1/metric-export"
 			}
-			log.Printf("Found Heapster at:  %v%v", URL.Host, URL.Path)
 		}
 	}
 
@@ -128,17 +126,19 @@ func ensureValidHeapster(config KubeAgentConfig) (KubeAgentConfig, error) {
 	if config.HeapsterURL != "" {
 		return validateHeapster(config, client, config.Namespace)
 	}
-	log.Printf("Could not find heapster running in the cluster, launching a copy in the %s namespace.", config.Namespace)
+	if !config.RetrieveNodeSummaries {
+		log.Printf("Could not find heapster running in the cluster, launching a copy in the %s namespace.", config.Namespace)
 
-	config.HeapsterURL, err = launchHeapster(config.Clientset, config.UseInClusterConfig, config.Namespace)
+		config.HeapsterURL, err = launchHeapster(config.Clientset, config.UseInClusterConfig, config.Namespace)
 
-	if err != nil {
-		return config, fmt.Errorf("Error launching heapster in the %s namespace: %+v", err, config.Namespace)
-	}
-	innerTest, _, err := util.TestHTTPConnection(
-		client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
-	if innerTest || err == nil {
-		log.Printf("Connected to heapster at: %v", config.HeapsterURL)
+		if err != nil {
+			return config, fmt.Errorf("Error launching heapster in the %s namespace: %+v", err, config.Namespace)
+		}
+		innerTest, _, err := util.TestHTTPConnection(
+			client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
+		if innerTest || err == nil {
+			log.Printf("Connected to heapster at: %v", config.HeapsterURL)
+		}
 	}
 
 	return config, err

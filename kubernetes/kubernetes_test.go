@@ -47,7 +47,7 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 	t.Run("ensure that an updated agentConfig with services if running is returned", func(t *testing.T) {
 		selfLink := "http://localhost"
 		servicePort := 8080
-		clientSet := fake.NewSimpleClientset(&v1.Service{
+		config.Clientset = fake.NewSimpleClientset(&v1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "heapster",
 				Namespace: v1.NamespaceDefault,
@@ -65,7 +65,7 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 			},
 		})
 
-		_, err := updateConfigurationForServices(clientSet, config)
+		_, err := updateConfigurationForServices(config)
 		if err != nil {
 			t.Errorf("Error getting services %v ", err)
 		}
@@ -74,7 +74,7 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 	t.Run("ensure that an updated agentConfig with services if running without defined serviceport is returned",
 		func(t *testing.T) {
 			selfLink := "http://localhost"
-			clientSet := fake.NewSimpleClientset(&v1.Service{
+			config.Clientset = fake.NewSimpleClientset(&v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "heapster",
 					Namespace: v1.NamespaceDefault,
@@ -85,7 +85,7 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 				},
 			})
 
-			_, err := updateConfigurationForServices(clientSet, config)
+			_, err := updateConfigurationForServices(config)
 			if err != nil {
 				t.Errorf("Error getting services %v ", err)
 			}

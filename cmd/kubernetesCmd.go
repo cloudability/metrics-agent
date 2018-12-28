@@ -87,8 +87,8 @@ func init() {
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.RetrieveNodeSummaries,
 		"retrieve_node_summaries",
-		false,
-		"When true, includes node summary metrics in metric collection. Default: False",
+		true,
+		"When true, includes node summary metrics in metric collection. Default: True",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.Namespace,
@@ -123,6 +123,7 @@ func init() {
 	config = kubernetes.KubeAgentConfig{
 		APIKey:                viper.GetString("api_key"),
 		ClusterName:           viper.GetString("cluster_name"),
+		CollectHeapsterExport: true,
 		HeapsterOverrideURL:   viper.GetString("heapster_override_url"),
 		PollInterval:          viper.GetInt("poll_interval"),
 		OutboundProxy:         viper.GetString("outbound_proxy"),
