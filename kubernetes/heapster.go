@@ -98,7 +98,6 @@ func getHeapsterURL(clientset kubernetes.Interface, clusterHostURL string) (URL 
 		if service.Name == "heapster" && service.Namespace == "cloudability" {
 			URL.Host = "http://heapster.cloudability:8082"
 			URL.Path = "/api/v1/metric-export"
-			// log.Printf("Found Heapster service running in the cloudability namespace at:  %v%v", URL.Host, URL.Path)
 			return URL, nil
 		} else if service.Name == "heapster" {
 			URL.Host = clusterHostURL
@@ -122,7 +121,8 @@ func ensureValidHeapster(config KubeAgentConfig) (KubeAgentConfig, error) {
 	var err error
 
 	// if Heapster is found in the cluster, test to make sure we can connect to it
-	// or launch an instance in the cloudability namespace. Make sure and close the returned response body.
+	// or if not using node summaries and unable to connect or find heapster in the kube-system namespace
+	// launch an instance of heapster in the cloudability namespace. Make sure and close the returned response body.
 	if config.HeapsterURL != "" {
 		return validateHeapster(config, client, config.Namespace)
 	}
