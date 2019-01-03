@@ -7,7 +7,7 @@ The metrics-agent collects allocation metrics from a container orchestration sys
 
 ## Kubernetes
 
-By default, the agent runs in a namespace named "cloudability" (see options below).  Once deployed, the agent will pull metrics from the Kubernetes API and directly from each node in the cluster it is running in. Additionally it will pull metrics from [Heapster](https://github.com/kubernetes/heapster) if found running in the kube-system anmespace cluster.  An example kubernetes deployment can be found [here](deploy/kubernetes/cloudability-metrics-agent.yaml). 
+By default, the agent runs in a namespace named "cloudability" (see options below).  Once deployed, the agent will pull metrics from the Kubernetes API and directly from each node in the cluster it is running in. Additionally it will pull metrics from [Heapster](https://github.com/kubernetes/heapster) if found running in the kube-system namespace cluster.  An example kubernetes deployment can be found [here](deploy/kubernetes/cloudability-metrics-agent.yaml).
 
 ### Configuration Options
 
