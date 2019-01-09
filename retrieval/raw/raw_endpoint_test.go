@@ -34,7 +34,7 @@ func TestGetRawEndPoint(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		testFile, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil)
+		testFile, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil, true)
 		if err != nil {
 			t.Error(err)
 		}
@@ -69,7 +69,7 @@ func TestGetRawEndPoint(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil)
+		_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil, true)
 		if err == nil {
 			t.Error("Server returned invalid response code but function did not raise error")
 		}
@@ -90,7 +90,7 @@ func TestGetRawEndPoint(t *testing.T) {
 		wd, _ := ioutil.TempDir("", "raw_endpoint_test")
 		workingDir, _ := os.Open(wd)
 
-		_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, "http://localhost:1234", nil)
+		_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, "http://localhost:1234", nil, true)
 		if err == nil {
 			t.Error("Unable to to connect to server but function did not raise error")
 		}
