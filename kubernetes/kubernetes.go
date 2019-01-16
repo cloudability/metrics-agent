@@ -198,12 +198,13 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	if config.RetrieveNodeSummaries {
-
 		err = retrieveNodeSummaries(config, msd, metricSampleDir, nodeSource)
 		if err != nil {
 			log.Printf("Warning: %s", err)
 		}
-	} else {
+	}
+
+	if config.CollectHeapsterExport {
 		// get raw Heapster metric sample
 		hme, err := config.InClusterClient.GetRawEndPoint(
 			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, true)
