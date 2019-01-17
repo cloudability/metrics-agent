@@ -87,7 +87,7 @@ func init() {
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.RetrieveNodeSummaries,
 		"retrieve_node_summaries",
-		false,
+		true,
 		"When true, includes node summary metrics in metric collection. Default: True",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
