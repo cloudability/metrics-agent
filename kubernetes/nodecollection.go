@@ -96,14 +96,14 @@ func downloadNodeData(prefix string,
 			continue
 		}
 
-		// retrieve node summary via kube-proxy
-		nodeStatSum := fmt.Sprintf("%s/api/v1/nodes/%s:10255/proxy/stats/summary", config.ClusterHostURL, n.Name)
+		// retrieve node summary via proxy
+		nodeStatSum := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, n.Name)
 		_, err = config.InClusterClient.GetRawEndPoint(
 			http.MethodGet, prefix+"-summary-"+n.Name, workDir, nodeStatSum, nil, true)
 		if err != nil {
 			failedNodeList[n.Name] = err
 		}
-		containerStats := fmt.Sprintf("%s/api/v1/nodes/%s:10255/proxy/stats/container/", config.ClusterHostURL, n.Name)
+		containerStats := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container/", config.ClusterHostURL, n.Name)
 		_, err = config.InClusterClient.GetRawEndPoint(
 			http.MethodPost, prefix+"-container-"+n.Name, workDir, containerStats, containersRequest, true)
 		if err != nil {
