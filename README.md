@@ -21,7 +21,7 @@ By default, the agent runs in a namespace named "cloudability" (see options belo
 | CLOUDABILITY_OUTBOUND_PROXY_AUTH        | Optional: Basic Authentication credentials to be used with the defined outbound proxy. If your outbound proxy requires basic authentication credentials can be defined in the form username:password |
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE    | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
 | CLOUDABILITY_INSECURE                   | Optional: When true, does not verify certificates when making TLS connections. Default: False|
-| CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Note: when false if heapster is not accessable in the kube-system namespace the agent will launch Heapster in the same namespace as the agent, Default: True|
+| CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True|
 | CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`|
 
 ```sh
