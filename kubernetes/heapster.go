@@ -122,18 +122,14 @@ func validateHeapster(config KubeAgentConfig, client rest.HTTPClient) error {
 	var me heapsterMetricExport
 	if err := json.Unmarshal(*body, &me); err != nil {
 		log.Printf("malformed response from heapster running at: %v", config.HeapsterURL)
-	}
-
-	if len(me) < 10 {
+	} else if len(me) < 10 {
 		log.Printf("Received empty or malformed response from heapster running at: %v",
 			config.HeapsterURL)
-	}
-
-	if !outerTest {
+	} else if !outerTest {
 		log.Println("No heapster")
+	} else {
+		log.Printf("Connected to heapster at: %v", config.HeapsterURL)
 	}
-
-	log.Printf("Connected to heapster at: %v", config.HeapsterURL)
 	return err
 }
 
