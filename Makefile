@@ -15,6 +15,9 @@ endif
 # This repo's root import path (under GOPATH).
 PKG := github.com/cloudability/metrics-agent
 
+# Application name
+APPLICATION := metrics-agent
+
 # This version-strategy uses git tags to set the version string
 VERSION := $(shell git describe --tags --always --dirty)
 
@@ -35,24 +38,17 @@ default:
 build:
 	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
 
-circleci-container:
-	go get -u github.com/golang/dep/cmd/dep && dep ensure -v
-	CGO_ENABLED=0 GOOS=linux go build -o metrics-agent main.go
-	cp deploy/docker/Dockerfile ./metrics-agent $(TEMP_DIR)
-	docker build -t $(PREFIX)/metrics-agent:$(VERSION) $(TEMP_DIR)
-
 circleci-push:
 	docker push $(PREFIX)/metrics-agent:$(VERSION)
 
-container-local:
-	docker run --rm -it $(TTY) -v $(TEMP_DIR):/build -v $(REPO_DIR):/go/src/$(PKG) -v ~/.ssh/id_rsa:/root/.ssh/id_rsa -v ~/.ssh/known_hosts:/root/.ssh/known_hosts -w /go/src/$(PKG) golang:$(GOLANG_VERSION) /bin/bash -c "\
-		GOOS=linux CGO_ENABLED=0 go build -o /build/metrics-agent /go/src/$(PKG)/main.go"
+container-build:
+	docker build --build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
 
-	cp deploy/docker/Dockerfile $(TEMP_DIR)
-	docker build --pull -t $(PREFIX)/metrics-agent:$(VERSION) $(TEMP_DIR)
-	rm -rf $(TEMP_DIR)
 
-deploy-local: container-local
+deploy-local: container-build
 	kubectl config use-context docker-for-desktop
 	cat ./deploy/kubernetes/cloudability-metrics-agent.yaml | \
 	sed "s/latest/$(VERSION)/g; s/XXXXXXXXX/$(CLDY_API_KEY)/g; s/Always/Never/g; s/NNNNNNNNN/local-dev-$(shell hostname)/g" \
