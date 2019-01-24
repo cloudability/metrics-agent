@@ -556,6 +556,8 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 		client := &config.HTTPClient
 		if config.HeapsterURL != "" {
 			err = validateHeapster(config, client)
+		} else {
+			config.CollectHeapsterExport = false
 		}
 		if err != nil {
 			config.CollectHeapsterExport = false
