@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -174,7 +174,10 @@ func newKubeAgent(config KubeAgentConfig) KubeAgentConfig {
 	}
 
 	// launch local services if we can't connect to them
-	config = ensureMetricServicesAvailable(config)
+	config, err = ensureMetricServicesAvailable(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	//Create metric sample working directory
 	config.msExportDirectory, err = util.CreateMSWorkingDirectory(config.clusterUID)
@@ -539,7 +542,7 @@ func updateConfigWithOverrideURLs(config KubeAgentConfig) KubeAgentConfig {
 	return config
 }
 
-func ensureMetricServicesAvailable(config KubeAgentConfig) KubeAgentConfig {
+func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, error) {
 	var err error
 
 	if config.RetrieveNodeSummaries {
@@ -550,13 +553,19 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) KubeAgentConfig {
 		}
 	}
 	if config.CollectHeapsterExport {
-		config, err = ensureValidHeapster(config)
+		client := &config.HTTPClient
+		if config.HeapsterURL != "" {
+			err = validateHeapster(config, client)
+		}
 		if err != nil {
-			log.Printf("Unable to validate heapster connectivity: %v exiting", err)
-			os.Exit(1)
+			config.CollectHeapsterExport = false
+			log.Println("Unable to connect to heapster. Only pulling node summaries")
+			if !config.RetrieveNodeSummaries {
+				return config, fmt.Errorf("unable to validate heapster connectivity: %v exiting", err)
+			}
 		}
 	}
-	return config
+	return config, nil
 }
 
 func createKubeHTTPClient(config KubeAgentConfig) (KubeAgentConfig, error) {
