@@ -558,12 +558,11 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 		}
 	}
 	if config.CollectHeapsterExport {
-		client := &config.HTTPClient
 		if config.HeapsterURL != "" {
-			err = validateHeapster(config, client)
+			err = validateHeapster(config, &config.HTTPClient)
 			if err != nil {
 				config.CollectHeapsterExport = false
-				log.Println("Unable to connect to heapster. Only pulling node summaries")
+				log.Printf("Unable to connect to heapster: %s. Only pulling node summaries", err.Error())
 				if !config.RetrieveNodeSummaries {
 					return config, fmt.Errorf("unable to validate heapster connectivity: %v exiting", err)
 				}
