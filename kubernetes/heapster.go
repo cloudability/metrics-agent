@@ -114,22 +114,21 @@ func getHeapsterURL(clientset kubernetes.Interface, clusterHostURL string) (URL 
 func validateHeapster(config KubeAgentConfig, client rest.HTTPClient) error {
 	outerTest, body, err := util.TestHTTPConnection(
 		client, config.HeapsterURL, http.MethodGet, config.BearerToken, retryCount, true)
-
 	if err != nil {
 		return err
 	}
-
+	if !outerTest {
+		return fmt.Errorf("no heapster found")
+	}
 	var me heapsterMetricExport
 	if err := json.Unmarshal(*body, &me); err != nil {
-		log.Printf("malformed response from heapster running at: %v", config.HeapsterURL)
-	} else if !outerTest {
-		return fmt.Errorf("no heapster found")
-	} else if len(me) < 10 {
-		log.Printf("Received empty or malformed response from heapster running at: %v",
-			config.HeapsterURL)
-	} else {
-		log.Printf("Connected to heapster at: %v", config.HeapsterURL)
+		return fmt.Errorf("malformed response from heapster running at: %v", config.HeapsterURL)
 	}
+	if len(me) < 10 {
+		return fmt.Errorf("received empty or malformed response from heapster running at: %v",
+			config.HeapsterURL)
+	}
+	log.Printf("Connected to heapster at: %v", config.HeapsterURL)
 	return err
 }
 
