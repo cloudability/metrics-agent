@@ -208,10 +208,7 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	if config.CollectHeapsterExport {
-		verbose := true
-		if config.RetrieveNodeSummaries {
-			verbose = false
-		}
+		verbose := !config.RetrieveNodeSummaries
 		// get raw Heapster metric sample
 		hme, err := config.InClusterClient.GetRawEndPoint(
 			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, verbose)
