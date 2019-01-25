@@ -1,6 +1,6 @@
 {
   "Vendor": true,
-  "Deadline": "10m",
+  "Deadline": "15m",
   "Sort": [
     "linter",
     "severity",

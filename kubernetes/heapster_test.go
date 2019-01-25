@@ -64,7 +64,8 @@ func TestGetHeapsterURL(t *testing.T) {
 		}
 	})
 }
-func TestEnsureValidHeapster(t *testing.T) {
+
+func TestValidateHeapster(t *testing.T) {
 
 	t.Run("Ensure that a valid heapster service is found and responds with data", func(t *testing.T) {
 
@@ -91,51 +92,10 @@ func TestEnsureValidHeapster(t *testing.T) {
 			BearerToken:        "",
 		}
 
-		_, err := ensureValidHeapster(kac)
+		err := validateHeapster(kac, &kac.HTTPClient)
 
 		if err != nil {
 			t.Error(err)
-		}
-	})
-
-}
-
-func TestLauchHeapster(t *testing.T) {
-
-	t.Parallel()
-
-	cs := fake.NewSimpleClientset()
-
-	t.Run("Ensure that heapster is launched locally", func(t *testing.T) {
-		heapsterURL, err := launchHeapster(cs, false, "cloudability")
-
-		if err != nil {
-			t.Error(err)
-		}
-		if heapsterURL != "http://localhost:0/api/v1/metric-export" {
-			t.Errorf("Error launching heapster without incluster config: %v", err)
-		}
-	})
-
-	t.Run("Ensure that heapster is launched locally (incluster config)", func(t *testing.T) {
-		heapsterURL, err := launchHeapster(cs, true, "cloudability")
-
-		if err != nil {
-			t.Error(err)
-		}
-		if heapsterURL != "http://heapster.cloudability:8082/api/v1/metric-export" {
-			t.Errorf("Error launching heapster with incluster config: %v", err)
-		}
-	})
-
-	t.Run("Ensure that heapster is launched in the kube-system namespace (incluster config)", func(t *testing.T) {
-		heapsterURL, err := launchHeapster(cs, true, "kube-system")
-
-		if err != nil {
-			t.Error(err)
-		}
-		if heapsterURL != "http://heapster.kube-system:8082/api/v1/metric-export" {
-			t.Errorf("Error launching heapster with incluster config: %v", err)
 		}
 	})
 

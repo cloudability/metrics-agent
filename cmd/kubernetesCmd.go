@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	kubernetes "github.com/cloudability/metrics-agent/kubernetes"
-	util "github.com/cloudability/metrics-agent/util"
+	"github.com/cloudability/metrics-agent/kubernetes"
+	"github.com/cloudability/metrics-agent/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -90,6 +90,12 @@ func init() {
 		true,
 		"When true, includes node summary metrics in metric collection. Default: True",
 	)
+	kubernetesCmd.PersistentFlags().BoolVar(
+		&config.CollectHeapsterExport,
+		"collect_heapster_export",
+		true,
+		"When true, tries to fetch heapster metrics if present. Default: True",
+	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.Namespace,
 		"namespace",
@@ -123,7 +129,7 @@ func init() {
 	config = kubernetes.KubeAgentConfig{
 		APIKey:                viper.GetString("api_key"),
 		ClusterName:           viper.GetString("cluster_name"),
-		CollectHeapsterExport: true,
+		CollectHeapsterExport: viper.GetBool("collect_heapster_export"),
 		HeapsterOverrideURL:   viper.GetString("heapster_override_url"),
 		PollInterval:          viper.GetInt("poll_interval"),
 		OutboundProxy:         viper.GetString("outbound_proxy"),

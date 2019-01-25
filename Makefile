@@ -59,7 +59,9 @@ deploy-local: container-local
 
 dockerhub-push:
 	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
+	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(VERSION)
 	docker push cloudability/metrics-agent:latest
+	docker push cloudability/metrics-agent:$(VERSION)
 	
 fmt:
 	goreturns -w .
