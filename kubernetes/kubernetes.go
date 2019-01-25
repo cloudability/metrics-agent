@@ -149,7 +149,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 func validateMetricCollectionConfig(retrieveNodeSummaries bool, collectHeapsterExport bool) {
 	if !retrieveNodeSummaries && !collectHeapsterExport {
-		log.Fatalf("Invalid agent configuration.")
+		log.Fatalf("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
 	}
 	if retrieveNodeSummaries {
 		log.Printf("Primary metrics collected directly from each node.")
@@ -157,7 +157,7 @@ func validateMetricCollectionConfig(retrieveNodeSummaries bool, collectHeapsterE
 	if retrieveNodeSummaries && collectHeapsterExport {
 		log.Printf("Collecting Heapster exports if found in cluster.")
 	} else if collectHeapsterExport {
-		log.Printf("Primary metrics collected from Heapster exports.")
+		log.Printf("Primary metrics collected from Heapster exports. WARNING: Heapster is being deprecated.")
 	}
 }
 
