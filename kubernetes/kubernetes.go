@@ -208,16 +208,18 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	if config.CollectHeapsterExport {
+		verbose := true
+		if config.RetrieveNodeSummaries {
+			verbose = false
+		}
 		// get raw Heapster metric sample
 		hme, err := config.InClusterClient.GetRawEndPoint(
-			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, true)
+			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, verbose)
 		if err != nil {
-			errMsg := fmt.Sprintf("unable to retrieve raw heapster metrics: %s", err)
 			if config.RetrieveNodeSummaries {
-				log.Println(errMsg)
 				return nil
 			}
-			return fmt.Errorf(errMsg)
+			return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
 		}
 
 		defer util.SafeClose(hme.Close, &rerr)
