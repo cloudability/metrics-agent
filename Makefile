@@ -18,6 +18,8 @@ PKG := github.com/cloudability/metrics-agent
 # This version-strategy uses git tags to set the version string
 VERSION := $(shell git describe --tags --always --dirty)
 
+RELEASE-VERSION := $(shell sed -nE 's/^var[[:space:]]VERSION[[:space:]]=[[:space:]]"([^"]+)".*/\1/p' version/version.go)
+
 # If this session isn't interactive, then we don't want to allocate a
 # TTY, which would fail, but if it is interactive, we do want to attach
 # so that the user can send e.g. ^C through.
@@ -59,9 +61,9 @@ deploy-local: container-local
 
 dockerhub-push:
 	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(VERSION)
+	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)
 	docker push cloudability/metrics-agent:latest
-	docker push cloudability/metrics-agent:$(VERSION)
+	docker push cloudability/metrics-agent:$(RELEASE-VERSION)
 	
 fmt:
 	goreturns -w .
@@ -79,5 +81,8 @@ check: fmt lint test
 
 version:
 	@echo $(VERSION)
+
+release-version:
+	@echo $(RELEASE-VERSION)
 
 .PHONY: test version
