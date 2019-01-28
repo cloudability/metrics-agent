@@ -116,6 +116,7 @@ func init() {
 	_ = viper.BindPFlag("insecure", kubernetesCmd.PersistentFlags().Lookup("insecure"))
 	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
 	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
+	_ = viper.BindPFlag("collect_heapster_export", kubernetesCmd.PersistentFlags().Lookup("collect_heapster_export"))
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
