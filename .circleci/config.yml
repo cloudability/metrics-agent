@@ -30,6 +30,7 @@ jobs:
       - run: 
           name: Lint
           command: make lint
+          no_output_timeout: 20m
 
       - run:
           name: Run Tests
