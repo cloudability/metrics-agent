@@ -30,7 +30,4 @@ WORKDIR /
 
 COPY --from=build-env /go/src/${package}/${application} /${application}
 
-# Expland the environment variable into a startup script
-RUN echo "/${application} \$@" > /run_application.sh
-
-ENTRYPOINT ["/bin/sh", "/run_application.sh"]
+ENTRYPOINT ["/metrics-agent"]
