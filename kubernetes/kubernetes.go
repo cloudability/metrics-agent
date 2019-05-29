@@ -86,7 +86,7 @@ const kbURL string = "https://support.cloudability.com/hc/en-us/articles/3600083
 //CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
 func CollectKubeMetrics(config KubeAgentConfig) {
 
-	log.Printf("Starting Cloudability Kubernetes Metric Agent")
+	log.Printf("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
 
 	validateMetricCollectionConfig(config.RetrieveNodeSummaries, config.CollectHeapsterExport)
 
@@ -336,7 +336,8 @@ func SendData(ms *os.File, uid string, mc client.MetricClient) (err error) {
 	if err != nil {
 		log.Printf("cloudability write failed: %v", err)
 	} else {
-		log.Printf("Exported metric sample %s to cloudability", ms.Name())
+		sn := strings.Split(ms.Name(), "/")
+		log.Printf("Exported metric sample %s to cloudability", strings.TrimSuffix(sn[len(sn)-1], ".tgz"))
 		err = os.Remove(ms.Name())
 		if err != nil {
 			log.Printf("Warning: Unable to cleanup after metric sample upload: %v", err)
