@@ -7,9 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"github.com/cloudability/metrics-agent/util"
+	"github.com/kubernetes/kubernetes/staging/src/k8s.io/client-go/util/retry"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/pkg/api/v1"
@@ -60,10 +62,14 @@ func downloadNodeData(prefix string,
 	workDir *os.File,
 	nodeSource NodeSource) (map[string]error, error) {
 
+	var nodes *v1.NodeList
+
 	failedNodeList := make(map[string]error)
 
-	nodes, err := nodeSource.GetNodes()
-
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
+		nodes, err = nodeSource.GetNodes()
+		return
+	})
 	if err != nil {
 		return nil, fmt.Errorf("cloudability metric agent is unable to get a list of nodes: %v", err)
 	}
@@ -119,15 +125,18 @@ func downloadNodeData(prefix string,
 // If unable to directly connect to the node summary & container stats endpoint, attempts to connect via kube-proxy
 func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
-	nodeHTTPClient := http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
-		// nolint gosec
-		InsecureSkipVerify: true,
-	},
-	}}
+	nodeHTTPClient := http.Client{
+		Timeout: time.Second * 30,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				// nolint gosec
+				InsecureSkipVerify: true,
+			},
+		}}
 
 	clientSetNodeSource := NewClientsetNodeSource(config.Clientset)
 
-	nodeClient := raw.NewClient(nodeHTTPClient, true, config.BearerToken, 0)
+	nodeClient := raw.NewClient(nodeHTTPClient, true, config.BearerToken, 3)
 
 	config.NodeClient = nodeClient
 
