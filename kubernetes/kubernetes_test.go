@@ -135,7 +135,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 		}
 
 		var err error
-		config, err = ensureMetricServicesAvailable(config)
+		_, err = ensureMetricServicesAvailable(config)
 		if err != nil {
 			t.Errorf("Unexpected error fetching node summaries: %s", err)
 		}
