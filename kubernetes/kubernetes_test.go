@@ -94,6 +94,54 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 
 }
 
+func TestEnsureMetricServicesAvailable(t *testing.T) {
+	t.Parallel()
+	t.Run("should return error if can't get node summaries", func(t *testing.T) {
+		cs := fake.NewSimpleClientset(
+			&v1.Node{Status: v1.NodeStatus{Addresses: []v1.NodeAddress{{Type: v1.NodeInternalIP}}},
+				ObjectMeta: metav1.ObjectMeta{Name: "node0", Namespace: v1.NamespaceDefault}},
+		)
+		config := KubeAgentConfig{
+			RetrieveNodeSummaries: true,
+			CollectHeapsterExport: false,
+			Clientset:             cs,
+		}
+		config, err := ensureMetricServicesAvailable(config)
+		if err == nil {
+			t.Errorf("expected an error for ensureMetricServicesAvailable")
+			return
+		}
+		if config.nodeRetrievalMethod != "unreachable" {
+			t.Errorf("expected nodeRetrievalMethod to be asdf, instead was %s", config.nodeRetrievalMethod)
+		}
+	})
+
+	t.Run("shouldn't return error if successfully fetch node summaries", func(t *testing.T) {
+		cs := fake.NewSimpleClientset(
+			&v1.Node{Status: v1.NodeStatus{Addresses: []v1.NodeAddress{{Type: v1.NodeInternalIP}}},
+				ObjectMeta: metav1.ObjectMeta{Name: "node0", Namespace: v1.NamespaceDefault}},
+		)
+		client := http.Client{}
+		ts := NewTestServer()
+		defer ts.Close()
+		config := KubeAgentConfig{
+			RetrieveNodeSummaries: true,
+			CollectHeapsterExport: false,
+			Clientset:             cs,
+			ClusterHostURL:        ts.URL,
+			HeapsterURL:           ts.URL,
+			HTTPClient:            client,
+			InClusterClient:       raw.NewClient(client, true, "", 0),
+		}
+
+		var err error
+		config, err = ensureMetricServicesAvailable(config)
+		if err != nil {
+			t.Errorf("Unexpected error fetching node summaries: %s", err)
+		}
+	})
+}
+
 // nolint: dupl
 func TestUpdateConfigWithOverrideURLs(t *testing.T) {
 
@@ -175,13 +223,7 @@ func TestCreateAgentStatusMetric(t *testing.T) {
 //nolint gocyclo
 func TestCollectMetrics(t *testing.T) {
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		jsonResp, _ := json.Marshal(map[string]string{"test": "data", "time": time.Now().String()})
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(200)
-		w.Write(jsonResp)
-
-	}))
+	ts := NewTestServer()
 	defer ts.Close()
 
 	cs := fake.NewSimpleClientset(
@@ -293,4 +335,15 @@ func TestSetProxyURL(t *testing.T) {
 		}
 	})
 
+}
+
+func NewTestServer() *httptest.Server {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		jsonResp, _ := json.Marshal(map[string]string{"test": "data", "time": time.Now().String()})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write(jsonResp)
+
+	}))
+	return ts
 }

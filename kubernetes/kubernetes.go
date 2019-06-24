@@ -553,8 +553,7 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 	if config.RetrieveNodeSummaries {
 		config, err = ensureNodeSource(config)
 		if err != nil {
-			log.Printf("Warning non-fatal error: Agent error occurred retrieving node source metrics: %s ", err)
-			log.Printf("For more information see: %v", kbURL)
+			return config, fmt.Errorf("unable to retrieve node summaries: %s", err)
 		}
 	}
 	if config.CollectHeapsterExport {

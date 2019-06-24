@@ -14,7 +14,7 @@ import (
 	"github.com/kubernetes/kubernetes/staging/src/k8s.io/client-go/util/retry"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/pkg/api/v1"
 )
 
 // NodeSource is an interface to get a list of Nodes
@@ -77,7 +77,7 @@ func downloadNodeData(prefix string,
 	containersRequest, err := buildContainersRequest()
 
 	if err != nil {
-		return nil, fmt.Errorf("Error occurred requesting container statistics: %v", err)
+		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
 	for _, n := range nodes.Items {
@@ -185,7 +185,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	config.nodeRetrievalMethod = "unreachable"
 	config.RetrieveNodeSummaries = false
-	return config, fmt.Errorf("Unable to retrieve node metrics. Please verify RBAC roles: %v", err)
+	return config, fmt.Errorf("unable to retrieve node metrics. Please verify RBAC roles: %v", err)
 }
 
 func retrieveNodeSummaries(
