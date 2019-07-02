@@ -81,6 +81,10 @@ func downloadNodeData(prefix string,
 	}
 
 	for _, n := range nodes.Items {
+		if n.Spec.ProviderID == "" {
+			log.Println("Warning: Provider ID for node does not exist")
+		}
+
 		// retrieve node summary directly from node
 		if config.nodeRetrievalMethod == "direct" {
 
