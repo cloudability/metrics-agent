@@ -553,23 +553,26 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 	if config.RetrieveNodeSummaries {
 		config, err = ensureNodeSource(config)
 		if err != nil {
-			return config, fmt.Errorf("unable to retrieve node summaries: %s", err)
+			log.Printf("Warning non-fatal error: Agent error occurred retrieving node source metrics: %s ", err)
+			log.Printf("For more information see: %v", kbURL)
 		}
 	}
 	if config.CollectHeapsterExport {
 		if config.HeapsterURL != "" {
 			err = validateHeapster(config, &config.HTTPClient)
 			if err != nil {
+				log.Printf("Error occurred validating custom heapster URL: %v %v", config.HeapsterURL, err)
 				config.CollectHeapsterExport = false
-				log.Printf("Unable to connect to heapster: %s. Only pulling node summaries", err.Error())
-				if !config.RetrieveNodeSummaries {
-					return config, fmt.Errorf("unable to validate heapster connectivity: %v exiting", err)
-				}
 			}
 		} else {
 			config.CollectHeapsterExport = false
 		}
 	}
+
+	if !config.RetrieveNodeSummaries && !config.CollectHeapsterExport {
+		return config, fmt.Errorf("unable to retrieve node summaries or heapster export: %s", err)
+	}
+
 	return config, nil
 }
 
