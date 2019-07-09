@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -82,7 +83,10 @@ func downloadNodeData(prefix string,
 
 	for _, n := range nodes.Items {
 		if n.Spec.ProviderID == "" {
-			log.Println("Warning: Provider ID for node does not exist")
+			log.Printf("Warning: Provider ID for node does not exist for node %s."+
+				" If this condition persists it will cause inconsistent cluster allocation", n.Name)
+			failedNodeList[n.Name] = errors.New("Provider ID for node does not exist. " +
+				"If this condition persists it will cause inconsistent cluster allocation")
 		}
 
 		// retrieve node summary directly from node

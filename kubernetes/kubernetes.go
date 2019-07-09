@@ -465,6 +465,11 @@ func setProxyURL(op string) (u url.URL, err error) {
 	return u, err
 }
 
+// GetNodeRetrievalMethod returns the nodeRetrievalMethod of the config
+func (ka KubeAgentConfig) GetNodeRetrievalMethod() string {
+	return ka.nodeRetrievalMethod
+}
+
 // returns the UID of a given Namespace
 func getNamespaceUID(clientset kubernetes.Interface, namespace string) (
 	string, error) {
