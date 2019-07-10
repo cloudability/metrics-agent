@@ -39,30 +39,6 @@ func NewTestClient(ts *httptest.Server) *fake.Clientset {
 			},
 		},
 	)
-
-	/*
-			s := strings.Split(ts.Listener.Addr().String(), ":")
-		ip := s[0]
-		port, _ := strconv.Atoi(s[1])
-		cs := fake.NewSimpleClientset(
-			&v1.Node{
-				ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
-				Status: v1.NodeStatus{
-					Addresses: []v1.NodeAddress{
-						{
-							Type:    "InternalIP",
-							Address: ip,
-						},
-					},
-					DaemonEndpoints: v1.NodeDaemonEndpoints{
-						KubeletEndpoint: v1.DaemonEndpoint{
-							Port: int32(port),
-						},
-					},
-				},
-			},
-		)
-	*/
 }
 
 func TestEnsureNodeSource(t *testing.T) {
