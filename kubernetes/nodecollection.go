@@ -83,8 +83,6 @@ func downloadNodeData(prefix string,
 
 	for _, n := range nodes.Items {
 		if n.Spec.ProviderID == "" {
-			log.Printf("Warning: Provider ID for node does not exist for node %s."+
-				" If this condition persists it will cause inconsistent cluster allocation", n.Name)
 			failedNodeList[n.Name] = errors.New("Provider ID for node does not exist. " +
 				"If this condition persists it will cause inconsistent cluster allocation")
 		}
