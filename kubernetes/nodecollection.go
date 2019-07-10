@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -81,6 +82,11 @@ func downloadNodeData(prefix string,
 	}
 
 	for _, n := range nodes.Items {
+		if n.Spec.ProviderID == "" {
+			failedNodeList[n.Name] = errors.New("Provider ID for node does not exist. " +
+				"If this condition persists it will cause inconsistent cluster allocation")
+		}
+
 		// retrieve node summary directly from node
 		if config.nodeRetrievalMethod == "direct" {
 
