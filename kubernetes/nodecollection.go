@@ -15,7 +15,7 @@ import (
 	"github.com/kubernetes/kubernetes/staging/src/k8s.io/client-go/util/retry"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
+	v1 "k8s.io/client-go/pkg/api/v1"
 )
 
 // NodeSource is an interface to get a list of Nodes

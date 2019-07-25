@@ -14,7 +14,7 @@ import (
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/pkg/api/v1"
+	v1 "k8s.io/client-go/pkg/api/v1"
 )
 
 func NewTestClient(ts *httptest.Server) *fake.Clientset {

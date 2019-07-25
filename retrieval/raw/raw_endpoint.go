@@ -52,7 +52,7 @@ func (c *Client) createRequest(method, url string, body io.Reader) (*http.Reques
 //GetRawEndPoint retrives the body of HTTP response from a given method ,
 // sourcename, working directory, URL, and request body
 func (c *Client) GetRawEndPoint(method, sourceName string,
-	workDir *os.File, URL string, body []byte, verbose bool) (rawRespFile *os.File, err error) {
+	workDir *os.File, URL string, body []byte, verbose bool) (filename string, err error) {
 
 	attempts := c.retries + 1
 	b := bytes.NewBuffer(body)
@@ -61,25 +61,25 @@ func (c *Client) GetRawEndPoint(method, sourceName string,
 		if i > 0 {
 			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
 		}
-		rawRespFile, err = downloadToFile(c, method, sourceName, workDir, URL, b, i)
+		filename, err = downloadToFile(c, method, sourceName, workDir, URL, b)
 		if err == nil {
-			return rawRespFile, nil
+			return filename, nil
 		}
 		if verbose {
 			log.Printf("%v URL: %s retrying: %v", err, URL, i+1)
 		}
 	}
-	return nil, err
+	return filename, err
 }
 
-func downloadToFile(c *Client, method, sourceName string,
-	workDir *os.File, URL string, body io.Reader, retryCount uint) (rawRespFile *os.File, rerr error) {
+func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL string,
+	body io.Reader) (filename string, rerr error) {
 
 	var fileExt string
 
 	req, err := c.createRequest(method, URL, body)
 	if err != nil {
-		return rawRespFile, errors.New("Unable to create raw request for " + sourceName)
+		return filename, errors.New("Unable to create raw request for " + sourceName)
 	}
 
 	if method == http.MethodPost {
@@ -88,13 +88,13 @@ func downloadToFile(c *Client, method, sourceName string,
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return rawRespFile, errors.New("Unable to connect")
+		return filename, errors.New("Unable to connect")
 	}
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
 	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
-		return rawRespFile, fmt.Errorf("Invalid response %s", strconv.Itoa(resp.StatusCode))
+		return filename, fmt.Errorf("Invalid response %s", strconv.Itoa(resp.StatusCode))
 	}
 
 	ct := resp.Header.Get("Content-Type")
@@ -107,15 +107,18 @@ func downloadToFile(c *Client, method, sourceName string,
 		fileExt = ""
 	}
 
-	rawRespFile, err = os.Create(workDir.Name() + "/" + sourceName + fileExt)
+	rawRespFile, err := os.Create(workDir.Name() + "/" + sourceName + fileExt)
 	if err != nil {
-		return rawRespFile, errors.New("Unable to create raw metric file")
+		return filename, errors.New("Unable to create raw metric file")
 	}
+	defer util.SafeClose(rawRespFile.Close, &rerr)
+
+	filename = rawRespFile.Name()
 
 	_, err = io.Copy(rawRespFile, resp.Body)
 	if err != nil {
-		return rawRespFile, errors.New("Error writing file: " + rawRespFile.Name())
+		return filename, errors.New("Error writing file: " + rawRespFile.Name())
 	}
 
-	return rawRespFile, err
+	return filename, rerr
 }

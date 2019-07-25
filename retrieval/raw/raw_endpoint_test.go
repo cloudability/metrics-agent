@@ -34,13 +34,16 @@ func TestGetRawEndPoint(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		testFile, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil, true)
+		testFileName, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil, true)
 		if err != nil {
 			t.Error(err)
 		}
 		sourceFile, _ := os.Open(testData)
+		testFile, _ := os.Open(testFileName)
 
 		defer sourceFile.Close()
+		defer testFile.Close()
+
 		sF, _ := sourceFile.Stat()
 		tF, _ := testFile.Stat()
 
