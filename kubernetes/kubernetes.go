@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
+	v1 "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -210,7 +210,7 @@ func (ka KubeAgentConfig) collectMetrics(
 	if config.CollectHeapsterExport {
 		verbose := !config.RetrieveNodeSummaries
 		// get raw Heapster metric sample
-		hme, err := config.InClusterClient.GetRawEndPoint(
+		filename, err := config.InClusterClient.GetRawEndPoint(
 			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, verbose)
 		if err != nil {
 			if config.RetrieveNodeSummaries {
@@ -219,13 +219,11 @@ func (ka KubeAgentConfig) collectMetrics(
 			return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
 		}
 
-		defer util.SafeClose(hme.Close, &rerr)
-
 		baselineMetricSample, err := util.MatchOneFile(
 			path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
 		if err == nil || err.Error() == "No matches found" {
 			if err = handleBaselineHeapsterMetrics(
-				config.msExportDirectory.Name(), msd, baselineMetricSample, hme.Name()); err != nil {
+				config.msExportDirectory.Name(), msd, baselineMetricSample, filename); err != nil {
 				log.Printf("Warning: updating Heapster Baseline failed: %v", err)
 			}
 		}
