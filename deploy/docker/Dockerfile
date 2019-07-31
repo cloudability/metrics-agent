@@ -30,4 +30,6 @@ WORKDIR /
 
 COPY --from=build-env /go/src/${package}/${application} /${application}
 
+USER 405
+
 ENTRYPOINT ["/metrics-agent"]
