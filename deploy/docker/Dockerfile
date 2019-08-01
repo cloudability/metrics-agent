@@ -26,10 +26,13 @@ ARG application
 # Allow delve to run on Alpine based containers.
 RUN apk --update upgrade && apk add ca-certificates
 
+RUN addgroup agent && \
+    adduser agent -S -s /bin/nologin -g metrics-agent -H -G agent 
+
 WORKDIR /
 
 COPY --from=build-env /go/src/${package}/${application} /${application}
 
-USER guest
+USER agent
 
 ENTRYPOINT ["/metrics-agent"]
