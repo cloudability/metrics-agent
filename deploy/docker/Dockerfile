@@ -26,8 +26,8 @@ ARG application
 # Allow delve to run on Alpine based containers.
 RUN apk --update upgrade && apk add ca-certificates
 
-RUN addgroup agent && \
-    adduser agent -S -s /bin/nologin -g metrics-agent -H -G agent 
+RUN addgroup -g 1000 agent && \
+    adduser agent -S -u 1000 -s /bin/nologin -g metrics-agent -H -G agent 
 
 WORKDIR /
 
