@@ -2,9 +2,9 @@ package test
 
 import (
 	"crypto/rand"
-	"log"
 	r "math/rand"
 	"time"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"math"
 	"net"
 	"net/http"
@@ -21,13 +20,16 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
+	"crypto/md5"
+
 	"github.com/cloudability/metrics-agent/measurement"
 	"github.com/cloudability/metrics-agent/util"
 	"github.com/cloudability/metrics-agent/version"
 )
 
 //nolint gosec
-import "crypto/md5"
 
 const defaultBaseURL = "https://metrics-collector.cloudability.com"
 const defaultTimeout = 1 * time.Minute
@@ -70,19 +72,19 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 	// Use defaults
 	if cfg.Timeout.Seconds() <= 0 {
 		if cfg.Verbose {
-			log.Printf("Using default timeout of %v\n", defaultTimeout)
+			log.Infof("Using default timeout of %v", defaultTimeout)
 		}
 		cfg.Timeout = defaultTimeout
 	}
 	if len(strings.TrimSpace(cfg.BaseURL)) == 0 {
 		if cfg.Verbose {
-			log.Printf("Using default baseURL of %v\n", defaultBaseURL)
+			log.Infof("Using default baseURL of %v", defaultBaseURL)
 		}
 		cfg.BaseURL = defaultBaseURL
 	}
 	if cfg.MaxRetries <= 0 {
 		if cfg.Verbose {
-			log.Printf("Using default retries %v\n", defaultMaxRetries)
+			log.Infof("Using default retries %v", defaultMaxRetries)
 		}
 		cfg.MaxRetries = defaultMaxRetries
 	}
@@ -174,9 +176,9 @@ func (c httpMetricClient) SendMeasurement(measurements []measurement.Measurement
 	if c.verbose {
 		requestDump, err := httputil.DumpRequest(req, true)
 		if err != nil {
-			log.Println(err)
+			log.Errorln(err)
 		}
-		log.Println(string(requestDump))
+		log.Infoln(string(requestDump))
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -191,9 +193,9 @@ func (c httpMetricClient) SendMeasurement(measurements []measurement.Measurement
 	if c.verbose {
 		responseDump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			log.Println(err)
+			log.Errorln(err)
 		}
-		log.Println(string(responseDump))
+		log.Infoln(string(responseDump))
 	}
 
 	return nil
@@ -220,9 +222,9 @@ func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersi
 	if c.verbose {
 		responseDump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			log.Println(err)
+			log.Errorln(err)
 		}
-		log.Printf("%q", responseDump)
+		log.Infof("%q", responseDump)
 	}
 
 	return nil
@@ -254,7 +256,7 @@ func (c httpMetricClient) retryWithBackoff(
 		var uploadURL, hash string
 		uploadURL, hash, err = c.GetUploadURL(metricFile, metricSampleURL, agentVersion, UID)
 		if err != nil {
-			log.Printf("error encountered while retriving upload location: %v", err)
+			log.Errorf("error encountered while retriving upload location: %v", err)
 			continue
 		}
 
@@ -263,10 +265,10 @@ func (c httpMetricClient) retryWithBackoff(
 		if c.verbose {
 			reponseDump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
-				log.Println(err)
+				log.Errorln(err)
 				continue
 			}
-			log.Println(string(reponseDump))
+			log.Infoln(string(reponseDump))
 		}
 
 		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
@@ -314,7 +316,7 @@ func (c httpMetricClient) buildAndDoRequest(
 
 	metricFile, err = os.Open(metricFile.Name())
 	if err != nil {
-		log.Fatal("Failed to open metric sample: ", err)
+		log.Fatalf("Failed to open metric sample: %v", err)
 		return nil, err
 	}
 
@@ -337,10 +339,10 @@ func (c httpMetricClient) buildAndDoRequest(
 	if c.verbose {
 		requestDump, err := httputil.DumpRequest(req, true)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 		}
-		log.Println(string(requestDump))
-		log.Printf("File info : %+v", metricFile)
+		log.Infoln(string(requestDump))
+		log.Infof("File info : %+v", metricFile)
 	}
 
 	return c.httpClient.Do(req)
@@ -360,7 +362,7 @@ func (c httpMetricClient) GetUploadURL(
 	var rerr error
 	hash, err := GetB64MD5Hash(metricFile.Name())
 	if err != nil {
-		log.Printf("error encountered generating upload check sum: %v", err)
+		log.Errorf("error encountered generating upload check sum: %v", err)
 		return "", "", err
 	}
 
@@ -382,9 +384,9 @@ func (c httpMetricClient) GetUploadURL(
 	if c.verbose {
 		requestDump, err := httputil.DumpRequest(req, true)
 		if err != nil {
-			log.Println(err)
+			log.Errorln(err)
 		}
-		log.Println(string(requestDump))
+		log.Infoln(string(requestDump))
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -397,9 +399,9 @@ func (c httpMetricClient) GetUploadURL(
 	if c.verbose {
 		responseDump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			log.Println(err)
+			log.Errorln(err)
 		}
-		log.Println(string(responseDump))
+		log.Infoln(string(responseDump))
 	}
 
 	if resp.StatusCode != 200 {

@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudability/metrics-agent/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -128,7 +129,7 @@ func validateHeapster(config KubeAgentConfig, client rest.HTTPClient) error {
 		return fmt.Errorf("received empty or malformed response from heapster running at: %v",
 			config.HeapsterURL)
 	}
-	log.Printf("Connected to heapster at: %v", config.HeapsterURL)
+	log.Infof("Connected to heapster at: %v", config.HeapsterURL)
 	return err
 }
 
@@ -136,7 +137,7 @@ func handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample,
 	// copy into the current sample directory the most recent baseline metric export
 	err := util.CopyFileContents(msd+"/"+filepath.Base(baselineMetricSample), baselineMetricSample)
 	if err != nil {
-		log.Println("Warning: Previous baseline not found or incomplete")
+		log.Warn("Warning previous baseline not found or incomplete")
 	}
 
 	// remove the baseline metric if it is not json
