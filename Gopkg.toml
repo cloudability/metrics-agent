@@ -11,6 +11,10 @@
   name = "github.com/ugorji/go"
   revision = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74"
 
-[[override]]
+[[constraint]]
   name = "github.com/spf13/cobra"
-  revision = "d5bde60e022436203e377c47806e001418c16af3"
+  version = "v0.0.5"
+
+[[override]]
+  name = "github.com/sirupsen/logrus"
+  revision = "07a84ee7412e7a28663d92930a1d46f81b124ee1"

@@ -2,7 +2,7 @@ package test
 
 import (
 	"crypto/rand"
-	"log"
+	log "github.com/sirupsen/logrus"
 	r "math/rand"
 	"time"
 )

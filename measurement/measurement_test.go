@@ -77,7 +77,7 @@ func TestMarshalJSON(t *testing.T) {
 			"{\"name\":\"%s\",\"metrics\":{\"uptime\":585525897},\"tags\":{\"host\":\"macbookpro.Local.abc123\",\"%v\":\"%v\"},\"ts\":%d,\"value\":%g}",
 			name, randKey, randValue, ts, value)
 		if expected != jsonString {
-			t.Errorf("expected json does not match actual. \n\texpected: %+v \n\tactual: %+v", expected, jsonString)
+			t.Errorf("expected json does not match actual. expected: %+v actual: %+v", expected, jsonString)
 		}
 	})
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -15,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/spf13/viper"
 	"k8s.io/client-go/rest"
 )
@@ -47,7 +46,7 @@ func TestHTTPConnection(testClient rest.HTTPClient,
 		resp, err := testClient.Do(req)
 		if err != nil {
 			if verbose {
-				log.Printf("Unable to connect to URL: %s retrying: %v", URL, i+1)
+				log.Warnf("Unable to connect to URL: %s retrying: %v", URL, i+1)
 			}
 			time.Sleep(time.Duration(int64(math.Pow(2, float64(i)))) * time.Second)
 			continue
@@ -66,36 +65,24 @@ func TestHTTPConnection(testClient rest.HTTPClient,
 
 }
 
-//CheckRequiredSettings checks for required min values / flags / environment variables in a given cobra command.
-func CheckRequiredSettings(cmd *cobra.Command, _ []string) error {
-	var err error
-	flags := cmd.Flags()
+//CheckRequiredSettings checks for required min values / flags / environment variables
+func CheckRequiredSettings(requiredArgs []string) error {
 
-	flags.VisitAll(func(flag *pflag.Flag) {
-
-		requiredAnnotation, found := flag.Annotations[cobra.BashCompOneRequiredFlag]
-		if !found {
-			return
+	for _, a := range requiredArgs {
+		if viper.GetString(a) != "" {
+			continue
 		}
+		return fmt.Errorf("Required flag: %v or environment variable: CLOUDABILITY_"+strings.ToUpper(
+			a)+" has not been set", a)
 
-		if (requiredAnnotation[0] == "true") && !flag.Changed {
-			//check if set in environment variable
-			if os.Getenv(strings.ToUpper("CLOUDABILITY_"+flag.Name)) == "" {
-				err = fmt.Errorf(
-					"Required flag: %v or environment variable: CLOUDABILITY_"+strings.ToUpper(
-						flag.Name)+" has not been set", flag.Name)
-				return
-			}
-		}
-
-	})
+	}
 
 	if viper.IsSet("poll_interval") && viper.GetInt("poll_interval") < 5 {
-		err = fmt.Errorf(
+		return fmt.Errorf(
 			"Polling interval must be 5 seconds or greater")
 	}
 
-	return err
+	return nil
 }
 
 //CreateMetricSample creates a metric sample from a given directory removing the source directory if cleanup is true
@@ -103,7 +90,7 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool) (*os.
 
 	ed, err := exportDirectory.Stat()
 	if err != nil || !ed.IsDir() {
-		log.Printf("Unable to stat sample directory: %v", err)
+		log.Errorf("Unable to stat sample directory: %v", err)
 		return nil, err
 	}
 
@@ -111,14 +98,14 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool) (*os.
 	destFile, err := os.Create(os.TempDir() + "/" + sampleFilename + ".tgz")
 
 	if err != nil {
-		log.Printf("Unable to create metric sample file: %v", err)
+		log.Errorf("Unable to create metric sample file: %v", err)
 		return nil, err
 	}
 
 	err = createTGZ(exportDirectory, destFile)
 
 	if err != nil {
-		log.Printf("Unable to tar metric sample directory: %v", err)
+		log.Errorf("Unable to tar metric sample directory: %v", err)
 		return nil, err
 	}
 
@@ -128,7 +115,7 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool) (*os.
 	}
 
 	if err != nil {
-		log.Printf("Unable to cleanup metric sample directory: %v", err)
+		log.Errorf("Unable to cleanup metric sample directory: %v", err)
 		return nil, err
 	}
 
@@ -217,7 +204,7 @@ func CreateMSWorkingDirectory(uid string) (*os.File, error) {
 	//create metric sample directory
 	td, err := ioutil.TempDir("", "cldy-metrics")
 	if err != nil {
-		log.Printf("Unable to create temporary directory: %v", err)
+		log.Errorf("Unable to create temporary directory: %v", err)
 		return nil, err
 	}
 
@@ -227,7 +214,7 @@ func CreateMSWorkingDirectory(uid string) (*os.File, error) {
 
 	err = os.MkdirAll(ed, os.ModePerm)
 	if err != nil {
-		log.Printf("Error creating metric sample export directory : %v", err)
+		log.Errorf("Error creating metric sample export directory : %v", err)
 	}
 	//nolint gosec
 	exportDir, err := os.Open(ed)
@@ -310,4 +297,33 @@ func MatchOneFile(directory string, pattern string) (fileName string, err error)
 	}
 
 	return "", fmt.Errorf("No matches found")
+}
+
+//SetupLogger sets configuration for the default logger
+func SetupLogger() (err error) {
+
+	var (
+		ll = viper.GetString("log_level")
+		lf = strings.ToLower(viper.GetString("log_format"))
+	)
+
+	// Set log level
+	l, err := log.ParseLevel(ll)
+	if err != nil {
+		return fmt.Errorf("Invalid log level: %v", ll)
+	}
+	log.SetLevel(l)
+	log.Debugf("Log level set to: %v", l.String())
+
+	// Set log format
+	switch lf {
+	case "json":
+		log.SetFormatter(&log.JSONFormatter{})
+	default:
+		log.SetFormatter(&log.TextFormatter{
+			DisableLevelTruncation: true,
+			PadLevelText:           true,
+		})
+	}
+	return nil
 }

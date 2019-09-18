@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"github.com/cloudability/metrics-agent/util"
 	"github.com/kubernetes/kubernetes/staging/src/k8s.io/client-go/util/retry"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/pkg/api/v1"
@@ -206,7 +206,7 @@ func retrieveNodeSummaries(
 	}
 
 	if len(config.failedNodeList) > 0 {
-		log.Printf("Warning: Failed to get node metrics: %+v", config.failedNodeList)
+		log.Warnf("Warning failed to get node metrics: %+v", config.failedNodeList)
 	}
 
 	// move baseline metrics for each node into sample directory

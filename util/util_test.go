@@ -94,7 +94,7 @@ func TestCheckRequiredSettings(t *testing.T) {
 		Short: "Collect Kubernetes Metrics",
 		Long:  `Command to collect Kubernetes Metrics`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return CheckRequiredSettings(cmd, args)
+			return CheckRequiredSettings([]string{"api_key"})
 		},
 		Run: func(cmd *cobra.Command, args []string) {},
 	}
@@ -115,7 +115,6 @@ func TestCheckRequiredSettings(t *testing.T) {
 
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
 	_ = viper.BindPFlag("poll_interval", kubernetesCmd.PersistentFlags().Lookup("poll_interval"))
-	_ = kubernetesCmd.MarkPersistentFlagRequired("api_key")
 
 	// nolint dupl
 	t.Run("ensure that required settings are set as cmd flags", func(t *testing.T) {
@@ -143,7 +142,6 @@ func TestCheckRequiredSettings(t *testing.T) {
 
 		viper.SetEnvPrefix("cloudability")
 		viper.AutomaticEnv()
-		_ = kubernetesCmd.MarkPersistentFlagRequired("api_key")
 
 		_ = os.Setenv("CLOUDABILITY_API_KEY", "8675309-9035768")
 		_ = os.Setenv("CLOUDABILITY_POLL_INTERVAL", "5")
@@ -158,7 +156,6 @@ func TestCheckRequiredSettings(t *testing.T) {
 
 		viper.SetEnvPrefix("cloudability")
 		viper.AutomaticEnv()
-		_ = kubernetesCmd.MarkPersistentFlagRequired("api_key")
 
 		envArgs := []string{"kubernetes"}
 		kubernetesCmd.SetArgs(envArgs)
@@ -176,7 +173,6 @@ func TestCheckRequiredSettings(t *testing.T) {
 
 		viper.SetEnvPrefix("cloudability")
 		viper.AutomaticEnv()
-		_ = kubernetesCmd.MarkPersistentFlagRequired("api_key")
 
 		envArgs := []string{"kubernetes"}
 		kubernetesCmd.SetArgs(envArgs)

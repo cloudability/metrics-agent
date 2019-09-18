@@ -3,25 +3,31 @@ package cmd
 import (
 	"github.com/cloudability/metrics-agent/kubernetes"
 	"github.com/cloudability/metrics-agent/util"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-func init() {
-
-	var config kubernetes.KubeAgentConfig
-
-	var kubernetesCmd = &cobra.Command{
+var (
+	config       kubernetes.KubeAgentConfig
+	requiredArgs = []string{
+		"api_key",
+		"cluster_name",
+	}
+	kubernetesCmd = &cobra.Command{
 		Use:   "kubernetes",
 		Short: "Collect Kubernetes Metrics",
 		Long:  "Command to collect Kubernetes Metrics",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return util.CheckRequiredSettings(cmd, args)
+			return util.CheckRequiredSettings(requiredArgs)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			kubernetes.CollectKubeMetrics(config)
 		},
 	}
+)
+
+func init() {
 
 	//add cobra and viper ENVs and flags
 	kubernetesCmd.PersistentFlags().StringVar(
@@ -46,7 +52,7 @@ func init() {
 		&config.PollInterval,
 		"poll_interval",
 		180,
-		"Time, in seconds, to poll the services infrastructure. Default: 180",
+		"Time, in seconds, to poll the services infrastructure.",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.Cert,
@@ -88,13 +94,13 @@ func init() {
 		&config.RetrieveNodeSummaries,
 		"retrieve_node_summaries",
 		true,
-		"When true, includes node summary metrics in metric collection. Default: True",
+		"When true, includes node summary metrics in metric collection.",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.CollectHeapsterExport,
 		"collect_heapster_export",
 		true,
-		"When true, tries to fetch heapster metrics if present. Default: True",
+		"When true, tries to fetch heapster metrics if present.",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.Namespace,
@@ -120,10 +126,6 @@ func init() {
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
-
-	//nolint gas
-	_ = kubernetesCmd.MarkPersistentFlagRequired("api_key")
-	_ = kubernetesCmd.MarkPersistentFlagRequired("cluster_name")
 
 	RootCmd.AddCommand(kubernetesCmd)
 

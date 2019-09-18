@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cloudability/metrics-agent/util"
+	log "github.com/sirupsen/logrus"
 )
 
 //Client defines an HTTP Client
@@ -66,7 +66,7 @@ func (c *Client) GetRawEndPoint(method, sourceName string,
 			return filename, nil
 		}
 		if verbose {
-			log.Printf("%v URL: %s retrying: %v", err, URL, i+1)
+			log.Warnf("%v URL: %s retrying: %v", err, URL, i+1)
 		}
 	}
 	return filename, err

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -28,6 +27,7 @@ import (
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"github.com/cloudability/metrics-agent/util"
 	cldyVersion "github.com/cloudability/metrics-agent/version"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
@@ -86,7 +86,7 @@ const kbURL string = "https://support.cloudability.com/hc/en-us/articles/3600083
 //CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
 func CollectKubeMetrics(config KubeAgentConfig) {
 
-	log.Printf("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
+	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
 
 	validateMetricCollectionConfig(config.RetrieveNodeSummaries, config.CollectHeapsterExport)
 
@@ -108,17 +108,17 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	err := fetchDiagnostics(kubeAgent.Clientset, config.Namespace, kubeAgent.msExportDirectory)
 
 	if err != nil {
-		log.Printf("Warning non-fatal error: Agent error occurred retrieving runtime diagnostics: %s ", err)
-		log.Printf("For more information see: %v", kbURL)
+		log.Warnf("Warning non-fatal error: Agent error occurred retrieving runtime diagnostics: %s ", err)
+		log.Warnf("For more information see: %v", kbURL)
 	}
 
 	err = downloadBaselineMetricExport(kubeAgent, clientSetNodeSource)
 
 	if err != nil {
-		log.Printf("Warning: Non-fatal error occurred retrieving baseline metrics: %s\n", err)
+		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	log.Printf("Cloudability Metrics Agent successfully started.")
+	log.Infof("Cloudability Metrics Agent successfully started.")
 
 	for {
 		select {
@@ -128,10 +128,10 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 			//Bundle raw metrics
 			metricSample, err := util.CreateMetricSample(*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true)
 			if err != nil {
-				log.Fatalf("Error creating metric sample: %s\n", err)
+				log.Fatalf("Error creating metric sample: %s", err)
 			}
 			//Send metric sample
-			log.Println("Uploading Metrics")
+			log.Infof("Uploading Metrics")
 			go kubeAgent.sendMetrics(metricSample)
 
 		case <-pollChan.C:
@@ -149,15 +149,15 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 func validateMetricCollectionConfig(retrieveNodeSummaries bool, collectHeapsterExport bool) {
 	if !retrieveNodeSummaries && !collectHeapsterExport {
-		log.Fatalf("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
+		log.Fatal("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
 	}
 	if retrieveNodeSummaries {
-		log.Printf("Primary metrics collected directly from each node.")
+		log.Info("Primary metrics collected directly from each node.")
 	}
 	if retrieveNodeSummaries && collectHeapsterExport {
-		log.Printf("Collecting Heapster exports if found in cluster.")
+		log.Info("Collecting Heapster exports if found in cluster.")
 	} else if collectHeapsterExport {
-		log.Printf("Primary metrics collected from Heapster exports. WARNING: Heapster is being deprecated.")
+		log.Warn("Primary metrics collected from Heapster exports. WARNING: Heapster is being deprecated.")
 	}
 }
 
@@ -203,7 +203,7 @@ func (ka KubeAgentConfig) collectMetrics(
 	if config.RetrieveNodeSummaries {
 		err = retrieveNodeSummaries(config, msd, metricSampleDir, nodeSource)
 		if err != nil {
-			log.Printf("Warning: %s", err)
+			log.Warnf("Warning: %s", err)
 		}
 	}
 
@@ -224,7 +224,7 @@ func (ka KubeAgentConfig) collectMetrics(
 		if err == nil || err.Error() == "No matches found" {
 			if err = handleBaselineHeapsterMetrics(
 				config.msExportDirectory.Name(), msd, baselineMetricSample, filename); err != nil {
-				log.Printf("Warning: updating Heapster Baseline failed: %v", err)
+				log.Warnf("Warning: updating Heapster Baseline failed: %v", err)
 			}
 		}
 	}
@@ -332,13 +332,13 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 func SendData(ms *os.File, uid string, mc client.MetricClient) (err error) {
 	err = mc.SendMetricSample(ms, cldyVersion.VERSION, uid)
 	if err != nil {
-		log.Printf("cloudability write failed: %v", err)
+		log.Warnf("cloudability write failed: %v", err)
 	} else {
 		sn := strings.Split(ms.Name(), "/")
-		log.Printf("Exported metric sample %s to cloudability", strings.TrimSuffix(sn[len(sn)-1], ".tgz"))
+		log.Infof("Exported metric sample %s to cloudability", strings.TrimSuffix(sn[len(sn)-1], ".tgz"))
 		err = os.Remove(ms.Name())
 		if err != nil {
-			log.Printf("Warning: Unable to cleanup after metric sample upload: %v", err)
+			log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
 		}
 
 	}
@@ -358,7 +358,7 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 		if km != "" && kc != "" {
 			thisConfig, err := clientcmd.BuildConfigFromFlags(km, kc)
 			if err != nil {
-				log.Print(
+				log.Warn(
 					"The cloudability metrics agent is unable to create cluster config")
 			}
 			config.UseInClusterConfig = false
@@ -369,9 +369,8 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 			config.Clientset, err = kubernetes.NewForConfig(thisConfig)
 			return config, err
 		}
-		log.Print(
-			"The cloudability metrics agent is unable to create cluster config via a service account. \n",
-			"Does this deployment have an associated service account? Trying Anonymous")
+		log.Warn(
+			"Unable to create cluster config via a service account. Check for associated service account. Trying Anonymous")
 		// create anonymous / Insecure client config
 		thisConfig, err = clientcmd.DefaultClientConfig.ClientConfig()
 		if err != nil {
@@ -422,7 +421,7 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	updatedConfig.ClusterVersion, err = getClusterVersion(updatedConfig.Clientset)
 	if err != nil {
-		log.Printf("cloudability metric agent is unable to determine the cluster version: %v", err)
+		log.Warnf("cloudability metric agent is unable to determine the cluster version: %v", err)
 	}
 
 	updatedConfig.provisioningID, err = getProvisioningID(updatedConfig.APIKey)
@@ -444,7 +443,7 @@ func updateConfigurationForServices(config KubeAgentConfig) (
 	if config.CollectHeapsterExport {
 		config.HeapsterProxyURL, err = getHeapsterURL(config.Clientset, config.ClusterHostURL)
 		if err != nil {
-			log.Printf("cloudability metric agent encountered an error while looking for heapster: %v", err)
+			log.Warnf("cloudability metric agent encountered an error while looking for heapster: %v", err)
 		}
 	}
 
@@ -486,7 +485,7 @@ func getClusterVersion(clientset kubernetes.Interface) (cv ClusterVersion, err e
 	cv.versionInfo = vi
 
 	if err != nil {
-		log.Printf("cloudability metric agent is unable to determine the cluster version: %v", err)
+		log.Warnf("cloudability metric agent is unable to determine the cluster version: %v", err)
 		return cv, err
 	}
 
@@ -494,7 +493,7 @@ func getClusterVersion(clientset kubernetes.Interface) (cv ClusterVersion, err e
 	reg := regexp.MustCompile("[^0-9D.*$]+")
 	cv.version, err = strconv.ParseFloat(reg.ReplaceAllString(cv.versionInfo.Major+"."+cv.versionInfo.Minor, ""), 64)
 	if err != nil {
-		log.Printf("Error parsing cluster version: %v", err)
+		log.Warnf("Error parsing cluster version: %v", err)
 	}
 
 	return cv, err
@@ -522,7 +521,7 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 	if config.RetrieveNodeSummaries {
 		config.failedNodeList, err = downloadNodeData("baseline", config, ed, nodeSource)
 		if len(config.failedNodeList) > 0 {
-			log.Printf("Warning: Failed to retrive metric data from %v nodes. Metric samples may be incomplete: %+v %v",
+			log.Warnf("Warning failed to retrive metric data from %v nodes. Metric samples may be incomplete: %+v %v",
 				len(config.failedNodeList), config.failedNodeList, err)
 		}
 	}
@@ -556,15 +555,15 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 	if config.RetrieveNodeSummaries {
 		config, err = ensureNodeSource(config)
 		if err != nil {
-			log.Printf("Warning non-fatal error: Agent error occurred retrieving node source metrics: %s ", err)
-			log.Printf("For more information see: %v", kbURL)
+			log.Warnf("Warning non-fatal error: Agent error occurred retrieving node source metrics: %s ", err)
+			log.Warnf("For more information see: %v", kbURL)
 		}
 	}
 	if config.CollectHeapsterExport {
 		if config.HeapsterURL != "" {
 			err = validateHeapster(config, &config.HTTPClient)
 			if err != nil {
-				log.Printf("Error occurred validating custom heapster URL: %v %v", config.HeapsterURL, err)
+				log.Errorf("Error occurred validating custom heapster URL: %v %v", config.HeapsterURL, err)
 				config.CollectHeapsterExport = false
 			}
 		} else {
@@ -689,17 +688,17 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	}
 
 	if err != nil {
-		log.Printf("Error creating Cloudability Agent status m : %v", err)
+		log.Errorf("Error creating Cloudability Agent status m : %v", err)
 	}
 
 	cldyMetric, err := json.Marshal(m)
 	if err != nil {
-		log.Printf("An error occurred converting Cldy m.  Error: %v\n", err)
+		log.Errorf("An error occurred converting Cldy measure.  Error: %v", err)
 	}
 
 	err = ioutil.WriteFile(exportFile, cldyMetric, 0644)
 	if err != nil {
-		log.Printf("An error occurred creating a Cldy m.  Error: %v\n", err)
+		log.Errorf("An error occurred creating a Cldy measure.  Error: %v", err)
 	}
 
 	return err
