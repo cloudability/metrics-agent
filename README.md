@@ -49,7 +49,7 @@ Flags:
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
 Global Flags:
-      --log_format string   Format for log output (JSON,TXT) (default "PLAIN")
+      --log_format string   Format for log output (JSON,PLAIN) (default "PLAIN")
       --log_level string    Log level to run the agent at (INFO,WARN,DEBUG) (default "INFO")
 ```
 
