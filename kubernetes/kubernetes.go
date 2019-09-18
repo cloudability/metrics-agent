@@ -370,7 +370,7 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 			return config, err
 		}
 		log.Warn(
-			"The cloudability metrics agent is unable to create cluster config via a service account. Does this deployment have an associated service account? Trying Anonymous")
+			"Unable to create cluster config via a service account. Check for associated service account. Trying Anonymous")
 		// create anonymous / Insecure client config
 		thisConfig, err = clientcmd.DefaultClientConfig.ClientConfig()
 		if err != nil {
