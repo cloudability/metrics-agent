@@ -53,9 +53,15 @@ func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sourc
 		"persistentvolumeclaims",
 	}
 	v1beta1Sources = []string{
-		"deployments",
 		"replicasets",
 		"daemonsets",
+	}
+
+	// deployments uses beta api before version 1.16 onward
+	if clusterVersion < 1.16 {
+		v1beta1Sources = append(v1beta1Sources, "deployments")
+	} else {
+		v1Sources = append(v1Sources, "deployments")
 	}
 
 	return v1Sources, v1beta1Sources
