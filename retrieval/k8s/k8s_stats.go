@@ -34,7 +34,7 @@ func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.Fi
 
 	// get v1 App sources
 	for _, v1Apps := range v1AppSources {
-		_, err := rawClient.GetRawEndPoint(http.MethodGet, v1Apps, workDir, clusterHostURL+"/api/apps/v1/"+v1Apps, nil, true)
+		_, err := rawClient.GetRawEndPoint(http.MethodGet, v1Apps, workDir, clusterHostURL+"/apis/apps/v1/"+v1Apps, nil, true)
 		if err != nil {
 			log.Errorf("Error retrieving "+v1Apps+" metric endpoint: %s", err)
 			return err
