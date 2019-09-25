@@ -11,7 +11,7 @@ import (
 //GetK8sMetrics returns cloudabilty measurements retrieved from a given K8S Clientset
 func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.File, rawClient raw.Client) (err error) {
 
-	v1Sources, v1beta1Sources := getk8sSourcePaths(clusterVersion)
+	v1Sources, v1beta1Sources, v1AppSources := getk8sSourcePaths(clusterVersion)
 
 	// get v1 sources
 	for _, v1s := range v1Sources {
@@ -32,6 +32,15 @@ func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.Fi
 		}
 	}
 
+	// get v1 App sources
+	for _, v1Apps := range v1AppSources {
+		_, err := rawClient.GetRawEndPoint(http.MethodGet, v1Apps, workDir, clusterHostURL+"/api/apps/v1/"+v1Apps, nil, true)
+		if err != nil {
+			log.Errorf("Error retrieving "+v1Apps+" metric endpoint: %s", err)
+			return err
+		}
+	}
+
 	// get jobs
 	_, err = rawClient.GetRawEndPoint(http.MethodGet, "jobs", workDir, clusterHostURL+"/apis/batch/v1/jobs", nil, true)
 	if err != nil {
@@ -42,7 +51,7 @@ func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.Fi
 	return err
 }
 
-func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sources []string) {
+func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sources []string, v1AppSources []string) {
 	v1Sources = []string{
 		"namespaces",
 		"replicationcontrollers",
@@ -57,13 +66,15 @@ func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sourc
 		"daemonsets",
 	}
 
+	v1AppSources = []string{}
+
 	// deployments uses beta api before version 1.16 onward
 	if clusterVersion < 1.16 {
 		v1beta1Sources = append(v1beta1Sources, "deployments")
 	} else {
-		v1Sources = append(v1Sources, "deployments")
+		v1AppSources = append(v1AppSources, "deployments")
 	}
 
-	return v1Sources, v1beta1Sources
+	return v1Sources, v1beta1Sources, v1AppSources
 
 }
