@@ -52,6 +52,11 @@ func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.Fi
 }
 
 func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sources []string, v1AppSources []string) {
+	commonSrcs := []string{
+		"replicasets",
+		"daemonsets",
+		"deployments",
+	}
 	v1Sources = []string{
 		"namespaces",
 		"replicationcontrollers",
@@ -61,18 +66,15 @@ func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sourc
 		"persistentvolumes",
 		"persistentvolumeclaims",
 	}
-	v1beta1Sources = []string{
-		"replicasets",
-		"daemonsets",
-	}
 
+	v1beta1Sources = []string{}
 	v1AppSources = []string{}
 
-	// deployments uses beta api before version 1.16 onward
+	// common sources [deployments, replicasets, daemonsets] moved from beta to apps v1.16 onward
 	if clusterVersion < 1.16 {
-		v1beta1Sources = append(v1beta1Sources, "deployments")
+		v1beta1Sources = append(v1beta1Sources, commonSrcs...)
 	} else {
-		v1AppSources = append(v1AppSources, "deployments")
+		v1AppSources = append(v1AppSources, commonSrcs...)
 	}
 
 	return v1Sources, v1beta1Sources, v1AppSources
