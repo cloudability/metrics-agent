@@ -200,9 +200,9 @@ func getExportFilename(uid string) string {
 }
 
 //CreateMSWorkingDirectory takes a given prefix and returns a metric sample working directory
-func CreateMSWorkingDirectory(uid string) (*os.File, error) {
+func CreateMSWorkingDirectory(uid string, scratchDir string) (*os.File, error) {
 	//create metric sample directory
-	td, err := ioutil.TempDir("", "cldy-metrics")
+	td, err := ioutil.TempDir(scratchDir, "cldy-metrics")
 	if err != nil {
 		log.Errorf("Unable to create temporary directory: %v", err)
 		return nil, err
@@ -325,5 +325,13 @@ func SetupLogger() (err error) {
 			PadLevelText:           true,
 		})
 	}
+	return nil
+}
+
+func SetupScratchDir(scratchDir string) error {
+	if _, err := os.Stat(scratchDir); os.IsNotExist(err) {
+		return os.MkdirAll(scratchDir, os.ModeDir)
+	}
+
 	return nil
 }

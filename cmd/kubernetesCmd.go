@@ -108,6 +108,12 @@ func init() {
 		"cloudability",
 		"Kubernetes Namespace that the Agent is Running In",
 	)
+	kubernetesCmd.PersistentFlags().StringVar(
+		&config.ScratchDir,
+		"scratch_dir",
+		"/tmp",
+		"Directory metrics will be written to",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -123,6 +129,7 @@ func init() {
 	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
 	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
 	_ = viper.BindPFlag("collect_heapster_export", kubernetesCmd.PersistentFlags().Lookup("collect_heapster_export"))
+	_ = viper.BindPFlag("scratch_dir", kubernetesCmd.PersistentFlags().Lookup("scratch_dir"))
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
@@ -143,6 +150,7 @@ func init() {
 		Key:                   viper.GetString("key_file"),
 		RetrieveNodeSummaries: viper.GetBool("retrieve_node_summaries"),
 		Namespace:             viper.GetString("namespace"),
+		ScratchDir:            viper.GetString("scratch_dir"),
 	}
 
 }
