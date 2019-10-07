@@ -127,7 +127,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		case <-sendChan.C:
 
 			//Bundle raw metrics
-			metricSample, err := util.CreateMetricSample(*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true)
+			metricSample, err := util.CreateMetricSample(*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true, kubeAgent.ScratchDir)
 			if err != nil {
 				log.Fatalf("Error creating metric sample: %s", err)
 			}

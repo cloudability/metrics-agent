@@ -196,7 +196,7 @@ func TestCreateMetricSample(t *testing.T) {
 
 		if _, err = os.Stat(testDataDirectory); err == nil {
 			sampleDirectory, err = os.Open(testDataDirectory)
-			ms, err := CreateMetricSample(*sampleDirectory, "cluster-id", false)
+			ms, err := CreateMetricSample(*sampleDirectory, "cluster-id", false, os.TempDir())
 			if err != nil {
 				t.Errorf("Error creating agent Status Metric: %v", err)
 			}

@@ -86,7 +86,7 @@ func CheckRequiredSettings(requiredArgs []string) error {
 }
 
 //CreateMetricSample creates a metric sample from a given directory removing the source directory if cleanup is true
-func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool) (*os.File, error) {
+func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scratchDir string) (*os.File, error) {
 
 	ed, err := exportDirectory.Stat()
 	if err != nil || !ed.IsDir() {
@@ -95,7 +95,7 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool) (*os.
 	}
 
 	sampleFilename := getExportFilename(uid)
-	destFile, err := os.Create(os.TempDir() + "/" + sampleFilename + ".tgz")
+	destFile, err := os.Create(scratchDir + "/" + sampleFilename + ".tgz")
 
 	if err != nil {
 		log.Errorf("Unable to create metric sample file: %v", err)
