@@ -86,7 +86,7 @@ func CheckRequiredSettings(requiredArgs []string) error {
 }
 
 //CreateMetricSample creates a metric sample from a given directory removing the source directory if cleanup is true
-func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool) (*os.File, error) {
+func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scratchDir string) (*os.File, error) {
 
 	ed, err := exportDirectory.Stat()
 	if err != nil || !ed.IsDir() {
@@ -95,7 +95,7 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool) (*os.
 	}
 
 	sampleFilename := getExportFilename(uid)
-	destFile, err := os.Create(os.TempDir() + "/" + sampleFilename + ".tgz")
+	destFile, err := os.Create(scratchDir + "/" + sampleFilename + ".tgz")
 
 	if err != nil {
 		log.Errorf("Unable to create metric sample file: %v", err)
@@ -200,9 +200,9 @@ func getExportFilename(uid string) string {
 }
 
 //CreateMSWorkingDirectory takes a given prefix and returns a metric sample working directory
-func CreateMSWorkingDirectory(uid string) (*os.File, error) {
+func CreateMSWorkingDirectory(uid string, scratchDir string) (*os.File, error) {
 	//create metric sample directory
-	td, err := ioutil.TempDir("", "cldy-metrics")
+	td, err := ioutil.TempDir(scratchDir, "cldy-metrics")
 	if err != nil {
 		log.Errorf("Unable to create temporary directory: %v", err)
 		return nil, err
@@ -325,5 +325,14 @@ func SetupLogger() (err error) {
 			PadLevelText:           true,
 		})
 	}
+	return nil
+}
+
+//ValidateScratchDir validates whether or not the scratch directory exists or not
+func ValidateScratchDir(scratchDir string) error {
+	if _, err := os.Stat(scratchDir); os.IsNotExist(err) {
+		return fmt.Errorf("There was a problem validating provided scratch directory: %v", err)
+	}
+
 	return nil
 }

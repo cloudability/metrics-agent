@@ -24,8 +24,9 @@ By default, the agent runs in a namespace named "cloudability" (see options belo
 | CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True|
 | CLOUDABILITY_COLLECT_HEAPSTER_EXPORT    | Optional: When true, attempts to collect metrics from Heapster if available. When False, does not collect Heapster metrics. Default: True|
 | CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`|
-| CLOUDABILITY_LOG_FORMAT    | Optional: Format for log output (JSON,PLAIN) Default: PLAIN|
+| CLOUDABILITY_LOG_FORMAT                 | Optional: Format for log output (JSON,PLAIN) Default: PLAIN|
 | CLOUDABILITY_LOG_LEVEL                  | Optional: Log level to run the agent at (INFO,WARN,DEBUG,TRACE). Default: `INFO`|
+| CLOUDABILITY_SCRATCH_DIR                | Optional: Temporary directory that metrics will be written to. If set, must assure that the directory exists and that the user agent UID 1000 has read/write access to the folder. Default: `/tmp`|
 
 ```sh
 

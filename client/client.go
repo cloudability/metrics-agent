@@ -22,7 +22,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"crypto/md5"
+	"crypto/md5" //nolint gosec
 
 	"github.com/cloudability/metrics-agent/measurement"
 	"github.com/cloudability/metrics-agent/util"

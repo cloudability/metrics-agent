@@ -75,6 +75,7 @@ type KubeAgentConfig struct {
 	msExportDirectory     *os.File
 	TLSClientConfig       rest.TLSClientConfig
 	Namespace             string
+	ScratchDir            string
 }
 
 const uploadInterval time.Duration = 10
@@ -126,7 +127,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		case <-sendChan.C:
 
 			//Bundle raw metrics
-			metricSample, err := util.CreateMetricSample(*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true)
+			metricSample, err := util.CreateMetricSample(
+				*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true, kubeAgent.ScratchDir)
 			if err != nil {
 				log.Fatalf("Error creating metric sample: %s", err)
 			}
@@ -179,14 +181,19 @@ func newKubeAgent(config KubeAgentConfig) KubeAgentConfig {
 		log.Fatal(err)
 	}
 
+	// setup directory for writing metrics to
+	err = util.ValidateScratchDir(config.ScratchDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	//Create metric sample working directory
-	config.msExportDirectory, err = util.CreateMSWorkingDirectory(config.clusterUID)
+	config.msExportDirectory, err = util.CreateMSWorkingDirectory(config.clusterUID, config.ScratchDir)
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable to create a temporary working directory: %v", err)
 	}
 
 	return config
-
 }
 
 func (ka KubeAgentConfig) collectMetrics(

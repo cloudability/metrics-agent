@@ -39,6 +39,7 @@ func init() {
 	// set version flag
 	RootCmd.Version = cldyVersion.VERSION
 
+	//nolint gosec
 	_ = viper.BindPFlag("log_level", RootCmd.PersistentFlags().Lookup("log_level"))
 	_ = viper.BindPFlag("log_format", RootCmd.PersistentFlags().Lookup("log_format"))
 
