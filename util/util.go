@@ -328,6 +328,7 @@ func SetupLogger() (err error) {
 	return nil
 }
 
+//ValidateScratchDir validates whether or not the scratch directory exists or not
 func ValidateScratchDir(scratchDir string) error {
 	if _, err := os.Stat(scratchDir); os.IsNotExist(err) {
 		return fmt.Errorf("There was a problem validating provided scratch directory: %v", err)
