@@ -261,3 +261,23 @@ func TestMatchOneFile(t *testing.T) {
 	_ = os.RemoveAll(dir)
 
 }
+
+func TestValidateScratchDir(t *testing.T) {
+	t.Run("Ensure that an error is returned when directory doesn't exist", func(t *testing.T) {
+		fakeDir := "/fake_dir"
+		err := ValidateScratchDir(fakeDir)
+
+		if err == nil {
+			t.Errorf("Should have raised an error when validating scratch directory that does not exist, error: %v", err)
+		}
+	})
+
+	t.Run("Ensure that no error is returned when it is directory that does exist", func(t *testing.T) {
+		scratchDir := "/tmp"
+		err := ValidateScratchDir(scratchDir)
+
+		if err != nil {
+			t.Errorf("Should not have raised an error when validating scratch directory that does exist, error: %v", err)
+		}
+	})
+}

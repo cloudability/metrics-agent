@@ -328,9 +328,9 @@ func SetupLogger() (err error) {
 	return nil
 }
 
-func SetupScratchDir(scratchDir string) error {
+func ValidateScratchDir(scratchDir string) error {
 	if _, err := os.Stat(scratchDir); os.IsNotExist(err) {
-		return os.MkdirAll(scratchDir, os.ModeDir)
+		return fmt.Errorf("There was a problem validating provided scratch directory: %v", err)
 	}
 
 	return nil

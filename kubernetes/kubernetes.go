@@ -181,7 +181,7 @@ func newKubeAgent(config KubeAgentConfig) KubeAgentConfig {
 	}
 
 	// setup directory for writing metrics to
-	err = util.SetupScratchDir(config.ScratchDir)
+	err = util.ValidateScratchDir(config.ScratchDir)
 	if err != nil {
 		log.Fatal(err)
 	}
