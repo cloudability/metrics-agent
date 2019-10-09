@@ -528,7 +528,7 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 	if config.RetrieveNodeSummaries {
 		config.failedNodeList, err = downloadNodeData("baseline", config, ed, nodeSource)
 		if len(config.failedNodeList) > 0 {
-			log.Warnf("Warning failed to retrive metric data from %v nodes. Metric samples may be incomplete: %+v %v",
+			log.Warnf("Warning failed to retrieve metric data from %v nodes. Metric samples may be incomplete: %+v %v",
 				len(config.failedNodeList), config.failedNodeList, err)
 		}
 	}

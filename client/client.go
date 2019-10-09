@@ -256,7 +256,7 @@ func (c httpMetricClient) retryWithBackoff(
 		var uploadURL, hash string
 		uploadURL, hash, err = c.GetUploadURL(metricFile, metricSampleURL, agentVersion, UID)
 		if err != nil {
-			log.Errorf("error encountered while retriving upload location: %v", err)
+			log.Errorf("error encountered while retrieving upload location: %v", err)
 			continue
 		}
 

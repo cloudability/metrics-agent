@@ -22,10 +22,9 @@ jobs:
             dep ensure -v
 
       - run:
-          name: Install gometalinter
+          name: Install golangci-lint
           command: |
-            go get -u gopkg.in/alecthomas/gometalinter.v2
-            gometalinter.v2 --install -u
+            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.20.0
 
       - run: 
           name: Lint

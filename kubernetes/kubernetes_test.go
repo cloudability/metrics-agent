@@ -165,7 +165,7 @@ func TestUpdateConfigWithOverrideURLs(t *testing.T) {
 				Host: "http://localhost:8888/",
 				Path: "/api/v1/namespaces/default/services/heapster:8888/proxy/metrics"},
 		})
-		if config.HeapsterURL != string(config.HeapsterProxyURL.Host+config.HeapsterProxyURL.Path) {
+		if config.HeapsterURL != config.HeapsterProxyURL.Host+config.HeapsterProxyURL.Path {
 			t.Error(" HeapsterURL is not set to proxyPath ")
 		}
 
