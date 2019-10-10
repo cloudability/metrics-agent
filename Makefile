@@ -65,7 +65,7 @@ fmt:
 	goreturns -w .
 
 lint:
-	CGO_ENABLED=0 gometalinter.v2 --config gometalinter.json --vendor ./...
+	golangci-lint run
 
 install:
 	go install ./...
