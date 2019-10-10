@@ -3,7 +3,7 @@ EXECUTABLES = go dep
 EXEC_CHECK := $(foreach exec,$(EXECUTABLES), \
 	$(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH.")))
 
-GOLANG_VERSION?=1.10
+GOLANG_VERSION?=1.11
 REPO_DIR:=$(shell pwd)
 PREFIX=cloudability
 CLDY_API_KEY=${CLOUDABILITY_API_KEY}
