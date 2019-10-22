@@ -62,7 +62,7 @@ We're using [dep](https://github.com/golang/dep) to manage Go dependencies.
 
 ### Source Code Analysis
 
-We're using [Go Meta Linter](https://github.com/alecthomas/gometalinter) for static source code analysis.
+We're using [golangci-lint](https://github.com/golangci/golangci-lint) for static source code analysis.
 
 ## Contributing code
 
