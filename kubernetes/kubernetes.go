@@ -296,9 +296,6 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 			return err
 		}
 		if strings.HasPrefix(info.Name(), "stats-") {
-			if err != nil {
-				return err
-			}
 			nodeName := getNodeName("stats", info.Name())
 			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s.json", nodeName)
 
@@ -692,10 +689,6 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 				Type:    "node_error",
 			})
 		}
-	}
-
-	if err != nil {
-		log.Errorf("Error creating Cloudability Agent status m : %v", err)
 	}
 
 	cldyMetric, err := json.Marshal(m)
