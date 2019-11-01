@@ -129,7 +129,7 @@ func validateHeapster(config KubeAgentConfig, client rest.HTTPClient) error {
 		return fmt.Errorf("received empty or malformed response from heapster running at: %v",
 			config.HeapsterURL)
 	}
-	log.Infof("Connected to heapster at: %v", config.HeapsterURL)
+	log.Debugf("Connected to heapster at: %v", config.HeapsterURL)
 	return err
 }
 
