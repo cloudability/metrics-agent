@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.13
 
     working_directory: /go/src/github.com/cloudability/metrics-agent
 
@@ -16,15 +16,8 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
 
       - run:
-          name: Install / run dep
-          command: |
-            go get -u github.com/golang/dep/cmd/dep
-            dep ensure -v
-
-      - run:
-          name: Install golangci-lint
-          command: |
-            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.20.0
+          name: Download Dependencies
+          command: make setup
 
       - run: 
           name: Lint

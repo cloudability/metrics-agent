@@ -7,11 +7,6 @@ ARG application
 
 WORKDIR /go/src/${package}/
 
-# Install dependencies
-RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-COPY Gopkg.toml Gopkg.lock ./
-RUN dep ensure --vendor-only
-
 # Build source code
 ENV CGO_ENABLED=0
 ENV GOOS=linux

@@ -24,9 +24,9 @@ import (
 
 	"crypto/md5" //nolint gosec
 
-	"github.com/cloudability/metrics-agent/measurement"
-	"github.com/cloudability/metrics-agent/util"
-	"github.com/cloudability/metrics-agent/version"
+	"github.com/cloudability/metrics-agent/v2/measurement"
+	"github.com/cloudability/metrics-agent/v2/util"
+	"github.com/cloudability/metrics-agent/v2/version"
 )
 
 //nolint gosec

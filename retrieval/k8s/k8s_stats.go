@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/cloudability/metrics-agent/retrieval/raw"
+	"github.com/cloudability/metrics-agent/v2/retrieval/raw"
 	log "github.com/sirupsen/logrus"
 )
 

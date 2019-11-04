@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	util "github.com/cloudability/metrics-agent/util"
-	cldyVersion "github.com/cloudability/metrics-agent/version"
+	util "github.com/cloudability/metrics-agent/v2/util"
+	cldyVersion "github.com/cloudability/metrics-agent/v2/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

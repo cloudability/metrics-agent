@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cloudability/metrics-agent/kubernetes"
-	"github.com/cloudability/metrics-agent/retrieval/raw"
+	"github.com/cloudability/metrics-agent/v2/kubernetes"
+	"github.com/cloudability/metrics-agent/v2/retrieval/raw"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	v1 "k8s.io/client-go/pkg/api/v1"
 )
 
 func NewTestClient(ts *httptest.Server) *fake.Clientset {

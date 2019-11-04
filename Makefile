@@ -3,10 +3,13 @@ EXECUTABLES = go dep
 EXEC_CHECK := $(foreach exec,$(EXECUTABLES), \
 	$(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH.")))
 
-GOLANG_VERSION?=1.11
+GOLANG_VERSION?=1.13
 REPO_DIR:=$(shell pwd)
 PREFIX=cloudability
 CLDY_API_KEY=${CLOUDABILITY_API_KEY}
+
+GO=GO111MODULE=on go
+GOLANGCILINT=GO111MODULE=on golangci-lint
 
 ifndef TEMP_DIR
 TEMP_DIR:=$(shell mktemp -d /tmp/metrics-agent.XXXXXX)
@@ -36,7 +39,7 @@ default:
 	@echo Specify a goal
 
 build:
-	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
+	GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build -o metrics-agent main.go
 
 circleci-push:
 	docker push $(PREFIX)/metrics-agent:$(VERSION)
@@ -54,6 +57,9 @@ deploy-local: container-build
 	sed "s/latest/$(VERSION)/g; s/XXXXXXXXX/$(CLDY_API_KEY)/g; s/Always/Never/g; s/NNNNNNNNN/local-dev-$(shell hostname)/g" \
 	./deploy/kubernetes/cloudability-metrics-agent.yaml |kubectl apply -f - 
 
+setup:
+	cd /tmp; $(GO) get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.18.0
+	$(GO) mod download
 
 dockerhub-push:
 	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
@@ -65,13 +71,13 @@ fmt:
 	goreturns -w .
 
 lint:
-	golangci-lint run
+	$(GOLANGCILINT) run
 
 install:
-	go install ./...
+	$(GO) install ./...
 
 test:
-	go test ./...
+	$(GO) test ./...
 
 check: fmt lint test
 

@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudability/metrics-agent/client"
-	"github.com/cloudability/metrics-agent/measurement"
-	"github.com/cloudability/metrics-agent/test"
-	"github.com/cloudability/metrics-agent/version"
+	"github.com/cloudability/metrics-agent/v2/client"
+	"github.com/cloudability/metrics-agent/v2/measurement"
+	"github.com/cloudability/metrics-agent/v2/test"
+	"github.com/cloudability/metrics-agent/v2/version"
 )
 
 // nolint: dupl

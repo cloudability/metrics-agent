@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/cloudability/metrics-agent/kubernetes"
-	"github.com/cloudability/metrics-agent/util"
+	"github.com/cloudability/metrics-agent/v2/kubernetes"
+	"github.com/cloudability/metrics-agent/v2/util"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

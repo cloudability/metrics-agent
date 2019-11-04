@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudability/metrics-agent/util"
+	"github.com/cloudability/metrics-agent/v2/util"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"k8s.io/client-go/util/retry"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/cloudability/metrics-agent/retrieval/raw"
-	"github.com/cloudability/metrics-agent/util"
-	"github.com/kubernetes/kubernetes/staging/src/k8s.io/client-go/util/retry"
+	"github.com/cloudability/metrics-agent/v2/retrieval/raw"
+	"github.com/cloudability/metrics-agent/v2/util"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/client-go/pkg/api/v1"
 )
 
 // NodeSource is an interface to get a list of Nodes
