@@ -2,12 +2,6 @@
   "run": {
     "timeout": "5m"
   },
-  "gocyclo": {
-    "min-complexity": 12
-  },
-  "lll": {
-    "line-length": 120
-  },
   "linters": {
     "disable-all": true,
     "enable": [
@@ -29,6 +23,17 @@
       "maligned",
       "gofmt"
     ]
+  },
+  "linters-settings": {
+    "dupl": {
+      "threshold": 100
+    },
+    "lll": {
+      "line-length": 120
+    },
+    "gocyclo": {
+      "min-complexity": 12
+    }
   },
   "issues": {
     "exclude-rules": [{

@@ -157,7 +157,7 @@ func validateMetricCollectionConfig(retrieveNodeSummaries bool, collectHeapsterE
 		log.Info("Primary metrics collected directly from each node.")
 	}
 	if retrieveNodeSummaries && collectHeapsterExport {
-		log.Info("Collecting Heapster exports if found in cluster.")
+		log.Debug("Collecting Heapster exports if found in cluster.")
 	} else if collectHeapsterExport {
 		log.Warn("Primary metrics collected from Heapster exports. WARNING: Heapster is being deprecated.")
 	}
@@ -231,7 +231,7 @@ func (ka KubeAgentConfig) collectMetrics(
 		if err == nil || err.Error() == "No matches found" {
 			if err = handleBaselineHeapsterMetrics(
 				config.msExportDirectory.Name(), msd, baselineMetricSample, filename); err != nil {
-				log.Warnf("Warning: updating Heapster Baseline failed: %v", err)
+				log.Debugf("Warning: updating Heapster Baseline failed: %v", err)
 			}
 		}
 	}
@@ -296,9 +296,6 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 			return err
 		}
 		if strings.HasPrefix(info.Name(), "stats-") {
-			if err != nil {
-				return err
-			}
 			nodeName := getNodeName("stats", info.Name())
 			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s.json", nodeName)
 
@@ -450,7 +447,7 @@ func updateConfigurationForServices(config KubeAgentConfig) (
 	if config.CollectHeapsterExport {
 		config.HeapsterProxyURL, err = getHeapsterURL(config.Clientset, config.ClusterHostURL)
 		if err != nil {
-			log.Warnf("cloudability metric agent encountered an error while looking for heapster: %v", err)
+			log.Debugf("cloudability metric agent encountered an error while looking for heapster: %v", err)
 		}
 	}
 
@@ -692,10 +689,6 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 				Type:    "node_error",
 			})
 		}
-	}
-
-	if err != nil {
-		log.Errorf("Error creating Cloudability Agent status m : %v", err)
 	}
 
 	cldyMetric, err := json.Marshal(m)
