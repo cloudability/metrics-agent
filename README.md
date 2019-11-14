@@ -4,6 +4,7 @@ The metrics-agent collects allocation metrics from a container orchestration sys
 
 [![CircleCI](https://circleci.com/gh/cloudability/metrics-agent/tree/master.svg?style=svg)](https://circleci.com/gh/cloudability/metrics-agent/tree/master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cloudability/metrics-agent)](https://goreportcard.com/report/github.com/cloudability/metrics-agent)
+[![Known Vulnerabilities](https://snyk.io/test/github/cloudability/metrics-agent/badge.svg?targetFile=Gopkg.lock)](https://snyk.io/test/github/cloudability/metrics-agent?targetFile=Gopkg.lock)
 
 ## Kubernetes
 
