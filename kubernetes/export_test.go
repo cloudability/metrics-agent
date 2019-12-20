@@ -1,4 +1,10 @@
 package kubernetes
 
-var EnsureNodeSource = ensureNodeSource
-var DownloadNodeData = downloadNodeData
+var (
+	IsFargateNode    = isFargateNode
+	EnsureNodeSource = ensureNodeSource
+	DownloadNodeData = downloadNodeData
+	Unreachable      = unreachable
+	Proxy            = proxy
+	Direct           = direct
+)

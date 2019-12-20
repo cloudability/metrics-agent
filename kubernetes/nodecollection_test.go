@@ -17,13 +17,30 @@ import (
 	v1 "k8s.io/client-go/pkg/api/v1"
 )
 
-func NewTestClient(ts *httptest.Server) *fake.Clientset {
+// labels found on an amazon EKS fargate node
+var fargateLabels = map[string]string{
+	"eks.amazonaws.com/compute-type": "fargate",
+	"beta.kubernetes.io/os":          "linux",
+}
+
+// labels found on a generic node
+var nodeSampleLabels = map[string]string{
+	"beta.kubernetes.io/os":          "linux",
+	"kubernetes.io/arch":             "amd64",
+	"eks.amazonaws.com/compute-type": "not-fargate",
+}
+
+func NewTestClient(ts *httptest.Server, labels map[string]string) *fake.Clientset {
 	s := strings.Split(ts.Listener.Addr().String(), ":")
 	ip := s[0]
 	port, _ := strconv.Atoi(s[1])
 	return fake.NewSimpleClientset(
 		&v1.Node{
-			ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "proxyNode",
+				Namespace: v1.NamespaceDefault,
+				Labels:    labels,
+			},
 			Status: v1.NodeStatus{
 				Addresses: []v1.NodeAddress{
 					{
@@ -42,10 +59,16 @@ func NewTestClient(ts *httptest.Server) *fake.Clientset {
 }
 
 func TestEnsureNodeSource(t *testing.T) {
-
+	// Cause test server to return success for the first two test queries, enabling
+	// the first test to succeed on the "direct" step.
+	// The second (proxy) test encounters two 400s when attempting a direct connection,
+	// which triggers a fallback to proxy testing, which receives the next two 200s.
+	// The final 400 fails the direct connection test, and as no proxy client is provided
+	// for the "unsuccessful" node test, it falls through to unreachable status.
+	// If no status code is provided, the default response is 200.
 	returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
 	ts := launchTLSTestServer(returnCodes)
-	cs := NewTestClient(ts)
+	cs := NewTestClient(ts, nodeSampleLabels)
 	ka := kubernetes.KubeAgentConfig{
 		Clientset:  cs,
 		HTTPClient: http.Client{},
@@ -57,7 +80,7 @@ func TestEnsureNodeSource(t *testing.T) {
 
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
-		if ka.GetNodeRetrievalMethod() != "direct" || err != nil {
+		if ka.GetNodeRetrievalMethod() != kubernetes.Direct || err != nil {
 			t.Errorf("Expected direct node retrieval method but got %v: %v",
 				ka.GetNodeRetrievalMethod(),
 				err)
@@ -69,6 +92,7 @@ func TestEnsureNodeSource(t *testing.T) {
 	t.Run("Ensure successful proxy node source test", func(t *testing.T) {
 		ka := kubernetes.KubeAgentConfig{
 			Clientset: cs,
+			// The proxy connection method uses the config http client
 			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
 				// nolint gosec
 				InsecureSkipVerify: true,
@@ -79,7 +103,7 @@ func TestEnsureNodeSource(t *testing.T) {
 
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
-		if ka.GetNodeRetrievalMethod() != "proxy" || err != nil {
+		if ka.GetNodeRetrievalMethod() != kubernetes.Proxy || err != nil {
 			t.Errorf("Expected proxy node retrieval method but got %v: %v", ka.GetNodeRetrievalMethod(), err)
 			return
 		}
@@ -87,17 +111,103 @@ func TestEnsureNodeSource(t *testing.T) {
 
 	t.Run("Ensure unsuccessful node source test", func(t *testing.T) {
 		ka, err := kubernetes.EnsureNodeSource(ka)
-		if ka.GetNodeRetrievalMethod() != "unreachable" {
+
+		if ka.GetNodeRetrievalMethod() != kubernetes.Unreachable {
 			t.Errorf("Expected unreachable node retrieval method but got %v: %v", ka.GetNodeRetrievalMethod(), err)
 			return
 		}
 	})
+
+	t.Run("Ensure Fargate node forces proxy connection", func(t *testing.T) {
+		cs := NewTestClient(ts, fargateLabels)
+		ka := kubernetes.KubeAgentConfig{
+			Clientset: cs,
+			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
+				// nolint gosec
+				InsecureSkipVerify: true,
+			},
+			}},
+			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
+		}
+		ka, err := kubernetes.EnsureNodeSource(ka)
+
+		if ka.GetNodeRetrievalMethod() != kubernetes.Proxy || err != nil {
+			t.Errorf("Expected proxy node retrieval method for Fargate node but got %v. Error: %v, Config: %+v",
+				ka.GetNodeRetrievalMethod(),
+				err,
+				ka)
+			return
+		}
+
+	})
+
+	t.Run("Ensure config flag forces proxy connection", func(t *testing.T) {
+		cs := NewTestClient(ts, nodeSampleLabels)
+		ka := kubernetes.KubeAgentConfig{
+			Clientset: cs,
+			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
+				// nolint gosec
+				InsecureSkipVerify: true,
+			},
+			}},
+			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
+			ForceKubeProxy: true,
+		}
+		ka, err := kubernetes.EnsureNodeSource(ka)
+
+		if ka.GetNodeRetrievalMethod() != kubernetes.Proxy || err != nil {
+			t.Errorf("Expected proxy node retrieval method with force_kube_proxy flag set, but got %v. Error: %v, Config: %+v",
+				ka.GetNodeRetrievalMethod(),
+				err,
+				ka)
+			return
+		}
+
+	})
+}
+
+func TestFargateNodeDetection(t *testing.T) {
+	n := v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "proxyNode",
+			Namespace: v1.NamespaceDefault,
+			Labels:    nodeSampleLabels,
+		},
+		Status: v1.NodeStatus{
+			Addresses: []v1.NodeAddress{
+				{
+					Type:    "InternalIP",
+					Address: "1.110.235.222",
+				},
+			},
+			DaemonEndpoints: v1.NodeDaemonEndpoints{
+				KubeletEndpoint: v1.DaemonEndpoint{
+					Port: 80,
+				},
+			},
+		},
+	}
+
+	t.Run("non-Fargate node returns false", func(t *testing.T) {
+		if kubernetes.IsFargateNode(n) {
+			t.Errorf("Incorrectly identified a node as Fargate")
+		}
+	})
+
+	t.Run("Fargate node returns true", func(t *testing.T) {
+		// add Fargate-identifying labels
+		n.ObjectMeta.Labels = fargateLabels
+		if !kubernetes.IsFargateNode(n) {
+			t.Errorf("Should have identified node as Fargate")
+		}
+	})
+
 }
 
 func TestDownloadNodeData(t *testing.T) {
 	returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
 	ts := launchTLSTestServer(returnCodes)
-	cs := NewTestClient(ts)
+	cs := NewTestClient(ts, nodeSampleLabels)
 	defer ts.Close()
 
 	t.Run("Ensure node added to fail list when providerID doesn't exist", func(t *testing.T) {

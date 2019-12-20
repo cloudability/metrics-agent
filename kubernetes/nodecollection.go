@@ -87,9 +87,10 @@ func downloadNodeData(prefix string,
 				"If this condition persists it will cause inconsistent cluster allocation")
 		}
 
-		// retrieve node summary directly from node
-		if config.nodeRetrievalMethod == "direct" {
-
+		// retrieve node summary directly from node if possible and allowed.
+		// The config shouldn't allow direct connection if Fargate nodes were
+		// found in the cluster at startup, but check again here to be safe.
+		if config.nodeRetrievalMethod == direct && !isFargateNode(n) {
 			ip, port, err := nodeSource.NodeAddress(&n)
 			if err != nil {
 				return nil, fmt.Errorf("error: %s", err)
@@ -97,13 +98,13 @@ func downloadNodeData(prefix string,
 			nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
 			_, err = config.NodeClient.GetRawEndPoint(http.MethodGet, prefix+"-summary-"+n.Name, workDir, nodeStatSum, nil, true)
 			if err != nil {
-				failedNodeList[n.Name] = err
+				failedNodeList[n.Name] = fmt.Errorf("direct connect failed: %s", err)
 			}
 			containerStats := fmt.Sprintf("https://%s:%v/stats/container/", ip, int64(port))
 			_, err = config.NodeClient.GetRawEndPoint(
 				http.MethodPost, prefix+"-container-"+n.Name, workDir, containerStats, containersRequest, true)
 			if err != nil {
-				failedNodeList[n.Name] = err
+				failedNodeList[n.Name] = fmt.Errorf("direct connect failed: %s", err)
 			}
 			continue
 		}
@@ -113,13 +114,13 @@ func downloadNodeData(prefix string,
 		_, err = config.InClusterClient.GetRawEndPoint(
 			http.MethodGet, prefix+"-summary-"+n.Name, workDir, nodeStatSum, nil, true)
 		if err != nil {
-			failedNodeList[n.Name] = err
+			failedNodeList[n.Name] = fmt.Errorf("proxy connect failed: %s", err)
 		}
 		containerStats := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container/", config.ClusterHostURL, n.Name)
 		_, err = config.InClusterClient.GetRawEndPoint(
 			http.MethodPost, prefix+"-container-"+n.Name, workDir, containerStats, containersRequest, true)
 		if err != nil {
-			failedNodeList[n.Name] = err
+			failedNodeList[n.Name] = fmt.Errorf("proxy connect failed: %s", err)
 		}
 		continue
 	}
@@ -128,7 +129,8 @@ func downloadNodeData(prefix string,
 }
 
 //ensureNodeSource validates connectivity to the kubelet metrics endpoints.
-// If unable to directly connect to the node summary & container stats endpoint, attempts to connect via kube-proxy
+// Attempts direct connection to the node summary & container stats endpoint
+// if possible and allowed, otherwise attempts to connect via kube-proxy
 func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	nodeHTTPClient := http.Client{
@@ -155,21 +157,25 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	if err != nil {
 		return config, fmt.Errorf("error retrieving node addresses: %s", err)
 	}
+	var nodeStatSum, containerStats string
+	var cs, ns bool
 
-	// test node direct connectivity
-	nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
-	containerStats := fmt.Sprintf("https://%s:%v/stats/container/", ip, int64(port))
-	ns, _, err := util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
-	if err != nil {
-		return config, err
-	}
-	cs, _, err := util.TestHTTPConnection(&nodeHTTPClient, containerStats, http.MethodPost, config.BearerToken, 0, false)
-	if err != nil {
-		return config, err
-	}
-	if ns && cs {
-		config.nodeRetrievalMethod = "direct"
-		return config, nil
+	if allowDirectConnect(config, nodes) {
+		// test node direct connectivity
+		nodeStatSum = fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
+		containerStats = fmt.Sprintf("https://%s:%v/stats/container/", ip, int64(port))
+		ns, _, err = util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
+		if err != nil {
+			return config, err
+		}
+		cs, _, err = util.TestHTTPConnection(&nodeHTTPClient, containerStats, http.MethodPost, config.BearerToken, 0, false)
+		if err != nil {
+			return config, err
+		}
+		if ns && cs {
+			config.nodeRetrievalMethod = direct
+			return config, nil
+		}
 	}
 
 	// test node connectivity via kube-proxy
@@ -185,13 +191,44 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	}
 	if ns && cs {
 		config.NodeClient = raw.Client{}
-		config.nodeRetrievalMethod = "proxy"
+		config.nodeRetrievalMethod = proxy
 		return config, nil
 	}
 
-	config.nodeRetrievalMethod = "unreachable"
+	config.nodeRetrievalMethod = unreachable
 	config.RetrieveNodeSummaries = false
 	return config, fmt.Errorf("unable to retrieve node metrics. Please verify RBAC roles: %v", err)
+}
+
+// isFargateNode detects whether a node is a Fargate node, which affects
+// how the agent will connect to it
+func isFargateNode(n v1.Node) bool {
+	v := n.Labels["eks.amazonaws.com/compute-type"]
+	if v == "fargate" {
+		log.Debugf("Fargate node found: %s", n.Name)
+		return true
+	}
+	return false
+}
+
+// allowDirectConnect determines whether the client and the
+// type of nodes in the cluster will allow retrieving data directly
+// from the node
+func allowDirectConnect(config KubeAgentConfig, nodes *v1.NodeList) bool {
+	if config.ForceKubeProxy {
+		log.Infof("ForceKubeProxy is set, direct node connection disabled")
+		return false
+	}
+	// Clusters may be mixed Fargate and non-Fargate.
+	// To simplify handling, we disallow direct connection
+	// if any Fargate nodes are found.
+	for _, n := range nodes.Items {
+		if isFargateNode(n) {
+			log.Infof("Fargate node found in cluster, direct node connection disabled. Learn more about Fargate support: %s", kbURL) //nolint: lll
+			return false
+		}
+	}
+	return true
 }
 
 func retrieveNodeSummaries(

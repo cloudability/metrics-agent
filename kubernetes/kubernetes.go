@@ -58,6 +58,7 @@ type KubeAgentConfig struct {
 	OutboundProxy         string
 	provisioningID        string
 	RetrieveNodeSummaries bool
+	ForceKubeProxy        bool
 	Insecure              bool
 	OutboundProxyInsecure bool
 	UseInClusterConfig    bool
@@ -80,6 +81,11 @@ type KubeAgentConfig struct {
 
 const uploadInterval time.Duration = 10
 const retryCount uint = 10
+
+// node connection methods
+const proxy = "proxy"
+const direct = "direct"
+const unreachable = "unreachable"
 
 //nolint llll
 const kbURL string = "https://support.cloudability.com/hc/en-us/articles/360008368193-Kubernetes-Metrics-Agent-Error-Messages"
@@ -154,7 +160,7 @@ func validateMetricCollectionConfig(retrieveNodeSummaries bool, collectHeapsterE
 		log.Fatal("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
 	}
 	if retrieveNodeSummaries {
-		log.Info("Primary metrics collected directly from each node.")
+		log.Info("Primary metrics will be collected from each node.")
 	}
 	if retrieveNodeSummaries && collectHeapsterExport {
 		log.Debug("Collecting Heapster exports if found in cluster.")
@@ -561,6 +567,8 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 		if err != nil {
 			log.Warnf("Warning non-fatal error: Agent error occurred retrieving node source metrics: %s ", err)
 			log.Warnf("For more information see: %v", kbURL)
+		} else {
+			log.Infof("Using %s connection to gather node summaries", config.nodeRetrievalMethod)
 		}
 	}
 	if config.CollectHeapsterExport {
@@ -674,6 +682,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
 	m.Values["node_retrieval_method"] = config.nodeRetrievalMethod
 	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
+	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {

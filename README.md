@@ -22,6 +22,7 @@ By default, the agent runs in a namespace named "cloudability" (see options belo
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE    | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
 | CLOUDABILITY_INSECURE                   | Optional: When true, does not verify certificates when making TLS connections. Default: False|
 | CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True|
+| CLOUDABILITY_FORCE_KUBE_PROXY           | Optional: When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False|
 | CLOUDABILITY_COLLECT_HEAPSTER_EXPORT    | Optional: When true, attempts to collect metrics from Heapster if available. When False, does not collect Heapster metrics. Default: True|
 | CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`|
 | CLOUDABILITY_LOG_FORMAT                 | Optional: Format for log output (JSON,PLAIN) Default: PLAIN|
@@ -47,6 +48,8 @@ Flags:
       --outbound_proxy string                    Outbound HTTP/HTTPS proxy eg: http://x.x.x.x:8080. Must have a scheme prefix (http:// or https://) - Optional
       --outbound_proxy_auth string               Outbound proxy basic authentication credentials. Must defined in the form username:password - Optional
       --outbound_proxy_insecure                  When true, does not verify TLS certificates when using the outbound proxy. Default: False
+      --retrieve_node_summaries                  When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True
+      --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
 Global Flags:
