@@ -111,7 +111,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			t.Errorf("expected an error for ensureMetricServicesAvailable")
 			return
 		}
-		if config.nodeRetrievalMethod != "unreachable" {
+		if config.nodeRetrievalMethod != Unreachable {
 			t.Errorf("expected nodeRetrievalMethod to be asdf, instead was %s", config.nodeRetrievalMethod)
 		}
 	})
@@ -250,6 +250,7 @@ func TestCollectMetrics(t *testing.T) {
 		Insecure:              true,
 		BearerToken:           "",
 		RetrieveNodeSummaries: true,
+		ForceKubeProxy:        false,
 	}
 
 	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)

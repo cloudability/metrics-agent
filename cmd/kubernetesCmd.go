@@ -97,6 +97,12 @@ func init() {
 		"When true, includes node summary metrics in metric collection.",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
+		&config.ForceKubeProxy,
+		"force_kube_proxy",
+		false,
+		"When true, disables direct node connection and forces proxy use.",
+	)
+	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.CollectHeapsterExport,
 		"collect_heapster_export",
 		true,
@@ -127,6 +133,7 @@ func init() {
 	_ = viper.BindPFlag("outbound_proxy_insecure", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_insecure"))
 	_ = viper.BindPFlag("insecure", kubernetesCmd.PersistentFlags().Lookup("insecure"))
 	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
+	_ = viper.BindPFlag("force_kube_proxy", kubernetesCmd.PersistentFlags().Lookup("force_kube_proxy"))
 	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
 	_ = viper.BindPFlag("collect_heapster_export", kubernetesCmd.PersistentFlags().Lookup("collect_heapster_export"))
 	_ = viper.BindPFlag("scratch_dir", kubernetesCmd.PersistentFlags().Lookup("scratch_dir"))
@@ -149,6 +156,7 @@ func init() {
 		Cert:                  viper.GetString("certificate_file"),
 		Key:                   viper.GetString("key_file"),
 		RetrieveNodeSummaries: viper.GetBool("retrieve_node_summaries"),
+		ForceKubeProxy:        viper.GetBool("force_kube_proxy"),
 		Namespace:             viper.GetString("namespace"),
 		ScratchDir:            viper.GetString("scratch_dir"),
 	}
