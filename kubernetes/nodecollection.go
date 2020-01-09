@@ -91,20 +91,20 @@ func downloadNodeData(prefix string,
 				"If this condition persists it will cause inconsistent cluster allocation")
 		}
 
+		// Nodes running in a cluster may not all be ready, check each node individually and if they are not ready
+		// skip the node and create a log.
+		nodeReady := v1Node.IsNodeReady(&n)
+		if !nodeReady {
+			log.Warnf("Node %s was not ready when attempting to get node summary", n.Name)
+			continue
+		} else if anyNodeReady == false {
+			anyNodeReady = true
+		}
+
 		// retrieve node summary directly from node if possible and allowed.
 		// The config shouldn't allow direct connection if Fargate nodes were
 		// found in the cluster at startup, but check again here to be safe.
 		if config.nodeRetrievalMethod == direct && !isFargateNode(n) {
-			// Nodes running in a cluster may not all be ready, check each node individually and if they are not ready
-			// skip the node and create a log.
-			nodeReady := v1Node.IsNodeReady(&n)
-			if !nodeReady {
-				log.Warnf("Node %s was not ready when attempting to get node summary", n.Name)
-				continue
-			} else if anyNodeReady == false {
-				anyNodeReady = true
-			}
-
 			ip, port, err := nodeSource.NodeAddress(&n)
 			if err != nil {
 				return nil, fmt.Errorf("error: %s", err)
@@ -149,6 +149,7 @@ func downloadNodeData(prefix string,
 //ensureNodeSource validates connectivity to the kubelet metrics endpoints.
 // Attempts direct connection to the node summary & container stats endpoint
 // if possible and allowed, otherwise attempts to connect via kube-proxy
+// nolint: gocyclo
 func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	nodeHTTPClient := http.Client{
