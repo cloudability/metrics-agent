@@ -275,6 +275,34 @@ func (tns testNodeSource) GetNodes() (*v1.NodeList, error) {
 							Address: ip,
 						},
 					},
+					Conditions: []v1.NodeCondition{{
+						Type:   v1.NodeReady,
+						Status: v1.ConditionTrue,
+					}},
+					DaemonEndpoints: v1.NodeDaemonEndpoints{
+						KubeletEndpoint: v1.DaemonEndpoint{
+							Port: int32(port),
+						},
+					},
+				},
+				Spec: v1.NodeSpec{
+					PodCIDR:    "",
+					ExternalID: "",
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "testNotReadyNode", Namespace: v1.NamespaceDefault},
+				Status: v1.NodeStatus{
+					Addresses: []v1.NodeAddress{
+						{
+							Type:    "InternalIP",
+							Address: ip,
+						},
+					},
+					Conditions: []v1.NodeCondition{{
+						Type:   v1.NodeReady,
+						Status: v1.ConditionFalse,
+					}},
 					DaemonEndpoints: v1.NodeDaemonEndpoints{
 						KubeletEndpoint: v1.DaemonEndpoint{
 							Port: int32(port),
