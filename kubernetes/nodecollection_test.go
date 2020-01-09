@@ -48,6 +48,10 @@ func NewTestClient(ts *httptest.Server, labels map[string]string) *fake.Clientse
 						Address: ip,
 					},
 				},
+				Conditions: []v1.NodeCondition{{
+					Type:   v1.NodeReady,
+					Status: v1.ConditionTrue,
+				}},
 				DaemonEndpoints: v1.NodeDaemonEndpoints{
 					KubeletEndpoint: v1.DaemonEndpoint{
 						Port: int32(port),
@@ -180,6 +184,10 @@ func TestFargateNodeDetection(t *testing.T) {
 					Address: "1.110.235.222",
 				},
 			},
+			Conditions: []v1.NodeCondition{{
+				Type:   v1.NodeReady,
+				Status: v1.ConditionTrue,
+			}},
 			DaemonEndpoints: v1.NodeDaemonEndpoints{
 				KubeletEndpoint: v1.DaemonEndpoint{
 					Port: 80,

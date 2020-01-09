@@ -98,7 +98,14 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 	t.Parallel()
 	t.Run("should return error if can't get node summaries", func(t *testing.T) {
 		cs := fake.NewSimpleClientset(
-			&v1.Node{Status: v1.NodeStatus{Addresses: []v1.NodeAddress{{Type: v1.NodeInternalIP}}},
+			&v1.Node{
+				Status: v1.NodeStatus{
+					Addresses: []v1.NodeAddress{{Type: v1.NodeInternalIP}},
+					Conditions: []v1.NodeCondition{{
+						Type:   v1.NodeReady,
+						Status: v1.ConditionTrue,
+					}},
+				},
 				ObjectMeta: metav1.ObjectMeta{Name: "node0", Namespace: v1.NamespaceDefault}},
 		)
 		config := KubeAgentConfig{
@@ -227,9 +234,18 @@ func TestCollectMetrics(t *testing.T) {
 	defer ts.Close()
 
 	cs := fake.NewSimpleClientset(
-		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node0", Namespace: v1.NamespaceDefault}},
-		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node1", Namespace: v1.NamespaceDefault}},
-		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node2", Namespace: v1.NamespaceDefault}},
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node0", Namespace: v1.NamespaceDefault}, Status: v1.NodeStatus{Conditions: []v1.NodeCondition{{
+			Type:   v1.NodeReady,
+			Status: v1.ConditionTrue,
+		}}}},
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node1", Namespace: v1.NamespaceDefault}, Status: v1.NodeStatus{Conditions: []v1.NodeCondition{{
+			Type:   v1.NodeReady,
+			Status: v1.ConditionTrue,
+		}}}},
+		&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node2", Namespace: v1.NamespaceDefault}, Status: v1.NodeStatus{Conditions: []v1.NodeCondition{{
+			Type:   v1.NodeReady,
+			Status: v1.ConditionTrue,
+		}}}},
 	)
 
 	sv, _ := cs.Discovery().ServerVersion()
