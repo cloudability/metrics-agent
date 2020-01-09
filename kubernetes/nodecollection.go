@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/pkg/api/v1"
+	v1Node "k8s.io/client-go/pkg/api/v1/node"
 )
 
 // NodeSource is an interface to get a list of Nodes
@@ -58,6 +59,7 @@ func (cns ClientsetNodeSource) NodeAddress(node *v1.Node) (string, int32, error)
 	return "", 0, fmt.Errorf("Could not find internal IP address for node %s ", node.Name)
 }
 
+// nolint: gocyclo
 func downloadNodeData(prefix string,
 	config KubeAgentConfig,
 	workDir *os.File,
@@ -81,6 +83,8 @@ func downloadNodeData(prefix string,
 		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
+	anyNodeReady := false
+
 	for _, n := range nodes.Items {
 		if n.Spec.ProviderID == "" {
 			failedNodeList[n.Name] = errors.New("Provider ID for node does not exist. " +
@@ -91,6 +95,16 @@ func downloadNodeData(prefix string,
 		// The config shouldn't allow direct connection if Fargate nodes were
 		// found in the cluster at startup, but check again here to be safe.
 		if config.nodeRetrievalMethod == direct && !isFargateNode(n) {
+			// Nodes running in a cluster may not all be ready, check each node individually and if they are not ready
+			// skip the node and create a log.
+			nodeReady := v1Node.IsNodeReady(&n)
+			if !nodeReady {
+				log.Warnf("Node %s was not ready when attempting to get node summary", n.Name)
+				continue
+			} else if anyNodeReady == false {
+				anyNodeReady = true
+			}
+
 			ip, port, err := nodeSource.NodeAddress(&n)
 			if err != nil {
 				return nil, fmt.Errorf("error: %s", err)
@@ -125,6 +139,10 @@ func downloadNodeData(prefix string,
 		continue
 	}
 
+	if !anyNodeReady {
+		log.Errorf("error retrieving node summaries: no nodes were ready in cluster %s", config.ClusterName)
+	}
+
 	return failedNodeList, nil
 }
 
@@ -153,7 +171,22 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 		return config, fmt.Errorf("error retrieving nodes: %s", err)
 	}
 
-	ip, port, err := clientSetNodeSource.NodeAddress(&nodes.Items[0])
+	// Some nodes may not be ready, we want to find the first node that is ready so we can set the node source
+	var firstReadyNode *v1.Node
+
+	for _, n := range nodes.Items {
+		nodeReady := v1Node.IsNodeReady(&n)
+
+		if nodeReady {
+			firstReadyNode = &n
+		}
+	}
+
+	if firstReadyNode == nil {
+		return config, fmt.Errorf("error retrieving node addresses: no nodes were ready in cluster %s", config.ClusterName)
+	}
+
+	ip, port, err := clientSetNodeSource.NodeAddress(firstReadyNode)
 	if err != nil {
 		return config, fmt.Errorf("error retrieving node addresses: %s", err)
 	}
