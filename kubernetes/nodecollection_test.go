@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -60,6 +61,67 @@ func NewTestClient(ts *httptest.Server, labels map[string]string) *fake.Clientse
 			},
 		},
 	)
+}
+
+func TestGetFirstReadyNode(t *testing.T) {
+	notReadyNode := v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "notReadyNode",
+			Namespace: v1.NamespaceDefault,
+			Labels:    nodeSampleLabels,
+		},
+		Status: v1.NodeStatus{
+			Conditions: []v1.NodeCondition{{
+				Type:   v1.NodeReady,
+				Status: v1.ConditionFalse,
+			}},
+		},
+	}
+
+	readyNode := v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "readyNode",
+			Namespace: v1.NamespaceDefault,
+			Labels:    nodeSampleLabels,
+		},
+		Status: v1.NodeStatus{
+			Conditions: []v1.NodeCondition{{
+				Type:   v1.NodeReady,
+				Status: v1.ConditionTrue,
+			}},
+		},
+	}
+
+	t.Run("Ensure grabs the first ready node and returns that and no error if there is a ready node", func(t *testing.T) {
+		nodes := v1.NodeList{
+			Items: []v1.Node{
+				notReadyNode,
+				readyNode,
+			},
+		}
+
+		firstReadyNode, err := kubernetes.GetFirstReadyNode(&nodes)
+
+		if err != nil || !reflect.DeepEqual(firstReadyNode, &readyNode) {
+			t.Errorf("expected to get back a node in the ready state but received 0 ready nodes")
+			return
+		}
+	})
+
+	t.Run("Ensure an error is returned if 0 ready nodes found", func(t *testing.T) {
+		nodes := v1.NodeList{
+			Items: []v1.Node{
+				notReadyNode,
+			},
+		}
+
+		firstReadyNode, err := kubernetes.GetFirstReadyNode(&nodes)
+
+		if err == nil || firstReadyNode != nil {
+			t.Errorf("expected to receive an error that there were no nodes in ready state but got a node back instead")
+			return
+		}
+	})
 }
 
 func TestEnsureNodeSource(t *testing.T) {

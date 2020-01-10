@@ -1,10 +1,11 @@
 package kubernetes
 
 var (
-	IsFargateNode    = isFargateNode
-	EnsureNodeSource = ensureNodeSource
-	DownloadNodeData = downloadNodeData
-	Unreachable      = unreachable
-	Proxy            = proxy
-	Direct           = direct
+	IsFargateNode     = isFargateNode
+	GetFirstReadyNode = getFirstReadyNode
+	EnsureNodeSource  = ensureNodeSource
+	DownloadNodeData  = downloadNodeData
+	Unreachable       = unreachable
+	Proxy             = proxy
+	Direct            = direct
 )
