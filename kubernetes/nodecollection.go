@@ -97,10 +97,9 @@ func downloadNodeData(prefix string,
 		if !nodeReady {
 			log.Warnf("Node %s was not ready when attempting to get node summary", n.Name)
 			continue
-		} else if anyNodeReady == false {
-			anyNodeReady = true
 		}
 
+		anyNodeReady = true
 		// retrieve node summary directly from node if possible and allowed.
 		// The config shouldn't allow direct connection if Fargate nodes were
 		// found in the cluster at startup, but check again here to be safe.
@@ -173,18 +172,10 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	}
 
 	// Some nodes may not be ready, we want to find the first node that is ready so we can set the node source
-	var firstReadyNode *v1.Node
+	firstReadyNode, err := getFirstReadyNode(nodes)
 
-	for _, n := range nodes.Items {
-		nodeReady := v1Node.IsNodeReady(&n)
-
-		if nodeReady {
-			firstReadyNode = &n
-		}
-	}
-
-	if firstReadyNode == nil {
-		return config, fmt.Errorf("error retrieving node addresses: no nodes were ready in cluster %s", config.ClusterName)
+	if err != nil {
+		return config, err
 	}
 
 	ip, port, err := clientSetNodeSource.NodeAddress(firstReadyNode)
@@ -232,6 +223,25 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	config.nodeRetrievalMethod = unreachable
 	config.RetrieveNodeSummaries = false
 	return config, fmt.Errorf("unable to retrieve node metrics. Please verify RBAC roles: %v", err)
+}
+
+func getFirstReadyNode(nodes *v1.NodeList) (*v1.Node, error) {
+	var firstReadyNode *v1.Node
+
+	for _, n := range nodes.Items {
+		nodeReady := v1Node.IsNodeReady(&n)
+
+		if nodeReady {
+			firstReadyNode = &n
+			break
+		}
+	}
+
+	if firstReadyNode == nil {
+		return nil, fmt.Errorf("error retrieving node addresses: no nodes were ready")
+	}
+
+	return firstReadyNode, nil
 }
 
 // isFargateNode detects whether a node is a Fargate node, which affects
