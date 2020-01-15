@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -61,67 +60,6 @@ func NewTestClient(ts *httptest.Server, labels map[string]string) *fake.Clientse
 			},
 		},
 	)
-}
-
-func TestGetFirstReadyNode(t *testing.T) {
-	notReadyNode := v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "notReadyNode",
-			Namespace: v1.NamespaceDefault,
-			Labels:    nodeSampleLabels,
-		},
-		Status: v1.NodeStatus{
-			Conditions: []v1.NodeCondition{{
-				Type:   v1.NodeReady,
-				Status: v1.ConditionFalse,
-			}},
-		},
-	}
-
-	readyNode := v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "readyNode",
-			Namespace: v1.NamespaceDefault,
-			Labels:    nodeSampleLabels,
-		},
-		Status: v1.NodeStatus{
-			Conditions: []v1.NodeCondition{{
-				Type:   v1.NodeReady,
-				Status: v1.ConditionTrue,
-			}},
-		},
-	}
-
-	t.Run("Ensure grabs the first ready node and returns that and no error if there is a ready node", func(t *testing.T) {
-		nodes := v1.NodeList{
-			Items: []v1.Node{
-				notReadyNode,
-				readyNode,
-			},
-		}
-
-		firstReadyNode, err := kubernetes.GetFirstReadyNode(&nodes)
-
-		if err != nil || !reflect.DeepEqual(firstReadyNode, &readyNode) {
-			t.Errorf("expected to get back a node in the ready state but received 0 ready nodes")
-			return
-		}
-	})
-
-	t.Run("Ensure an error is returned if 0 ready nodes found", func(t *testing.T) {
-		nodes := v1.NodeList{
-			Items: []v1.Node{
-				notReadyNode,
-			},
-		}
-
-		firstReadyNode, err := kubernetes.GetFirstReadyNode(&nodes)
-
-		if err == nil || firstReadyNode != nil {
-			t.Errorf("expected to receive an error that there were no nodes in ready state but got a node back instead")
-			return
-		}
-	})
 }
 
 func TestEnsureNodeSource(t *testing.T) {
@@ -326,7 +264,7 @@ func TestDownloadNodeData(t *testing.T) {
 
 type testNodeSource struct{}
 
-func (tns testNodeSource) GetNodes() (*v1.NodeList, error) {
+func (tns testNodeSource) GetReadyNodes() ([]v1.Node, error) {
 	returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
 
 	ts := launchTLSTestServer(returnCodes)
@@ -334,61 +272,36 @@ func (tns testNodeSource) GetNodes() (*v1.NodeList, error) {
 	s := strings.Split(ts.Listener.Addr().String(), ":")
 	ip := s[0]
 	port, _ := strconv.Atoi(s[1])
-	nl := v1.NodeList{
-		Items: []v1.Node{
-			{
-				ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
-				Status: v1.NodeStatus{
-					Addresses: []v1.NodeAddress{
-						{
-							Type:    "InternalIP",
-							Address: ip,
-						},
-					},
-					Conditions: []v1.NodeCondition{{
-						Type:   v1.NodeReady,
-						Status: v1.ConditionTrue,
-					}},
-					DaemonEndpoints: v1.NodeDaemonEndpoints{
-						KubeletEndpoint: v1.DaemonEndpoint{
-							Port: int32(port),
-						},
+	nodes := []v1.Node{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
+			Status: v1.NodeStatus{
+				Addresses: []v1.NodeAddress{
+					{
+						Type:    "InternalIP",
+						Address: ip,
 					},
 				},
-				Spec: v1.NodeSpec{
-					PodCIDR:    "",
-					ExternalID: "",
+				Conditions: []v1.NodeCondition{{
+					Type:   v1.NodeReady,
+					Status: v1.ConditionTrue,
+				}},
+				DaemonEndpoints: v1.NodeDaemonEndpoints{
+					KubeletEndpoint: v1.DaemonEndpoint{
+						Port: int32(port),
+					},
 				},
 			},
-			{
-				ObjectMeta: metav1.ObjectMeta{Name: "testNotReadyNode", Namespace: v1.NamespaceDefault},
-				Status: v1.NodeStatus{
-					Addresses: []v1.NodeAddress{
-						{
-							Type:    "InternalIP",
-							Address: ip,
-						},
-					},
-					Conditions: []v1.NodeCondition{{
-						Type:   v1.NodeReady,
-						Status: v1.ConditionFalse,
-					}},
-					DaemonEndpoints: v1.NodeDaemonEndpoints{
-						KubeletEndpoint: v1.DaemonEndpoint{
-							Port: int32(port),
-						},
-					},
-				},
-				Spec: v1.NodeSpec{
-					PodCIDR:    "",
-					ExternalID: "",
-				},
+			Spec: v1.NodeSpec{
+				PodCIDR:    "",
+				ExternalID: "",
 			},
 		},
 	}
+
 	defer ts.Close()
 
-	return &nl, nil
+	return nodes, nil
 }
 
 func (tns testNodeSource) NodeAddress(node *v1.Node) (string, int32, error) {

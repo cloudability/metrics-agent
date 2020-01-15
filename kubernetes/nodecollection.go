@@ -21,7 +21,7 @@ import (
 
 // NodeSource is an interface to get a list of Nodes
 type NodeSource interface {
-	GetNodes() (*v1.NodeList, error)
+	GetReadyNodes() ([]v1.Node, error)
 	NodeAddress(node *v1.Node) (string, int32, error)
 }
 
@@ -43,9 +43,30 @@ func NewClientsetNodeSource(clientSet kubernetes.Interface) ClientsetNodeSource 
 	}
 }
 
-// GetNodes fetches the list of nodes from the clientSet
-func (cns ClientsetNodeSource) GetNodes() (*v1.NodeList, error) {
-	return cns.clientSet.CoreV1().Nodes().List(metav1.ListOptions{})
+// GetReadyNodes fetches the list of nodes from the clientSet and filters down to only ready nodes
+func (cns ClientsetNodeSource) GetReadyNodes() ([]v1.Node, error) {
+	allNodes, err := cns.clientSet.CoreV1().Nodes().List(metav1.ListOptions{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var readyNodes []v1.Node
+	for _, n := range allNodes.Items {
+		nodeReady := v1Node.IsNodeReady(&n)
+
+		if nodeReady {
+			readyNodes = append(readyNodes, n)
+		} else {
+			log.Infof("node, %s, is in a notready state", n.Name)
+		}
+	}
+
+	if len(readyNodes) == 0 {
+		return nil, fmt.Errorf("there were 0 nodes in a ready state")
+	}
+
+	return readyNodes, nil
 }
 
 // NodeAddress returns the internal IP address and kubelet port of a given node
@@ -64,12 +85,12 @@ func downloadNodeData(prefix string,
 	workDir *os.File,
 	nodeSource NodeSource) (map[string]error, error) {
 
-	var nodes *v1.NodeList
+	var nodes []v1.Node
 
 	failedNodeList := make(map[string]error)
 
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
-		nodes, err = nodeSource.GetNodes()
+		nodes, err = nodeSource.GetReadyNodes()
 		return
 	})
 	if err != nil {
@@ -82,21 +103,12 @@ func downloadNodeData(prefix string,
 		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
-	anyNodeReady := false
-
-	for _, n := range nodes.Items {
+	for _, n := range nodes {
 		if n.Spec.ProviderID == "" {
 			failedNodeList[n.Name] = errors.New("Provider ID for node does not exist. " +
 				"If this condition persists it will cause inconsistent cluster allocation")
 		}
 
-		// Nodes running in a cluster may not all be ready, check each node individually and if they are not ready
-		// skip the node and create a log.
-		nodeReady := v1Node.IsNodeReady(&n)
-		if !nodeReady {
-			log.Warnf("Node %s was not ready when attempting to get node summary", n.Name)
-			continue
-		}
 		nd := nodeFetchData{
 			nodeName:          n.Name,
 			prefix:            prefix,
@@ -104,7 +116,6 @@ func downloadNodeData(prefix string,
 			ClusterHostURL:    config.ClusterHostURL,
 			containersRequest: containersRequest,
 		}
-		anyNodeReady = true
 		// retrieve node summary directly from node if possible and allowed.
 		// The config shouldn't allow direct connection if Fargate nodes were
 		// found in the cluster at startup, but check again here to be safe.
@@ -123,10 +134,6 @@ func downloadNodeData(prefix string,
 		if err != nil {
 			failedNodeList[n.Name] = fmt.Errorf("proxy connect failed: %s", err)
 		}
-	}
-
-	if !anyNodeReady {
-		log.Errorf("error retrieving node summaries: no nodes were ready in cluster %s", config.ClusterName)
 	}
 
 	return failedNodeList, nil
@@ -254,18 +261,14 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	config.NodeClient = nodeClient
 
-	nodes, err := clientSetNodeSource.GetNodes()
+	nodes, err := clientSetNodeSource.GetReadyNodes()
 	if err != nil {
 		return config, fmt.Errorf("error retrieving nodes: %s", err)
 	}
 
-	// Some nodes may not be ready, we want to find the first node that is ready so we can set the node source
-	firstReadyNode, err := getFirstReadyNode(nodes)
-	if err != nil {
-		return config, err
-	}
+	firstNode := &nodes[0]
 
-	ip, port, err := clientSetNodeSource.NodeAddress(firstReadyNode)
+	ip, port, err := clientSetNodeSource.NodeAddress(firstNode)
 	if err != nil {
 		return config, fmt.Errorf("error retrieving node addresses: %s", err)
 	}
@@ -284,7 +287,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	}
 
 	// test node connectivity via kube-proxy
-	p := proxyEndpoints(config.ClusterHostURL, firstReadyNode.Name)
+	p := proxyEndpoints(config.ClusterHostURL, firstNode.Name)
 	success, err := testNodeConn(&config.HTTPClient, p.statsSummary(), p.statsContainer(), config.BearerToken)
 	if err != nil {
 		return config, err
@@ -312,15 +315,6 @@ func testNodeConn(client *http.Client, nodeStatSum, containerStats, bearerToken 
 	return ns && cs, nil
 }
 
-func getFirstReadyNode(nodes *v1.NodeList) (*v1.Node, error) {
-	for _, n := range nodes.Items {
-		if v1Node.IsNodeReady(&n) {
-			return &n, nil
-		}
-	}
-	return nil, fmt.Errorf("error retrieving node addresses: no nodes were ready")
-}
-
 // isFargateNode detects whether a node is a Fargate node, which affects
 // how the agent will connect to it
 func isFargateNode(n v1.Node) bool {
@@ -335,7 +329,7 @@ func isFargateNode(n v1.Node) bool {
 // allowDirectConnect determines whether the client and the
 // type of nodes in the cluster will allow retrieving data directly
 // from the node
-func allowDirectConnect(config KubeAgentConfig, nodes *v1.NodeList) bool {
+func allowDirectConnect(config KubeAgentConfig, nodes []v1.Node) bool {
 	if config.ForceKubeProxy {
 		log.Infof("ForceKubeProxy is set, direct node connection disabled")
 		return false
@@ -343,7 +337,7 @@ func allowDirectConnect(config KubeAgentConfig, nodes *v1.NodeList) bool {
 	// Clusters may be mixed Fargate and non-Fargate.
 	// To simplify handling, we disallow direct connection
 	// if any Fargate nodes are found.
-	for _, n := range nodes.Items {
+	for _, n := range nodes {
 		if isFargateNode(n) {
 			log.Infof("Fargate node found in cluster, direct node connection disabled. Learn more about Fargate support: %s", kbURL) //nolint: lll
 			return false
