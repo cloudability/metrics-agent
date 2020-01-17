@@ -243,6 +243,36 @@ func TestDownloadNodeData(t *testing.T) {
 
 		ns := testNodeSource{}
 
+		s := strings.Split(ts.Listener.Addr().String(), ":")
+		ip := s[0]
+		port, _ := strconv.Atoi(s[1])
+		ns.Nodes = []v1.Node{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
+				Status: v1.NodeStatus{
+					Addresses: []v1.NodeAddress{
+						{
+							Type:    "InternalIP",
+							Address: ip,
+						},
+					},
+					Conditions: []v1.NodeCondition{{
+						Type:   v1.NodeReady,
+						Status: v1.ConditionTrue,
+					}},
+					DaemonEndpoints: v1.NodeDaemonEndpoints{
+						KubeletEndpoint: v1.DaemonEndpoint{
+							Port: int32(port),
+						},
+					},
+				},
+				Spec: v1.NodeSpec{
+					PodCIDR:    "",
+					ExternalID: "",
+				},
+			},
+		}
+
 		failedNodeList, _ := kubernetes.DownloadNodeData(
 			"baseline",
 			ka,
@@ -260,46 +290,63 @@ func TestDownloadNodeData(t *testing.T) {
 			t.Error("unexpected error")
 		}
 	})
+
+	t.Run("Ensure error is returned when GetReadyNodes returns error", func(t *testing.T) {
+		c := http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					// nolint gosec
+					InsecureSkipVerify: true,
+				},
+			}}
+		rc := raw.NewClient(
+			c,
+			true,
+			"",
+			uint(1),
+		)
+		ka := kubernetes.KubeAgentConfig{
+			Clientset:       cs,
+			HTTPClient:      c,
+			InClusterClient: rc,
+			ClusterHostURL:  "https://" + ts.Listener.Addr().String(),
+		}
+		wd, _ := os.Getwd()
+		ed, _ := os.Open(fmt.Sprintf("%s/testdata", wd))
+
+		ns := testNodeSource{}
+
+		_, err := kubernetes.DownloadNodeData(
+			"baseline",
+			ka,
+			ed,
+			ns,
+		)
+
+		if err == nil {
+			t.Error("Expected no nodes found error")
+		}
+
+		if err.Error() != "cloudability metric agent is unable to get a list of nodes: 0 nodes were ready" {
+			t.Error("unexpected error")
+		}
+	})
 }
 
-type testNodeSource struct{}
+type testNodeSource struct {
+	Nodes []v1.Node
+}
 
 func (tns testNodeSource) GetReadyNodes() ([]v1.Node, error) {
 	returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
 
 	ts := launchTLSTestServer(returnCodes)
-
-	s := strings.Split(ts.Listener.Addr().String(), ":")
-	ip := s[0]
-	port, _ := strconv.Atoi(s[1])
-	nodes := []v1.Node{
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
-			Status: v1.NodeStatus{
-				Addresses: []v1.NodeAddress{
-					{
-						Type:    "InternalIP",
-						Address: ip,
-					},
-				},
-				Conditions: []v1.NodeCondition{{
-					Type:   v1.NodeReady,
-					Status: v1.ConditionTrue,
-				}},
-				DaemonEndpoints: v1.NodeDaemonEndpoints{
-					KubeletEndpoint: v1.DaemonEndpoint{
-						Port: int32(port),
-					},
-				},
-			},
-			Spec: v1.NodeSpec{
-				PodCIDR:    "",
-				ExternalID: "",
-			},
-		},
-	}
-
+	nodes := tns.Nodes
 	defer ts.Close()
+
+	if len(nodes) == 0 {
+		return nil, fmt.Errorf("0 nodes were ready")
+	}
 
 	return nodes, nil
 }
