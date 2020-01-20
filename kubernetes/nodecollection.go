@@ -67,7 +67,7 @@ func (cns ClientsetNodeSource) GetReadyNodes() ([]v1.Node, error) {
 	}
 
 	if len(readyNodes) != len(allNodes.Items) {
-		log.Info("some nodes were in a not ready when retrieving nodes")
+		log.Info("some nodes were in a not ready state when retrieving nodes")
 	}
 
 	return readyNodes, nil
