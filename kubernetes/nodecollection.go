@@ -16,11 +16,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/pkg/api/v1"
+	v1Node "k8s.io/client-go/pkg/api/v1/node"
 )
 
 // NodeSource is an interface to get a list of Nodes
 type NodeSource interface {
-	GetNodes() (*v1.NodeList, error)
+	GetReadyNodes() ([]v1.Node, error)
 	NodeAddress(node *v1.Node) (string, int32, error)
 }
 
@@ -42,9 +43,34 @@ func NewClientsetNodeSource(clientSet kubernetes.Interface) ClientsetNodeSource 
 	}
 }
 
-// GetNodes fetches the list of nodes from the clientSet
-func (cns ClientsetNodeSource) GetNodes() (*v1.NodeList, error) {
-	return cns.clientSet.CoreV1().Nodes().List(metav1.ListOptions{})
+// GetReadyNodes fetches the list of nodes from the clientSet and filters down to only ready nodes
+func (cns ClientsetNodeSource) GetReadyNodes() ([]v1.Node, error) {
+	allNodes, err := cns.clientSet.CoreV1().Nodes().List(metav1.ListOptions{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var readyNodes []v1.Node
+	for _, n := range allNodes.Items {
+		nodeReady := v1Node.IsNodeReady(&n)
+
+		if nodeReady {
+			readyNodes = append(readyNodes, n)
+		} else {
+			log.Debugf("node, %s, is in a notready state", n.Name)
+		}
+	}
+
+	if len(readyNodes) == 0 {
+		return nil, fmt.Errorf("there were 0 nodes in a ready state")
+	}
+
+	if len(readyNodes) != len(allNodes.Items) {
+		log.Info("some nodes were in a not ready state when retrieving nodes")
+	}
+
+	return readyNodes, nil
 }
 
 // NodeAddress returns the internal IP address and kubelet port of a given node
@@ -63,12 +89,12 @@ func downloadNodeData(prefix string,
 	workDir *os.File,
 	nodeSource NodeSource) (map[string]error, error) {
 
-	var nodes *v1.NodeList
+	var nodes []v1.Node
 
 	failedNodeList := make(map[string]error)
 
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
-		nodes, err = nodeSource.GetNodes()
+		nodes, err = nodeSource.GetReadyNodes()
 		return
 	})
 	if err != nil {
@@ -81,51 +107,142 @@ func downloadNodeData(prefix string,
 		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
-	for _, n := range nodes.Items {
+	for _, n := range nodes {
 		if n.Spec.ProviderID == "" {
 			failedNodeList[n.Name] = errors.New("Provider ID for node does not exist. " +
 				"If this condition persists it will cause inconsistent cluster allocation")
 		}
 
+		nd := nodeFetchData{
+			nodeName:          n.Name,
+			prefix:            prefix,
+			workDir:           workDir,
+			ClusterHostURL:    config.ClusterHostURL,
+			containersRequest: containersRequest,
+		}
 		// retrieve node summary directly from node if possible and allowed.
 		// The config shouldn't allow direct connection if Fargate nodes were
 		// found in the cluster at startup, but check again here to be safe.
 		if config.nodeRetrievalMethod == direct && !isFargateNode(n) {
-			ip, port, err := nodeSource.NodeAddress(&n)
-			if err != nil {
-				return nil, fmt.Errorf("error: %s", err)
+			err := directNodeFetch(nodeSource, config, &n, nd)
+			// no error, no need to try proxy
+			if err == nil {
+				continue
 			}
-			nodeStatSum := fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
-			_, err = config.NodeClient.GetRawEndPoint(http.MethodGet, prefix+"-summary-"+n.Name, workDir, nodeStatSum, nil, true)
-			if err != nil {
-				failedNodeList[n.Name] = fmt.Errorf("direct connect failed: %s", err)
-			}
-			containerStats := fmt.Sprintf("https://%s:%v/stats/container/", ip, int64(port))
-			_, err = config.NodeClient.GetRawEndPoint(
-				http.MethodPost, prefix+"-container-"+n.Name, workDir, containerStats, containersRequest, true)
-			if err != nil {
-				failedNodeList[n.Name] = fmt.Errorf("direct connect failed: %s", err)
-			}
-			continue
+			// TODO: Do we want to consider the node failed if we can still try proxy?
+			// make note of the error and fall through to proxy
+			failedNodeList[n.Name] = fmt.Errorf("direct connect failed (will attempt proxy): %s", err)
 		}
-
 		// retrieve node summary via proxy
-		nodeStatSum := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, n.Name)
-		_, err = config.InClusterClient.GetRawEndPoint(
-			http.MethodGet, prefix+"-summary-"+n.Name, workDir, nodeStatSum, nil, true)
+		err := proxyNodeFetch(nd, config)
 		if err != nil {
 			failedNodeList[n.Name] = fmt.Errorf("proxy connect failed: %s", err)
 		}
-		containerStats := fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container/", config.ClusterHostURL, n.Name)
-		_, err = config.InClusterClient.GetRawEndPoint(
-			http.MethodPost, prefix+"-container-"+n.Name, workDir, containerStats, containersRequest, true)
-		if err != nil {
-			failedNodeList[n.Name] = fmt.Errorf("proxy connect failed: %s", err)
-		}
-		continue
 	}
 
 	return failedNodeList, nil
+}
+
+// nodeFetchData is a convenience wrapper for
+// information used to fetch node stats and store
+// in the appropriate file location
+type nodeFetchData struct {
+	nodeName          string
+	prefix            string
+	workDir           *os.File
+	ClusterHostURL    string
+	containersRequest []byte
+}
+
+// directNodeFetch retrieves node stats directly from the node api
+func directNodeFetch(nodeSource NodeSource, config KubeAgentConfig, n *v1.Node, nd nodeFetchData) error {
+	ip, port, err := nodeSource.NodeAddress(n)
+	if err != nil {
+		return fmt.Errorf("problem getting node address: %s", err)
+	}
+	d := directNodeEndpoints(ip, port)
+	return retrieveNodeData(nd, config.NodeClient, d.statsSummary(), d.statsContainer())
+}
+
+// proxyNodeFetch retrieves node data via the proxy api
+func proxyNodeFetch(nd nodeFetchData, config KubeAgentConfig) error {
+	proxy := proxyEndpoints(config.ClusterHostURL, nd.nodeName)
+	return retrieveNodeData(nd, config.InClusterClient, proxy.statsSummary(), proxy.statsContainer())
+}
+
+type proxyAPI struct {
+	clusterHostURL string
+	nodeName       string
+}
+
+// statsSummary formats the proxy api stats/summary endpoint for the node
+func (p proxyAPI) statsSummary() string {
+	return fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", p.clusterHostURL, p.nodeName)
+}
+
+// statsContainer formats the proxy api stats/container endpoint for the node
+func (p proxyAPI) statsContainer() string {
+	return fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container/", p.clusterHostURL, p.nodeName)
+}
+
+func proxyEndpoints(clusterHostURL, nodeName string) proxyAPI {
+	return proxyAPI{
+		clusterHostURL: clusterHostURL,
+		nodeName:       nodeName,
+	}
+}
+
+type directNode struct {
+	ip   string
+	port int64
+}
+
+// statsSummary formats the direct node stats/summary endpoint
+func (d directNode) statsSummary() string {
+	return fmt.Sprintf("https://%s:%v/stats/summary", d.ip, d.port)
+}
+
+// statsContainer formats the direct node stats/container endpoint
+func (d directNode) statsContainer() string {
+	return fmt.Sprintf("https://%s:%v/stats/container/", d.ip, d.port)
+}
+
+func directNodeEndpoints(ip string, port int32) directNode {
+	return directNode{
+		ip:   ip,
+		port: int64(port),
+	}
+}
+
+type sourceName struct {
+	prefix   string
+	nodeName string
+}
+
+func (s sourceName) summary() string {
+	return fmt.Sprintf("%s-summary-%s", s.prefix, s.nodeName)
+}
+
+func (s sourceName) container() string {
+	return fmt.Sprintf("%s-container-%s", s.prefix, s.nodeName)
+}
+
+// retrieveNodeData fetches summary and container data from the node
+func retrieveNodeData(nd nodeFetchData, c raw.Client, nodeStatSum, containerStats string) error {
+	source := sourceName{
+		prefix:   nd.prefix,
+		nodeName: nd.nodeName,
+	}
+	// fetch stats/summary data
+	_, err := c.GetRawEndPoint(http.MethodGet, source.summary(), nd.workDir, nodeStatSum, nil, true)
+	if err != nil {
+		return err
+	}
+	// fetch container details
+	_, err = c.GetRawEndPoint(
+		http.MethodPost, source.container(), nd.workDir, containerStats, nd.containersRequest, true)
+	return err
+
 }
 
 //ensureNodeSource validates connectivity to the kubelet metrics endpoints.
@@ -148,48 +265,38 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	config.NodeClient = nodeClient
 
-	nodes, err := clientSetNodeSource.GetNodes()
+	nodes, err := clientSetNodeSource.GetReadyNodes()
 	if err != nil {
 		return config, fmt.Errorf("error retrieving nodes: %s", err)
 	}
 
-	ip, port, err := clientSetNodeSource.NodeAddress(&nodes.Items[0])
+	firstNode := &nodes[0]
+
+	ip, port, err := clientSetNodeSource.NodeAddress(firstNode)
 	if err != nil {
 		return config, fmt.Errorf("error retrieving node addresses: %s", err)
 	}
-	var nodeStatSum, containerStats string
-	var cs, ns bool
 
 	if allowDirectConnect(config, nodes) {
 		// test node direct connectivity
-		nodeStatSum = fmt.Sprintf("https://%s:%v/stats/summary", ip, int64(port))
-		containerStats = fmt.Sprintf("https://%s:%v/stats/container/", ip, int64(port))
-		ns, _, err = util.TestHTTPConnection(&nodeHTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
+		d := directNodeEndpoints(ip, port)
+		success, err := testNodeConn(&nodeHTTPClient, d.statsSummary(), d.statsContainer(), config.BearerToken)
 		if err != nil {
 			return config, err
 		}
-		cs, _, err = util.TestHTTPConnection(&nodeHTTPClient, containerStats, http.MethodPost, config.BearerToken, 0, false)
-		if err != nil {
-			return config, err
-		}
-		if ns && cs {
+		if success {
 			config.nodeRetrievalMethod = direct
 			return config, nil
 		}
 	}
 
 	// test node connectivity via kube-proxy
-	nodeStatSum = fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/summary", config.ClusterHostURL, nodes.Items[0].Name)
-	containerStats = fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container/", config.ClusterHostURL, nodes.Items[0].Name)
-	ns, _, err = util.TestHTTPConnection(&config.HTTPClient, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
+	p := proxyEndpoints(config.ClusterHostURL, firstNode.Name)
+	success, err := testNodeConn(&config.HTTPClient, p.statsSummary(), p.statsContainer(), config.BearerToken)
 	if err != nil {
 		return config, err
 	}
-	cs, _, err = util.TestHTTPConnection(&config.HTTPClient, containerStats, http.MethodPost, config.BearerToken, 0, false)
-	if err != nil {
-		return config, err
-	}
-	if ns && cs {
+	if success {
 		config.NodeClient = raw.Client{}
 		config.nodeRetrievalMethod = proxy
 		return config, nil
@@ -198,6 +305,18 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	config.nodeRetrievalMethod = unreachable
 	config.RetrieveNodeSummaries = false
 	return config, fmt.Errorf("unable to retrieve node metrics. Please verify RBAC roles: %v", err)
+}
+
+func testNodeConn(client *http.Client, nodeStatSum, containerStats, bearerToken string) (success bool, err error) {
+	ns, _, err := util.TestHTTPConnection(client, nodeStatSum, http.MethodGet, bearerToken, 0, false)
+	if err != nil {
+		return false, err
+	}
+	cs, _, err := util.TestHTTPConnection(client, containerStats, http.MethodPost, bearerToken, 0, false)
+	if err != nil {
+		return false, err
+	}
+	return ns && cs, nil
 }
 
 // isFargateNode detects whether a node is a Fargate node, which affects
@@ -214,7 +333,7 @@ func isFargateNode(n v1.Node) bool {
 // allowDirectConnect determines whether the client and the
 // type of nodes in the cluster will allow retrieving data directly
 // from the node
-func allowDirectConnect(config KubeAgentConfig, nodes *v1.NodeList) bool {
+func allowDirectConnect(config KubeAgentConfig, nodes []v1.Node) bool {
 	if config.ForceKubeProxy {
 		log.Infof("ForceKubeProxy is set, direct node connection disabled")
 		return false
@@ -222,7 +341,7 @@ func allowDirectConnect(config KubeAgentConfig, nodes *v1.NodeList) bool {
 	// Clusters may be mixed Fargate and non-Fargate.
 	// To simplify handling, we disallow direct connection
 	// if any Fargate nodes are found.
-	for _, n := range nodes.Items {
+	for _, n := range nodes {
 		if isFargateNode(n) {
 			log.Infof("Fargate node found in cluster, direct node connection disabled. Learn more about Fargate support: %s", kbURL) //nolint: lll
 			return false
