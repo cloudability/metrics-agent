@@ -1,6 +1,6 @@
 # metrics-agent
 
-The metrics-agent collects allocation metrics from a container orchestration system (currently Kubernetes) and sends them to cloudability to help you gain visibility, reduce costs and increase efficiency across your infrastructure.  The agent is designed to run as a docker container in each cluster inside your orchestration system.
+The metrics-agent collects allocation metrics from a container orchestration system (currently Kubernetes) and sends the metrics to cloudability to help you gain visibility, reduce costs, and increase efficiency across your infrastructure.  The agent is designed to run as a docker container in each cluster inside your orchestration system.
 
 [![CircleCI](https://circleci.com/gh/cloudability/metrics-agent/tree/master.svg?style=svg)](https://circleci.com/gh/cloudability/metrics-agent/tree/master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cloudability/metrics-agent)](https://goreportcard.com/report/github.com/cloudability/metrics-agent)
@@ -69,8 +69,8 @@ We're using [golangci-lint](https://github.com/golangci/golangci-lint) for stati
 
 ## Contributing code
 
-You'll find information and help on how to contribute code see
-[the contributing doc](CONTRIBUTING.md) of this repo.
+You'll find information and help on how to contribute code in
+[the CONTRIBUTING document](CONTRIBUTING.md) in this repo.
 
 
 ### To Run Locally
@@ -84,8 +84,7 @@ make deploy-local
 
 ## Local Development
 
-The makefile step deploy-local assumes that you have [docker](https://www.docker.com/community-edition) and kubernetes (with a context: docker-for-desktop) running locally. The step does the following:
+The makefile target _deploy-local_ assumes that you have [docker](https://www.docker.com/community-edition) and kubernetes (with a context: docker-for-desktop) running locally. The target does the following:
 
-- Build a container with the local project codebase
-
-- locally deploy a deployment / pod with the local metrics agent container
+- Builds a container with the local project codebase
+- Locally creates a deployment / pod with the local metrics agent container
