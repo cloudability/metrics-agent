@@ -50,8 +50,8 @@ container-build:
 
 helm-package:
 	helm package deploy/charts/metrics-agent \
-	--version=$(VERSION) \
-	--app-version=$(VERSION)
+	--version=$(RELEASE-VERSION) \
+	--app-version=$(RELEASE-VERSION)
 
 
 deploy-local: container-build
