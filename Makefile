@@ -48,6 +48,12 @@ container-build:
 	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
 
 
+helm-package:
+	helm package deploy/charts/metrics-agent \
+	--version=$(VERSION) \
+	--app-version=$(VERSION)
+
+
 deploy-local: container-build
 	kubectl config use-context docker-for-desktop
 	cat ./deploy/kubernetes/cloudability-metrics-agent.yaml | \
