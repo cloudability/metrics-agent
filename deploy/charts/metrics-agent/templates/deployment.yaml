@@ -28,6 +28,18 @@ spec:
           args:
           - 'kubernetes'
           env:
+            - name: "CLOUDABILITY_API_KEY"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "metrics-agent.fullname" . }}
+                  key: CLOUDABILITY_API_KEY
+            {{- if .Values.extraEnv }}
+            {{ toYaml .Values.extraEnv | nindent 12 }}
+            {{- end }}
+            - name: CLOUDABILITY_CLUSTER_NAME
+              value: {{ .Values.clusterName }}
+            - name: CLOUDABILITY_POLL_INTERVAL
+              value: {{ .Values.pollInterval | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
