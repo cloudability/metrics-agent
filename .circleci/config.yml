@@ -26,6 +26,11 @@ jobs:
           command: |
             curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.20.0
 
+      - run:
+          name: Install helm
+          command: |
+            curl -sfL https://get.helm.sh/helm-v3.0.3-linux-amd64.tar.gz | tar xz && mv linux-amd64/helm /bin/helm && rm -rf linux-amd64
+
       - run: 
           name: Lint
           command: make lint
