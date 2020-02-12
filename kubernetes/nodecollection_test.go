@@ -12,9 +12,9 @@ import (
 
 	"github.com/cloudability/metrics-agent/kubernetes"
 	"github.com/cloudability/metrics-agent/retrieval/raw"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	v1 "k8s.io/client-go/pkg/api/v1"
 )
 
 // labels found on an amazon EKS fargate node
@@ -267,8 +267,7 @@ func TestDownloadNodeData(t *testing.T) {
 					},
 				},
 				Spec: v1.NodeSpec{
-					PodCIDR:    "",
-					ExternalID: "",
+					PodCIDR: "",
 				},
 			},
 		}

@@ -61,7 +61,7 @@ Global Flags:
 
 ### Dependency management
 
-We're using [dep](https://github.com/golang/dep) to manage Go dependencies.
+We're using [go modules](https://github.com/golang/go/wiki/Modules) for Go dependencies.
 
 ### Source Code Analysis
 

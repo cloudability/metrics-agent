@@ -11,12 +11,14 @@ import (
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"github.com/cloudability/metrics-agent/util"
-	"github.com/kubernetes/kubernetes/staging/src/k8s.io/client-go/util/retry"
 	log "github.com/sirupsen/logrus"
+
+	v1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/client-go/pkg/api/v1"
-	v1Node "k8s.io/client-go/pkg/api/v1/node"
+	"k8s.io/client-go/util/retry"
+	nodeutil "k8s.io/kubernetes/pkg/controller/util/node"
 )
 
 // NodeSource is an interface to get a list of Nodes
@@ -53,12 +55,14 @@ func (cns ClientsetNodeSource) GetReadyNodes() ([]v1.Node, error) {
 
 	var readyNodes []v1.Node
 	for _, n := range allNodes.Items {
-		nodeReady := v1Node.IsNodeReady(&n)
-
-		if nodeReady {
+		i, nc := nodeutil.GetNodeCondition(
+			&n.Status,
+			v1.NodeReady)
+		log.Printf("status: %v %+v", i, nc)
+		if i >= 0 && nc.Type == v1.NodeReady {
 			readyNodes = append(readyNodes, n)
 		} else {
-			log.Debugf("node, %s, is in a notready state", n.Name)
+			log.Debugf("node, %s, is in a notready state. Node Condition: %+v", n.Name, nc)
 		}
 	}
 
