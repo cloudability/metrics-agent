@@ -66,5 +66,9 @@ workflows:
     jobs:
       - snyk_scan:
           context: snyk
+          filters:
+            branches:
+              only:
+                - master
       - build:
           context: snyk
