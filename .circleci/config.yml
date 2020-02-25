@@ -14,6 +14,8 @@ jobs:
           organization: Cloudability
           monitor-on-build: true
           severity-threshold: medium
+          no_output_timeout: "20m"
+          additional-arguments: "--print-deps"
 
   build:
     docker:
@@ -72,3 +74,7 @@ workflows:
                 - master
       - build:
           context: snyk
+          filters:
+            branches:
+              only:
+                - master
