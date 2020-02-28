@@ -631,7 +631,7 @@ func createKubeHTTPClient(config KubeAgentConfig) (KubeAgentConfig, error) {
 			Certificates: []tls.Certificate{cert},
 			RootCAs:      caCertPool,
 		}
-		tlsConfig.BuildNameToCertificate()
+
 		transport = &http.Transport{TLSClientConfig: tlsConfig}
 
 		config.HTTPClient = http.Client{Transport: transport}
