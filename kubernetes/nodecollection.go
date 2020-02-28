@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
-	nodeutil "k8s.io/kubernetes/pkg/controller/util/node"
 )
 
 // NodeSource is an interface to get a list of Nodes
@@ -55,7 +54,7 @@ func (cns ClientsetNodeSource) GetReadyNodes() ([]v1.Node, error) {
 
 	var readyNodes []v1.Node
 	for _, n := range allNodes.Items {
-		i, nc := nodeutil.GetNodeCondition(
+		i, nc := getNodeCondition(
 			&n.Status,
 			v1.NodeReady)
 		log.Printf("status: %v %+v", i, nc)
@@ -394,4 +393,19 @@ func buildContainersRequest() ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
+}
+
+// GetNodeCondition extracts the provided condition from the given status and returns that.
+// Returns nil and -1 if the condition is not present, and the index of the located condition.
+// Based on https://github.com/kubernetes/kubernetes/blob/v1.17.3/pkg/controller/util/node/controller_utils.go#L286
+func getNodeCondition(status *v1.NodeStatus, conditionType v1.NodeConditionType) (int, *v1.NodeCondition) {
+	if status == nil {
+		return -1, nil
+	}
+	for i := range status.Conditions {
+		if status.Conditions[i].Type == conditionType {
+			return i, &status.Conditions[i]
+		}
+	}
+	return -1, nil
 }
