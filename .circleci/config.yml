@@ -6,7 +6,7 @@ jobs:
 
   snyk_scan:
     docker:
-      - image: 'circleci/golang:1.13'
+      - image: 'circleci/golang:1.14'
     steps:
       - checkout
       - snyk/scan:
@@ -14,13 +14,12 @@ jobs:
           organization: Cloudability
           monitor-on-build: true
           severity-threshold: medium
-          no_output_timeout: "20m"
-          additional-arguments: "--print-deps"
+
 
   build:
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.14
 
     working_directory: /go/src/github.com/cloudability/metrics-agent
 
@@ -68,12 +67,9 @@ workflows:
     jobs:
       - snyk_scan:
           context: snyk
-          filters:
-            branches:
-              only:
-                - master
+
       - build:
-          context: snyk
+          context: metrics-agent-master-build
           filters:
             branches:
               only:
