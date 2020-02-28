@@ -11,7 +11,7 @@ jobs:
       - checkout
       - snyk/scan:
           fail-on-issues: true
-          organization: Cloudability
+          organization: cloudability
           monitor-on-build: true
           severity-threshold: medium
 
