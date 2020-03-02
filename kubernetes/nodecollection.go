@@ -57,7 +57,6 @@ func (cns ClientsetNodeSource) GetReadyNodes() ([]v1.Node, error) {
 		i, nc := getNodeCondition(
 			&n.Status,
 			v1.NodeReady)
-		log.Printf("status: %v %+v", i, nc)
 		if i >= 0 && nc.Type == v1.NodeReady {
 			readyNodes = append(readyNodes, n)
 		} else {
@@ -395,7 +394,7 @@ func buildContainersRequest() ([]byte, error) {
 	return body, nil
 }
 
-// GetNodeCondition extracts the provided condition from the given status and returns that.
+// getNodeCondition extracts the provided condition from the given status and returns that.
 // Returns nil and -1 if the condition is not present, and the index of the located condition.
 // Based on https://github.com/kubernetes/kubernetes/blob/v1.17.3/pkg/controller/util/node/controller_utils.go#L286
 func getNodeCondition(status *v1.NodeStatus, conditionType v1.NodeConditionType) (int, *v1.NodeCondition) {
