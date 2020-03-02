@@ -61,7 +61,7 @@ Global Flags:
 
 ### Dependency management
 
-We're using [dep](https://github.com/golang/dep) to manage Go dependencies.
+We're using [go modules](https://github.com/golang/go/wiki/Modules) for Go dependencies.
 
 ### Source Code Analysis
 
@@ -86,5 +86,5 @@ make deploy-local
 
 The makefile target _deploy-local_ assumes that you have [docker](https://www.docker.com/community-edition) and kubernetes (with a context: docker-for-desktop) running locally. The target does the following:
 
-- Builds a container with the local project codebase
+- Builds a container with the local project codebase 
 - Locally creates a deployment / pod with the local metrics agent container

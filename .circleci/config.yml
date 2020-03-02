@@ -1,9 +1,25 @@
-version: 2
+version: 2.1
+orbs:
+  snyk: snyk/snyk@0.0.8
+
 jobs:
+
+  snyk_scan:
+    docker:
+      - image: 'circleci/golang:1.14'
+    steps:
+      - checkout
+      - snyk/scan:
+          fail-on-issues: true
+          organization: cloudability
+          monitor-on-build: true
+          severity-threshold: medium
+
+
   build:
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.14
 
     working_directory: /go/src/github.com/cloudability/metrics-agent
 
@@ -16,15 +32,9 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
 
       - run:
-          name: Install / run dep
-          command: |
-            go get -u github.com/golang/dep/cmd/dep
-            dep ensure -v
-
-      - run:
           name: Install golangci-lint
           command: |
-            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.20.0
+            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.23.7
 
       - run: 
           name: Lint
@@ -42,13 +52,46 @@ jobs:
           name: build docker container
           command:  make -e container-build
 
+      - store_test_results:
+          path: /tmp/test-results
+
+  deploy:
+    docker:
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.14
+
+    working_directory: /go/src/github.com/cloudability/metrics-agent
+
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+    steps:
+      - checkout
+      
+      - setup_remote_docker:
+            version: 17.07.0-ce
+
+      - run:
+          name: build docker container
+          command:  make -e container-build
+
       - run:
           name: push to dockerhub
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
                 docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} 
-                make -e dockerhub-push
+                make -e dockerhub-push 
             fi
 
-      - store_test_results:
-          path: /tmp/test-results
+workflows:
+  workflow:
+    jobs:
+      - snyk_scan:
+          context: snyk
+      - build
+      - deploy:
+          context: metrics-agent-master-build
+          filters:
+            branches:
+              only:
+                - master
