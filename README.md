@@ -86,5 +86,5 @@ make deploy-local
 
 The makefile target _deploy-local_ assumes that you have [docker](https://www.docker.com/community-edition) and kubernetes (with a context: docker-for-desktop) running locally. The target does the following:
 
-- Builds a container with the local project codebase
+- Builds a container with the local project codebase 
 - Locally creates a deployment / pod with the local metrics agent container
