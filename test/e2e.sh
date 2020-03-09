@@ -5,7 +5,7 @@ set -e
 : ${IMAGE:?Need to set metrics-agent IMAGE variable to test}
 : ${KUBERNETES_VERSION:?Need to set KUBERNETES_VERSION to test}
 
-export WORKINGDIR=$(PWD)/testdata/e2e/e2e-${KUBERNETES_VERSION}
+export WORKINGDIR=${TEMP_DIR}/testdata/e2e/e2e-${KUBERNETES_VERSION}
 
 cleanup() {
   kind delete cluster --name=e2e-${KUBERNETES_VERSION} &> /dev/null || true
