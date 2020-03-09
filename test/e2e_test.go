@@ -40,7 +40,7 @@ func TestMetricSample(t *testing.T) {
 				ft := toAgentFileType(n)
 				seen[toAgentFileType(ft)] = true
 				if unmarshalFn, ok := knownFileTypes[ft]; ok {
-					fmt.Println("Proccessing:", n)
+					fmt.Println("Processing:", n)
 					f, err := ioutil.ReadFile(path)
 					if err != nil {
 						return err
@@ -55,6 +55,9 @@ func TestMetricSample(t *testing.T) {
 
 			return nil
 		})
+		if err != nil {
+			t.Fatalf("Failed: %v", err)
+		}
 		err = checkForRequiredFiles(seen)
 		if err != nil {
 			t.Fatalf("Failed: %v", err)
@@ -99,7 +102,8 @@ func TestMetricSample(t *testing.T) {
 		for _, nc := range parsedK8sLists.NodeContainers {
 
 			for _, s := range nc {
-				if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(s.Spec.Labels["io.kubernetes.pod.name"], "stress-") {
+				if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(
+					s.Spec.Labels["io.kubernetes.pod.name"], "stress-") {
 					return
 				}
 			}
