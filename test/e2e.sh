@@ -8,7 +8,6 @@ set -e
 export WORKINGDIR=$(PWD)/testdata/e2e/e2e-${KUBERNETES_VERSION}
 
 cleanup() {
-  # export WORKINGDIR=$(PWD)/testdata/e2e/e2e-${KUBERNETES_VERSION}
   kind delete cluster --name=e2e-${KUBERNETES_VERSION} &> /dev/null || true
   if [ -d $WORKINGDIR ]; then
     echo "Cleaning up Temp directory : ${WORKINGDIR}"
@@ -41,8 +40,7 @@ done
 
 deploy(){
   mkdir -p -m 0777 ${WORKINGDIR}
-  # export WORKINGDIR=$(PWD)/testdata/e2e/e2e-${KUBERNETES_VERSION}
-  # Bail out if the temp directory wasn't created successfully.
+
   if [ ! -d $WORKINGDIR ]; then
     >&2 echo "Failed to create temp directory ${WORKINGDIR}"
     exit 1
@@ -55,8 +53,6 @@ deploy(){
   export CONTAINER="\"name\": \"metrics-agent\", \"image\": \"${IMAGE}\",\"imagePullPolicy\": \"Never\""
   export ENVS="\"env\": [{\"name\": \"CLOUDABILITY_CLUSTER_NAME\", \"value\": \"e2e\"}, {\"name\": \"CLOUDABILITY_POLL_INTERVAL\", \"value\": \"20\"} ]"
 
-
-  # {\"apiVersion\": \"v1\",\"kind\": \"Pod\", \"metadata\": {\"name\": \"stress\"},\"spec\": {\"containers\": [{\"name\": \"stress\",\"image\": \"jfusterm/stress\",\"args\": [\"--vm\",\"1\",\"--vm-bytes\",\"127M\"],\"resources\": {\"limits\": {\"cpu\": \"200m\",\"memory\": \"128Mi\"},\"requests\": {\"cpu\": \"200m\",\"memory\": \"128Mi\"}}}]}}
 
     kubectl -n cloudability patch deployment metrics-agent --patch \
   "{\"spec\": {\"template\": {\"spec\": {\"containers\": [{${CONTAINER}, ${ENVS} }]}}}}"
@@ -80,9 +76,8 @@ get_sample_data(){
 }
 
 run_tests() {
-  echo tests
-  WORKING_DIR=${WORKINGDIR} go test test/e2e_test.go -v
-  sleep 90000
+  echo "tests: WORKING_DIR=${WORKINGDIR} KUBERNETES_VERSION=${KUBERNETES_VERSION} go test test/e2e_test.go -v"
+  WORKING_DIR=${WORKINGDIR} KUBERNETES_VERSION=${KUBERNETES_VERSION} go test test/e2e_test.go -v
 }
 
 trap cleanup EXIT

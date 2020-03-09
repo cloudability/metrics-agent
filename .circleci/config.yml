@@ -55,6 +55,26 @@ jobs:
       - store_test_results:
           path: /tmp/test-results
 
+  test_e2e:
+    docker:
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.14
+
+    working_directory: /go/src/github.com/cloudability/metrics-agent
+
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+    steps:
+      - checkout
+      
+      - setup_remote_docker:
+            version: 17.07.0-ce
+
+      - run:
+          name: run e2e tests
+          command:  make test-e2e-all
+
   deploy:
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
@@ -89,6 +109,7 @@ workflows:
       - snyk_scan:
           context: snyk
       - build
+      - test_e2e
       - deploy:
           context: metrics-agent-master-build
           filters:
