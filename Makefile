@@ -10,7 +10,7 @@ CLDY_API_KEY=${CLOUDABILITY_API_KEY}
 
 # $(call TEST_KUBERNETES, image_tag, prefix, git_commit)
 define TEST_KUBERNETES
-	KUBERNETES_VERSION=$(1) IMAGE=$(2)/metrics-agent:$(3) TEMP_DIR=$(TEMP_DIR) ./testdata/e2e/e2e.sh; \
+	KUBERNETES_VERSION=$(1) IMAGE=$(2)/metrics-agent:$(3) TEMP_DIR=$(TEMP_DIR) $(REPO_DIR)/testdata/e2e/e2e.sh; \
 		if [ $$? != 0 ]; then \
 			exit 1; \
 		fi;
