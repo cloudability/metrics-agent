@@ -87,7 +87,7 @@ wait_for_metrics() {
 get_sample_data(){
   echo "Waiting for agent data collection"
   sleep 30
-  if [ $CI="true" ]; then
+  if [[ -z "${CI}" ]]; then
     docker cp e2e-${KUBERNETES_VERSION}-control-plane:/tmp ${WORKINGDIR}
   else
     POD=$(kubectl get pod -n cloudability -l app=metrics-agent -o jsonpath="{.items[0].metadata.name}")
