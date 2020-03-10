@@ -48,10 +48,10 @@ deploy(){
   if "${CI}" = "true"; then
     docker cp ~/.kube/config e2e-${KUBERNETES_VERSION}-control-plane:/root/.kube/config
     docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443 apply -f -  < deploy/kubernetes/cloudability-metrics-agent.yaml
-    docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl -n cloudability patch deployment metrics-agent --patch \
+    docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443 -n cloudability patch deployment metrics-agent --patch \
   "{\"spec\": {\"template\": {\"spec\": {\"containers\": [{${CONTAINER}, ${ENVS} }]}}}}"
-    docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl create ns stress
-    docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl -n stress run stress --labels=app=stress --image=jfusterm/stress -- --cpu 50 --vm 1 --vm-bytes 127m
+    docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443 create ns stress
+    docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443 -n stress run stress --labels=app=stress --image=jfusterm/stress -- --cpu 50 --vm 1 --vm-bytes 127m
   else
     kubectl -n cloudability patch deployment metrics-agent --patch \
   "{\"spec\": {\"template\": {\"spec\": {\"containers\": [{${CONTAINER}, ${ENVS} }]}}}}"
@@ -63,7 +63,7 @@ deploy(){
 wait_for_metrics() {
   # Wait for metrics-agent pod ready
   if "${CI}" = "true"; then
-    while [[ $(docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl get pods -n cloudability -l app=metrics-agent -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
+    while [[ $(docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443 get pods -n cloudability -l app=metrics-agent -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
       echo "waiting for pod ready" && sleep 5;
     done
   else
