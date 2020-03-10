@@ -28,9 +28,7 @@ setup_kind() {
 
   sleep 2
   
-  if [[ -z "${CI}" ]]; then
-    echo "running in CI, no need to load image to kind"
-    done
+
   else
     i=0
     until [ $i -ge 5 ]
@@ -39,7 +37,6 @@ setup_kind() {
       n=$[$i+1]
       sleep 15
     done
-  fi
 }
 
 deploy(){
@@ -57,7 +54,8 @@ deploy(){
   export CONTAINER="\"name\": \"metrics-agent\", \"image\": \"${IMAGE}\",\"imagePullPolicy\": \"Never\""
   export ENVS="\"env\": [{\"name\": \"CLOUDABILITY_CLUSTER_NAME\", \"value\": \"e2e\"}, {\"name\": \"CLOUDABILITY_POLL_INTERVAL\", \"value\": \"20\"} ]"
 
-  if [[ -z "${CI}" ]]; then
+  if "${CI}" = "true"; then
+    docker cp ~/.kube/config e2e-${KUBERNETES_VERSION}-control-plane:/root/.kube/config
     docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443 apply -f -  < deploy/kubernetes/cloudability-metrics-agent.yaml
     docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl -n cloudability patch deployment metrics-agent --patch \
   "{\"spec\": {\"template\": {\"spec\": {\"containers\": [{${CONTAINER}, ${ENVS} }]}}}}"
@@ -73,7 +71,7 @@ deploy(){
 
 wait_for_metrics() {
   # Wait for metrics-agent pod ready
-  if [[ -z "${CI}" ]]; then
+  if "${CI}" = "true"; then
     while [[ $(docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl get pods -n cloudability -l app=metrics-agent -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
       echo "waiting for pod ready" && sleep 5;
     done
@@ -87,7 +85,7 @@ wait_for_metrics() {
 get_sample_data(){
   echo "Waiting for agent data collection"
   sleep 30
-  if [[ -z "${CI}" ]]; then
+  if "${CI}" = "true"; then
     docker cp e2e-${KUBERNETES_VERSION}-control-plane:/tmp ${WORKINGDIR}
   else
     POD=$(kubectl get pod -n cloudability -l app=metrics-agent -o jsonpath="{.items[0].metadata.name}")
