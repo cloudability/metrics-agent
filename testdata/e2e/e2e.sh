@@ -45,13 +45,6 @@ deploy(){
     exit 1
   fi
   
-  echo ${WORKINGDIR}
-
-
-  kubectl apply -f deploy/kubernetes/
-  export CONTAINER="\"name\": \"metrics-agent\", \"image\": \"${IMAGE}\",\"imagePullPolicy\": \"Never\""
-  export ENVS="\"env\": [{\"name\": \"CLOUDABILITY_CLUSTER_NAME\", \"value\": \"e2e\"}, {\"name\": \"CLOUDABILITY_POLL_INTERVAL\", \"value\": \"20\"} ]"
-
   if "${CI}" = "true"; then
     docker cp ~/.kube/config e2e-${KUBERNETES_VERSION}-control-plane:/root/.kube/config
     docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443 apply -f -  < deploy/kubernetes/cloudability-metrics-agent.yaml
