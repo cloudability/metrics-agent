@@ -28,14 +28,15 @@ setup_kind() {
 
   sleep 2
   
-  i=0
-  until [ $i -ge 5 ]
-  do
-   kind load docker-image ${IMAGE} --name e2e-${KUBERNETES_VERSION} && echo "${IMAGE} image added to cluster" && break
-   n=$[$i+1]
-   sleep 15
-done
-
+  if [ ! $CI="true" ]; then
+    i=0
+    until [ $i -ge 5 ]
+    do
+      kind load docker-image ${IMAGE} --name e2e-${KUBERNETES_VERSION} && echo "${IMAGE} image added to cluster" && break
+      n=$[$i+1]
+      sleep 15
+    done
+  fi
 }
 
 deploy(){
