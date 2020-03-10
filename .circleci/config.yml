@@ -46,7 +46,7 @@ jobs:
           command: make test
 
       - setup_remote_docker:
-            version: 17.07.0-ce
+            version: 18.09.3
 
       - run:
           name: build docker container
@@ -69,7 +69,7 @@ jobs:
       - checkout
       
       - setup_remote_docker:
-            version: 17.07.0-ce
+            version: 18.09.3
 
       - run:
           name: setup dirs and such for kubectl
@@ -98,7 +98,7 @@ jobs:
       - checkout
       
       - setup_remote_docker:
-            version: 17.07.0-ce
+            version: 18.09.3
 
       - run:
           name: build docker container
