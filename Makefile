@@ -10,7 +10,7 @@ CLDY_API_KEY=${CLOUDABILITY_API_KEY}
 
 # $(call TEST_KUBERNETES, image_tag, prefix, git_commit)
 define TEST_KUBERNETES
-	KUBERNETES_VERSION=$(1) IMAGE=$(2)/metrics-agent:$(3) ./test/e2e.sh; \
+	KUBERNETES_VERSION=$(1) IMAGE=$(2)/metrics-agent:$(3) TEMP_DIR=$(TEMP_DIR) $(REPO_DIR)/testdata/e2e/e2e.sh; \
 		if [ $$? != 0 ]; then \
 			exit 1; \
 		fi;
@@ -95,9 +95,6 @@ version:
 release-version:
 	@echo $(RELEASE-VERSION)
 
-# e2e Test Rules
-test-e2e-latest: container-build install-tools
-	$(call TEST_KUBERNETES,v1.17.0,$(PREFIX),$(VERSION))
 
 test-e2e-1.17: container-build install-tools
 	$(call TEST_KUBERNETES,v1.17.0,$(PREFIX),$(VERSION))
@@ -105,9 +102,9 @@ test-e2e-1.17: container-build install-tools
 test-e2e-1.16: container-build install-tools
 	$(call TEST_KUBERNETES,v1.16.1,$(PREFIX),$(VERSION))
 
-test-e2e-1.15: install-tools
+test-e2e-1.15: container-build install-tools
 	$(call TEST_KUBERNETES,v1.15.0,$(PREFIX),$(VERSION))
 
-test-e2e-all: test-e2e-latest test-e2e-1.17 test-e2e-1.16 test-e2e-1.15
+test-e2e-all: test-e2e-1.17 test-e2e-1.16 test-e2e-1.15
 
 .PHONY: test version

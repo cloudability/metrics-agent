@@ -13,89 +13,104 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	statsapi "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
-	// . "github.com/onsi/ginkgo"
-	// . "github.com/onsi/gomega"
 )
 
-// func TestMetricsSample(t *testing.T) {
-// 	RegisterFailHandler(Fail)
-// 	RunSpecs(t, "[MetricsAgent]")
-// }
 func TestMetricSample(t *testing.T) {
 
 	wd := os.Getenv("WORKING_DIR")
 
-	parsedK8sLists := &ParsedK8sLists{}
-	//load the metric samples
-	err := filepath.Walk(wd, func(path string, info os.FileInfo, e error) error {
-		if e != nil {
-			return e
-		}
-
-		// check if it is a regular file (not dir)
-		if info.Mode().IsRegular() {
-			fmt.Println("Proccessing:", info.Name())
-			if unmarshalFn, ok := knownFileTypes[info.Name()]; ok {
-				f, err := ioutil.ReadFile(path)
-				if err != nil {
-					return err
-				}
-
-				if err := unmarshalFn(path, f, parsedK8sLists); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		t.Errorf("bad news %v", err)
+	parsedK8sLists := &ParsedK8sLists{
+		NodeSummaries:          make(map[string]statsapi.Summary),
+		BaselineNodeSummaries:  make(map[string]statsapi.Summary),
+		NodeContainers:         make(map[string]map[string]cadvisor.ContainerInfo),
+		BaselineNodeContainers: make(map[string]map[string]cadvisor.ContainerInfo),
 	}
 
-	// t.Parallel()
-	t.Run("ensure that a metrics sample has cloudability namespace", func(t *testing.T) {
-		f := false
-		for _, ns := range parsedK8sLists.Namespaces.Items {
-			if ns.Name == "cloudability" {
-				f = true
+	t.Run("ensure that a metrics sample has expected files", func(t *testing.T) {
+		seen := make(map[string]bool, len(knownFileTypes))
+
+		err := filepath.Walk(wd, func(path string, info os.FileInfo, e error) error {
+			if e != nil {
+				return e
 			}
+
+			// check if it is a regular file (not dir)
+			if info.Mode().IsRegular() {
+				n := info.Name()
+				ft := toAgentFileType(n)
+				seen[toAgentFileType(ft)] = true
+				if unmarshalFn, ok := knownFileTypes[ft]; ok {
+					fmt.Println("Processing:", n)
+					f, err := ioutil.ReadFile(path)
+					if err != nil {
+						return err
+					}
+
+					if err := unmarshalFn(path, f, parsedK8sLists); err != nil {
+						return err
+					}
+
+				}
+			}
+
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Failed: %v", err)
 		}
-		if !f {
-			t.Error("Namespace cloudability not found in metric sample")
+		err = checkForRequiredFiles(seen)
+		if err != nil {
+			t.Fatalf("Failed: %v", err)
 		}
 	})
 
-	// t.Run("ensure that a metrics sample has cloudability namespace", func(t *testing.T) {
-	// 	f := false
-	// 	for _, ns := range parsedK8sLists. Namespaces.Items {
-	// 		if ns.Name == "cloudability" {
-	// 			f = true
-	// 		}
-	// 	}
-	// 	if !f {
-	// 		t.Error("Namespace cloudability not found in metric sample")
-	// 	}
-	// })
+	t.Parallel()
 
-}
+	t.Run("ensure that a metrics sample contains the cloudability namespace", func(t *testing.T) {
+		for _, ns := range parsedK8sLists.Namespaces.Items {
+			if ns.Name == "cloudability" {
+				return
+			}
+		}
+		t.Error("Namespace cloudability not found in metric sample")
+	})
 
-type ParsedK8sLists struct {
-	Namespaces             NamespaceList
-	Pods                   PodList
-	Deployments            LabelSelectorMatchedResourceList
-	ReplicaSets            LabelSelectorMatchedResourceList
-	Services               LabelMapMatchedResourceList
-	Jobs                   LabelSelectorMatchedResourceList
-	DaemonSets             LabelSelectorMatchedResourceList
-	Nodes                  NodeList
-	PersistentVolumes      PersistentVolumeList
-	PersistentVolumeClaims PersistentVolumeClaimList
-	ReplicationControllers LabelMapMatchedResourceList
-	NodeSummaries          map[string]statsapi.Summary
-	BaselineNodeSummaries  map[string]statsapi.Summary
-	NodeContainers         map[string]map[string]cadvisor.ContainerInfo
-	BaselineNodeContainers map[string]map[string]cadvisor.ContainerInfo
-	CldyAgent              CldyAgent
+	t.Run("ensure that a metrics sample has expected pod data", func(t *testing.T) {
+		for _, po := range parsedK8sLists.Pods.Items {
+			if strings.HasPrefix(po.Name, "stress-") && po.Status.QOSClass == v1.PodQOSBestEffort {
+				return
+			}
+
+		}
+		t.Error("pod stress not found in metric sample")
+	})
+
+	t.Run("ensure that a metrics sample has expected containers summary data", func(t *testing.T) {
+
+		for _, ns := range parsedK8sLists.NodeSummaries {
+			for _, pf := range ns.Pods {
+				if strings.HasPrefix(pf.PodRef.Name, "stress-") && pf.PodRef.Namespace == "stress" && pf.CPU.UsageNanoCores != nil {
+					return
+				}
+			}
+		}
+		t.Error("pod summary data not found in metric sample")
+	})
+
+	t.Run("ensure that a metrics sample has expected containers stat data", func(t *testing.T) {
+
+		for _, nc := range parsedK8sLists.NodeContainers {
+
+			for _, s := range nc {
+				if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(
+					s.Spec.Labels["io.kubernetes.pod.name"], "stress-") {
+					return
+				}
+			}
+		}
+		t.Error("pod container stat data not found in metric sample")
+	})
+
 }
 
 var knownFileTypes = map[string]UnmarshalForK8sListFn{
@@ -117,14 +132,64 @@ var knownFileTypes = map[string]UnmarshalForK8sListFn{
 	"baseline-container-":         AsContainerNodeSummary(true),
 }
 
+var agentFileTypes = map[string]bool{
+	"stats-summary-":      true,
+	"baseline-summary-":   true,
+	"stats-container-":    true,
+	"baseline-container-": true,
+}
+
+type ParsedK8sLists struct {
+	Namespaces             NamespaceList
+	Pods                   PodList
+	Deployments            LabelSelectorMatchedResourceList
+	ReplicaSets            LabelSelectorMatchedResourceList
+	Services               LabelMapMatchedResourceList
+	Jobs                   LabelSelectorMatchedResourceList
+	DaemonSets             LabelSelectorMatchedResourceList
+	Nodes                  NodeList
+	PersistentVolumes      PersistentVolumeList
+	PersistentVolumeClaims PersistentVolumeClaimList
+	ReplicationControllers LabelMapMatchedResourceList
+	NodeSummaries          map[string]statsapi.Summary
+	BaselineNodeSummaries  map[string]statsapi.Summary
+	NodeContainers         map[string]map[string]cadvisor.ContainerInfo
+	BaselineNodeContainers map[string]map[string]cadvisor.ContainerInfo
+	CldyAgent              CldyAgent
+}
+
 // UnmarshalForK8sListFn function alias type for a function that unmarshals data into a ParsedK8sLists ref
 type UnmarshalForK8sListFn func(fname string, fdata []byte, parsedK8sList *ParsedK8sLists) error
 
 type k8sRefFn func(lists *ParsedK8sLists) interface{}
 
+func checkForRequiredFiles(seen map[string]bool) error {
+	for f := range knownFileTypes {
+		if seen[f] {
+			continue
+		}
+
+		return fmt.Errorf("missing expected files: %#v, SEEN: %#v", f, seen)
+	}
+	return nil
+}
+
+func toAgentFileType(n string) string {
+	for at := range agentFileTypes {
+		if strings.HasPrefix(n, at) {
+			return at
+		}
+	}
+
+	return n
+}
+
 // ByRefFn returns a UnmarshalForK8sListFn that will unmarshal into the ref returned by the given refFn
 func ByRefFn(refFn k8sRefFn) UnmarshalForK8sListFn {
 	return func(fname string, fdata []byte, parsedK8sList *ParsedK8sLists) error {
+		if len(fdata) <= 0 {
+			return fmt.Errorf("File: %v appears to be empty", fname)
+		}
 		return json.Unmarshal(fdata, refFn(parsedK8sList))
 	}
 }
