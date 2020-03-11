@@ -5,8 +5,13 @@ set -e
 : ${IMAGE:?Need to set metrics-agent IMAGE variable to test}
 : ${KUBERNETES_VERSION:?Need to set KUBERNETES_VERSION to test}
 
-export WORKINGDIR=${TEMP_DIR}/testdata/e2e/e2e-${KUBERNETES_VERSION}
-export CI_KUBECTL="docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443"
+OS=$(uname)
+if [ "$OS" = "Darwin" ]; then
+  export WORKINGDIR=/private${TEMP_DIR}/testdata/e2e/e2e-${KUBERNETES_VERSION}
+else
+  export WORKINGDIR=${TEMP_DIR}/testdata/e2e/e2e-${KUBERNETES_VERSION}
+  export CI_KUBECTL="docker exec -i e2e-${KUBERNETES_VERSION}-control-plane kubectl --server=https://127.0.0.1:6443"
+fi
 
 cleanup() {
   kind delete cluster --name=e2e-${KUBERNETES_VERSION} &> /dev/null || true
