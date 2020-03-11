@@ -49,7 +49,7 @@ deploy(){
   export CONTAINER="\"name\": \"metrics-agent\", \"image\": \"${IMAGE}\",\"imagePullPolicy\": \"Never\""
   export ENVS="\"env\": [{\"name\": \"CLOUDABILITY_CLUSTER_NAME\", \"value\": \"e2e\"}, {\"name\": \"CLOUDABILITY_POLL_INTERVAL\", \"value\": \"20\"} ]"
   
-  if "${CI}" = "true"; then
+  if [ "${CI}" = "true" ]; then
     docker cp ~/.kube/config e2e-${KUBERNETES_VERSION}-control-plane:/root/.kube/config
     ${CI_KUBECTL} apply -f -  < deploy/kubernetes/cloudability-metrics-agent.yaml
     ${CI_KUBECTL} -n cloudability patch deployment metrics-agent --patch "{\"spec\": {\"template\": {\"spec\": {\"containers\": [{${CONTAINER}, ${ENVS} }]}}}}"
@@ -66,7 +66,7 @@ deploy(){
 
 wait_for_metrics() {
   # Wait for metrics-agent pod ready
-  if "${CI}" = "true"; then
+  if [ "${CI}" = "true" ]; then
     while [[ $(${CI_KUBECTL} get pods -n cloudability -l app=metrics-agent -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
       echo "waiting for pod ready" && sleep 5;
     done
@@ -80,7 +80,7 @@ wait_for_metrics() {
 get_sample_data(){
   echo "Waiting for agent data collection check: docker cp e2e-${KUBERNETES_VERSION}-control-plane:/tmp ${WORKINGDIR}"
   sleep 30
-  if "${CI}" = "true"; then
+  if [ "${CI}" = "true" ]; then
     POD=$(${CI_KUBECTL} get pod -n cloudability -l app=metrics-agent -o jsonpath="{.items[0].metadata.name}")
     echo "pod is $POD"
     ${CI_KUBECTL} cp cloudability/${POD}:/tmp /root/export
