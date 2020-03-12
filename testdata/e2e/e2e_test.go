@@ -25,6 +25,7 @@ func TestMetricSample(t *testing.T) {
 		NodeContainers:         make(map[string]map[string]cadvisor.ContainerInfo),
 		BaselineNodeContainers: make(map[string]map[string]cadvisor.ContainerInfo),
 	}
+	t.Parallel()
 
 	t.Run("ensure that a metrics sample has expected files", func(t *testing.T) {
 		seen := make(map[string]bool, len(knownFileTypes))
@@ -40,7 +41,7 @@ func TestMetricSample(t *testing.T) {
 				ft := toAgentFileType(n)
 				seen[toAgentFileType(ft)] = true
 				if unmarshalFn, ok := knownFileTypes[ft]; ok {
-					fmt.Println("Processing:", n)
+					t.Logf("Processing: %v", n)
 					f, err := ioutil.ReadFile(path)
 					if err != nil {
 						return err
@@ -63,8 +64,6 @@ func TestMetricSample(t *testing.T) {
 			t.Fatalf("Failed: %v", err)
 		}
 	})
-
-	t.Parallel()
 
 	t.Run("ensure that a metrics sample contains the cloudability namespace", func(t *testing.T) {
 		for _, ns := range parsedK8sLists.Namespaces.Items {
