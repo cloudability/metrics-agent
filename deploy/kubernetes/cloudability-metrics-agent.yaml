@@ -9,7 +9,89 @@ metadata:
   name: cloudability
   namespace: cloudability
 ---
-apiVersion: extensions/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: metrics-agents
+  namespace: kube-system
+rules:
+- apiGroups:
+  - ""
+  - "extensions"
+  - "apps"
+  - "batch"
+  resources:
+    - "namespaces"
+    - "replicationcontrollers"
+    - "services"
+    - "nodes"
+    - "nodes/spec"
+    - "pods"
+    - "jobs"
+    - "cronjobs"
+    - "persistentvolumes"
+    - "persistentvolumeclaims"
+    - "deployments"
+    - "replicasets"
+    - "daemonsets"
+  verbs:
+    - "get"
+    - "watch"
+    - "list"
+- apiGroups: [""]
+  resources:
+    - "services/proxy"
+    - "pods/proxy"
+    - "nodes/proxy"
+    - "nodes/stats"
+  verbs:
+    - "get"
+    - "list"
+    - "create"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metrics-agents
+  namespace: kube-system
+subjects:
+- kind: ServiceAccount
+  name: cloudability
+  namespace: cloudability
+roleRef:
+  kind: ClusterRole
+  name: metrics-agents
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: metrics-agents
+  namespace: cloudability
+rules:
+- apiGroups: ["*"]
+  resources:
+    - "pods"
+    - "pods/log"
+  verbs:
+    - "get"
+    - "list"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: metrics-agents
+  namespace: cloudability
+subjects:
+- kind: ServiceAccount
+  name: cloudability
+  namespace: cloudability
+roleRef:
+  kind: Role
+  name: metrics-agents
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
@@ -17,6 +99,9 @@ metadata:
   name: "metrics-agent"
   namespace: cloudability
 spec:
+  selector:
+    matchLabels:
+      app: metrics-agent
   replicas: 1
   template:
     metadata:
@@ -32,7 +117,7 @@ spec:
               memory: "128Mi"
               cpu: ".1"
             limits:
-              memory: "512Mi"
+              memory: "1Gi"
               cpu: ".5"
           name: "metrics-agent"
           args:
@@ -44,4 +129,3 @@ spec:
               value: "NNNNNNNNN"
             - name: CLOUDABILITY_POLL_INTERVAL
               value: "180"
-
