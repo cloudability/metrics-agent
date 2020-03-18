@@ -11,12 +11,13 @@ import (
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"github.com/cloudability/metrics-agent/util"
-	"github.com/kubernetes/kubernetes/staging/src/k8s.io/client-go/util/retry"
 	log "github.com/sirupsen/logrus"
+
+	v1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/client-go/pkg/api/v1"
-	v1Node "k8s.io/client-go/pkg/api/v1/node"
+	"k8s.io/client-go/util/retry"
 )
 
 // NodeSource is an interface to get a list of Nodes
@@ -53,12 +54,13 @@ func (cns ClientsetNodeSource) GetReadyNodes() ([]v1.Node, error) {
 
 	var readyNodes []v1.Node
 	for _, n := range allNodes.Items {
-		nodeReady := v1Node.IsNodeReady(&n)
-
-		if nodeReady {
+		i, nc := getNodeCondition(
+			&n.Status,
+			v1.NodeReady)
+		if i >= 0 && nc.Type == v1.NodeReady {
 			readyNodes = append(readyNodes, n)
 		} else {
-			log.Debugf("node, %s, is in a notready state", n.Name)
+			log.Debugf("node, %s, is in a notready state. Node Condition: %+v", n.Name, nc)
 		}
 	}
 
@@ -390,4 +392,19 @@ func buildContainersRequest() ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
+}
+
+// getNodeCondition extracts the provided condition from the given status and returns that.
+// Returns nil and -1 if the condition is not present, and the index of the located condition.
+// Based on https://github.com/kubernetes/kubernetes/blob/v1.17.3/pkg/controller/util/node/controller_utils.go#L286
+func getNodeCondition(status *v1.NodeStatus, conditionType v1.NodeConditionType) (int, *v1.NodeCondition) {
+	if status == nil {
+		return -1, nil
+	}
+	for i := range status.Conditions {
+		if status.Conditions[i].Type == conditionType {
+			return i, &status.Conditions[i]
+		}
+	}
+	return -1, nil
 }

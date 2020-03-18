@@ -5,3 +5,4 @@ vendor/**
 **/debug.test
 .vscode
 .idea
+/testdata/e2e

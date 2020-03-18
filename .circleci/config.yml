@@ -1,9 +1,25 @@
-version: 2
+version: 2.1
+orbs:
+  snyk: snyk/snyk@0.0.8
+
 jobs:
+
+  snyk_scan:
+    docker:
+      - image: 'circleci/golang:1.14'
+    steps:
+      - checkout
+      - snyk/scan:
+          fail-on-issues: true
+          organization: cloudability
+          monitor-on-build: true
+          severity-threshold: medium
+
+
   build:
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.14
 
     working_directory: /go/src/github.com/cloudability/metrics-agent
 
@@ -16,15 +32,9 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
 
       - run:
-          name: Install / run dep
+          name: Install tools
           command: |
-            go get -u github.com/golang/dep/cmd/dep
-            dep ensure -v
-
-      - run:
-          name: Install golangci-lint
-          command: |
-            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.20.0
+            make install-tools
 
       - run:
           name: Install helm
@@ -41,7 +51,59 @@ jobs:
           command: make test
 
       - setup_remote_docker:
-            version: 17.07.0-ce
+            version: 18.09.3
+
+      - run:
+          name: build docker container
+          command:  make -e container-build
+
+      - store_test_results:
+          path: /tmp/test-results
+
+  test_e2e:
+    docker:
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.14
+
+    working_directory: /go/src/github.com/cloudability/metrics-agent
+
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+    steps:
+      - checkout
+      
+      - setup_remote_docker:
+            version: 18.09.3
+
+      - run:
+          name: setup dirs and such for kubectl
+          command: 
+            mkdir -p /home/circleci/bin
+            
+      - run:
+          name: install kubectl
+          command: cd /home/circleci/bin && curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl && chmod 755 /home/circleci/bin/kubectl && cd -
+
+      - run:
+          name: run e2e tests
+          command:  make test-e2e-all
+
+  deploy:
+    docker:
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.14
+
+    working_directory: /go/src/github.com/cloudability/metrics-agent
+
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+    steps:
+      - checkout
+      
+      - setup_remote_docker:
+            version: 18.09.3
 
       - run:
           name: build docker container
@@ -56,8 +118,19 @@ jobs:
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
                 docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} 
-                make -e dockerhub-push
+                make -e dockerhub-push 
             fi
 
-      - store_test_results:
-          path: /tmp/test-results
+workflows:
+  workflow:
+    jobs:
+      - snyk_scan:
+          context: snyk
+      - build
+      - test_e2e
+      - deploy:
+          context: metrics-agent-master-build
+          filters:
+            branches:
+              only:
+                - master

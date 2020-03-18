@@ -15,7 +15,7 @@ Here are some items to check when submitting your PR:
 
   * have a [proper commit history](#commits) (Please rebase if needed).
   * write tests for the code you wrote.
-  * preferably make sure that all tests pass locally.
+  * preferably make sure that all tests pass locally `make test` & `make test-e2e-all`.
   * summarize your PR with an explanatory title and a message describing your
     changes, cross-referencing any related bugs/PRs.
   * open your PR against the `master` branch.

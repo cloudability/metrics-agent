@@ -28,10 +28,10 @@ import (
 	"github.com/cloudability/metrics-agent/util"
 	cldyVersion "github.com/cloudability/metrics-agent/version"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -631,7 +631,7 @@ func createKubeHTTPClient(config KubeAgentConfig) (KubeAgentConfig, error) {
 			Certificates: []tls.Certificate{cert},
 			RootCAs:      caCertPool,
 		}
-		tlsConfig.BuildNameToCertificate()
+
 		transport = &http.Transport{TLSClientConfig: tlsConfig}
 
 		config.HTTPClient = http.Client{Transport: transport}

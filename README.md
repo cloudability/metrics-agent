@@ -1,6 +1,6 @@
 # metrics-agent
 
-The metrics-agent collects allocation metrics from a container orchestration system (currently Kubernetes) and sends the metrics to cloudability to help you gain visibility, reduce costs, and increase efficiency across your infrastructure.  The agent is designed to run as a docker container in each cluster inside your orchestration system.
+The metrics-agent collects allocation metrics from a Kubernetes cluster system and sends the metrics to cloudability to help you gain visibility, reduce costs, and increase efficiency across your infrastructure.  The agent is designed to run as a docker container in each cluster inside your orchestration system.
 
 [![CircleCI](https://circleci.com/gh/cloudability/metrics-agent/tree/master.svg?style=svg)](https://circleci.com/gh/cloudability/metrics-agent/tree/master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cloudability/metrics-agent)](https://goreportcard.com/report/github.com/cloudability/metrics-agent)
@@ -61,7 +61,7 @@ Global Flags:
 
 ### Dependency management
 
-We're using [dep](https://github.com/golang/dep) to manage Go dependencies.
+We're using [go modules](https://github.com/golang/go/wiki/Modules) for Go dependencies.
 
 ### Source Code Analysis
 
@@ -86,5 +86,8 @@ make deploy-local
 
 The makefile target _deploy-local_ assumes that you have [docker](https://www.docker.com/community-edition) and kubernetes (with a context: docker-for-desktop) running locally. The target does the following:
 
-- Builds a container with the local project codebase
+- Builds a container with the local project codebase 
 - Locally creates a deployment / pod with the local metrics agent container
+
+### Testing
+In addition to running all go tests via the make step `make test`,  `make test-e2e-all` runs end to end tests by spinning up a [kind](https://github.com/kubernetes-sigs/kind) cluster, building the metrics agent, deploying it to the reference clusters, then testing the collected data.  The use of kind requires a local docker daemon to be running.
