@@ -23,7 +23,10 @@ serviceAccount:
   create: true
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: cloudability
+  # name:
+
+rbac:
+  create: true
 
 podSecurityContext: {}
   # fsGroup: 2000
@@ -41,7 +44,7 @@ resources:
     memory: "128Mi"
     cpu: ".1"
   limits:
-    memory: "512Mi"
+    memory: "1Gi"
     cpu: ".5"
 
 nodeSelector: {}
