@@ -103,7 +103,7 @@ jobs:
       - run:
           name: Install helm
           command: |
-            curl -sfL https://get.helm.sh/helm-v3.0.3-linux-amd64.tar.gz | tar xz && sudo mv linux-amd64/helm /bin/helm && rm -rf linux-amd64
+            curl -sfL https://get.helm.sh/helm-v3.1.2-linux-amd64.tar.gz | tar xz && sudo mv linux-amd64/helm /bin/helm && rm -rf linux-amd64
 
       - run:
           name: build docker container
