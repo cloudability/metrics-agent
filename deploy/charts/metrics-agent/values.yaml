@@ -1,0 +1,54 @@
+# Default values for metrics-agent.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: cloudability/metrics-agent
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+apiKey: ""
+clusterName: ""
+pollInterval: 180
+
+extraEnv: []
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  # name:
+
+rbac:
+  create: true
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: ".1"
+  limits:
+    memory: "1Gi"
+    cpu: ".5"
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

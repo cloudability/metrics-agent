@@ -36,6 +36,11 @@ jobs:
           command: |
             make install-tools
 
+      - run:
+          name: Install helm
+          command: |
+            curl -sfL https://get.helm.sh/helm-v3.0.3-linux-amd64.tar.gz | tar xz && sudo mv linux-amd64/helm /bin/helm && rm -rf linux-amd64
+
       - run: 
           name: Lint
           command: make lint
@@ -103,6 +108,10 @@ jobs:
       - run:
           name: build docker container
           command:  make -e container-build
+
+      - run:
+          name: package helm chart
+          command: make -e helm-package
 
       - run:
           name: push to dockerhub
