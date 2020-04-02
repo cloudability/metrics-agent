@@ -110,10 +110,6 @@ jobs:
           command:  make -e container-build
 
       - run:
-          name: package helm chart
-          command: make -e helm-package
-
-      - run:
           name: push to dockerhub
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
