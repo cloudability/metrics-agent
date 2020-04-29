@@ -10,12 +10,15 @@
 
 #### What are the relevant Github Issues?
 
+#### What test methodology from the Testbook was used?
+
 #### Developer Done List
 
 - [ ] Tests Added/Updated
 - [ ] Updated README.md
 - [ ] Verified backward compatible
 - [ ] Verified database migrations will not be catastrophic
+- [ ] Referenced/Updated Testbook page
 - [ ] Considered Security, Availability and Confidentiality
 
 #### For the Reviewer:
