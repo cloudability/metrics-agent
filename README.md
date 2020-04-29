@@ -67,6 +67,9 @@ We're using [go modules](https://github.com/golang/go/wiki/Modules) for Go depen
 
 We're using [golangci-lint](https://github.com/golangci/golangci-lint) for static source code analysis.
 
+### Reference Testbook
+Before creating a pull request, make sure to test that your changes are working as intended. To help with this process, the [Testbook Confluence page](https://cloudability.atlassian.net/wiki/spaces/CONT/pages/844038145/Testbooks) was created. There you will find testing methodologies that were used in the past to validate feature work. Make sure to use this resource as a tool for testing, and, if you don't see the way you would verify changes, add to the document to help those doing similar stories in the future.
+
 ## Contributing code
 
 You'll find information and help on how to contribute code in
