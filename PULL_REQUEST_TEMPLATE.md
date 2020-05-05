@@ -1,34 +1,33 @@
 #### What does this PR do?
 
-#### Where should the reviewer start?
-
 #### How should this be manually tested?
 
-#### Any background context you want to provide?
+#### Any notes for the reviewer?
 
 #### What picture best describes this PR (optional but encouraged)?
 
-#### What are the relevant Github Issues?
+#### What are the relevant tickets?
 
 #### What test methodology from the Testbook was used?
 
+#### For the developer
+#### By submitting this PR, the developer acknowledges that they have checked all items in this done list. 
 #### Developer Done List
+- Tests Added/Updated
+- Updated README.md if necessary
+- Considered Security, Availability and Confidentiality
 
-- [ ] Tests Added/Updated
-- [ ] Updated README.md
+#### Other common actions (not required to submit PR)
 - [ ] Verified backward compatible
 - [ ] Verified database migrations will not be catastrophic
-- [ ] Referenced/Updated Testbook page
-- [ ] Considered Security, Availability and Confidentiality
 
 #### For the Reviewer:
-
-#### By approving this PR, the reviewer acknowledges that they have checked all items in this done list.
-
+#### By approving this PR, the reviewer acknowledges that they have checked all items in this done list. 
 #### Reviewer/Approval Done List
+- Tests Pass
+- Reviewed code and its impact to Security, Availability, and Confidentiality (if issue found, add comments and request changes)
 
-- [ ] Tests Pass Locally
+#### Other common actions (not required for approval)
 - [ ] CI Build Passes
 - [ ] Verified README.md is updated
 - [ ] Verified changes are backward compatible
-- [ ] Reviewed impact to Security, Availability and Confidentiality (if issue found, add comments and request changes)
