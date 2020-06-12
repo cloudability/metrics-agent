@@ -43,7 +43,8 @@ rbac:
 # For agent configuration options, see https://github.com/cloudability/metrics-agent/blob/master/README.md
 extraEnv: []
 
-securityContext: {}
+securityContext:
+  runAsUser: 1000
 
 nodeSelector: {}
 
