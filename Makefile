@@ -56,9 +56,7 @@ container-build:
 	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
 
 helm-package:
-	helm package deploy/charts/metrics-agent \
-	--version=$(RELEASE-VERSION) \
-	--app-version=$(RELEASE-VERSION)
+	helm package deploy/charts/metrics-agent
 
 deploy-local: container-build
 	kubectl config use-context docker-for-desktop
