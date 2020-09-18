@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -216,6 +217,40 @@ func TestCreateMetricSample(t *testing.T) {
 
 	})
 
+	t.Run("Only create metric sample if data directory contains files", func(t *testing.T) {
+		emptySampleDirectory, err := ioutil.TempDir(os.TempDir(), "empty_sample_directory")
+		if err != nil {
+			t.Errorf("error creating temporary sample directory: %v", err)
+		}
+		defer func() {
+			_ = os.Remove(emptySampleDirectory)
+		}()
+
+		sampleDirectory, err := os.Open(emptySampleDirectory)
+		if err != nil {
+			t.Errorf("error opening temporary sample directory as file: %v", err)
+		}
+
+		// First we expect no data
+		_, err = CreateMetricSample(*sampleDirectory, "cluster-id", false, os.TempDir())
+		if err != EmptyDataDir {
+			t.Errorf("expected an EmptyDataDir error but got: %v", err)
+		}
+
+		// Add a file
+		fp, err := os.Create(fmt.Sprintf("%s/sample_file.txt", sampleDirectory.Name()))
+		if err != nil {
+			t.Errorf("unable to create file: %v", err)
+		}
+		_, _ = fp.WriteString("test")
+		_ = fp.Close()
+
+		// Then we expect data
+		_, err = CreateMetricSample(*sampleDirectory, "cluster-id", false, os.TempDir())
+		if err != nil {
+			t.Errorf("unexpected error but got: %v", err)
+		}
+	})
 }
 
 func TestMatchOneFile(t *testing.T) {
