@@ -137,7 +137,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true, kubeAgent.ScratchDir)
 			if err != nil {
 				switch err {
-				case util.EmptyDataDir:
+				case util.ErrEmptyDataDir:
 					log.Warn("Got an empty data directory, skipping this send")
 					continue
 				default:

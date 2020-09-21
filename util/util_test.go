@@ -233,8 +233,8 @@ func TestCreateMetricSample(t *testing.T) {
 
 		// First we expect no data
 		_, err = CreateMetricSample(*sampleDirectory, "cluster-id", false, os.TempDir())
-		if err != EmptyDataDir {
-			t.Errorf("expected an EmptyDataDir error but got: %v", err)
+		if err != ErrEmptyDataDir {
+			t.Errorf("expected an ErrEmptyDataDir error but got: %v", err)
 		}
 
 		// Add a file

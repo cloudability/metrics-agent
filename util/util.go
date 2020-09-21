@@ -21,8 +21,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// EmptyDataDir error to indicate the data directory is empty
-var EmptyDataDir = errors.New("empty data directory")
+// ErrEmptyDataDir error to indicate the data directory is empty
+var ErrEmptyDataDir = errors.New("empty data directory")
 
 // IsValidURL returns true if string is a valid URL
 func IsValidURL(toTest string) bool {
@@ -345,7 +345,7 @@ func ValidateScratchDir(scratchDir string) error {
 	return nil
 }
 
-// CheckIfDirEmpty checks if a directory is empty, returning an EmptyDataDir error if it is
+// CheckIfDirEmpty checks if a directory is empty, returning an ErrEmptyDataDir error if it is
 func CheckIfDirEmpty(dirname string) error {
 	dir, err := os.Open(dirname)
 	if err != nil {
@@ -356,7 +356,7 @@ func CheckIfDirEmpty(dirname string) error {
 	if err != nil {
 		switch err {
 		case io.EOF:
-			return EmptyDataDir
+			return ErrEmptyDataDir
 		default:
 			return err
 		}
