@@ -346,11 +346,13 @@ func ValidateScratchDir(scratchDir string) error {
 }
 
 // CheckIfDirEmpty checks if a directory is empty, returning an ErrEmptyDataDir error if it is
-func CheckIfDirEmpty(dirname string) error {
+func CheckIfDirEmpty(dirname string) (rerr error) {
 	dir, err := os.Open(dirname)
 	if err != nil {
 		return err
 	}
+
+	defer SafeClose(dir.Close, &rerr)
 
 	_, err = dir.Readdir(1)
 	if err != nil {
