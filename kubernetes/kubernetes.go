@@ -136,7 +136,13 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 			metricSample, err := util.CreateMetricSample(
 				*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true, kubeAgent.ScratchDir)
 			if err != nil {
-				log.Fatalf("Error creating metric sample: %s", err)
+				switch err {
+				case util.ErrEmptyDataDir:
+					log.Warn("Got an empty data directory, skipping this send")
+					continue
+				default:
+					log.Fatalf("Error creating metric sample: %s", err)
+				}
 			}
 			//Send metric sample
 			log.Infof("Uploading Metrics")

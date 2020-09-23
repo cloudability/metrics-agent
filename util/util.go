@@ -3,6 +3,7 @@ package util
 import (
 	"archive/tar"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,6 +20,9 @@ import (
 	"github.com/spf13/viper"
 	"k8s.io/client-go/rest"
 )
+
+// ErrEmptyDataDir error to indicate the data directory is empty
+var ErrEmptyDataDir = errors.New("empty data directory")
 
 // IsValidURL returns true if string is a valid URL
 func IsValidURL(toTest string) bool {
@@ -91,6 +95,10 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scrat
 	ed, err := exportDirectory.Stat()
 	if err != nil || !ed.IsDir() {
 		log.Errorf("Unable to stat sample directory: %v", err)
+		return nil, err
+	}
+
+	if err := CheckIfDirEmpty(exportDirectory.Name()); err != nil {
 		return nil, err
 	}
 
@@ -332,6 +340,28 @@ func SetupLogger() (err error) {
 func ValidateScratchDir(scratchDir string) error {
 	if _, err := os.Stat(scratchDir); os.IsNotExist(err) {
 		return fmt.Errorf("There was a problem validating provided scratch directory: %v", err)
+	}
+
+	return nil
+}
+
+// CheckIfDirEmpty checks if a directory is empty, returning an ErrEmptyDataDir error if it is
+func CheckIfDirEmpty(dirname string) (rerr error) {
+	dir, err := os.Open(dirname)
+	if err != nil {
+		return err
+	}
+
+	defer SafeClose(dir.Close, &rerr)
+
+	_, err = dir.Readdir(1)
+	if err != nil {
+		switch err {
+		case io.EOF:
+			return ErrEmptyDataDir
+		default:
+			return err
+		}
 	}
 
 	return nil
