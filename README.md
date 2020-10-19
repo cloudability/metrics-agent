@@ -26,6 +26,7 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 | CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True|
 | CLOUDABILITY_FORCE_KUBE_PROXY           | Optional: When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False|
 | CLOUDABILITY_COLLECT_HEAPSTER_EXPORT    | Optional: When true, attempts to collect metrics from Heapster if available. When False, does not collect Heapster metrics. Default: True|
+| CLOUDABILITY_COLLECTION_RETRY_LIMIT     | Optional: Number of times agent should attempt to gather metrics from each source upon a failure Default: 2|
 | CLOUDABILITY_NAMESPACE                  | Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`|
 | CLOUDABILITY_LOG_FORMAT                 | Optional: Format for log output (JSON,PLAIN) Default: PLAIN|
 | CLOUDABILITY_LOG_LEVEL                  | Optional: Log level to run the agent at (INFO,WARN,DEBUG,TRACE). Default: `INFO`|
@@ -44,6 +45,7 @@ Flags:
       --certificate_file string                  The path to a certificate file. - Optional
       --cluster_name string                      Kubernetes Cluster Name - required this must be unique to every cluster.
       --heapster_override_url string             URL to connect to a running heapster instance. - optionally override the discovered Heapster URL.
+      --collection_retry_limit uint              Number of times agent should attempt to gather metrics from each source upon a failure (default 2)
   -h, --help                                     help for kubernetes
       --insecure                                 When true, does not verify certificates when making TLS connections. Default: False
       --key_file string                          The path to a key file. - Optional
