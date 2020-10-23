@@ -82,7 +82,7 @@ type KubeAgentConfig struct {
 
 const uploadInterval time.Duration = 10
 const retryCount uint = 10
-const DefaultCollectionRetry = 2
+const DefaultCollectionRetry = 1
 
 // node connection methods
 const proxy = "proxy"
