@@ -8,6 +8,7 @@ require (
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/gostaticanalysis/analysisutil v0.0.3 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/onsi/gomega v1.8.1
 	github.com/sirupsen/logrus v1.4.3-0.20190701143506-07a84ee7412e
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect

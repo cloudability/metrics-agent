@@ -54,6 +54,12 @@ func init() {
 		180,
 		"Time, in seconds, to poll the services infrastructure.",
 	)
+	kubernetesCmd.PersistentFlags().UintVar(
+		&config.CollectionRetryLimit,
+		"collection_retry_limit",
+		kubernetes.DefaultCollectionRetry,
+		"Number of times agent should attempt to gather metrics from each source upon a failure",
+	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.Cert,
 		"certificate_file",
@@ -126,6 +132,7 @@ func init() {
 	_ = viper.BindPFlag("cluster_name", kubernetesCmd.PersistentFlags().Lookup("cluster_name"))
 	_ = viper.BindPFlag("heapster_override_url", kubernetesCmd.PersistentFlags().Lookup("heapster_override_url"))
 	_ = viper.BindPFlag("poll_interval", kubernetesCmd.PersistentFlags().Lookup("poll_interval"))
+	_ = viper.BindPFlag("collection_retry_limit", kubernetesCmd.PersistentFlags().Lookup("collection_retry_limit"))
 	_ = viper.BindPFlag("certificate_file", kubernetesCmd.PersistentFlags().Lookup("certificate_file"))
 	_ = viper.BindPFlag("key_file", kubernetesCmd.PersistentFlags().Lookup("key_file"))
 	_ = viper.BindPFlag("outbound_proxy", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy"))
@@ -149,6 +156,7 @@ func init() {
 		CollectHeapsterExport: viper.GetBool("collect_heapster_export"),
 		HeapsterOverrideURL:   viper.GetString("heapster_override_url"),
 		PollInterval:          viper.GetInt("poll_interval"),
+		CollectionRetryLimit:  viper.GetUint("collection_retry_limit"),
 		OutboundProxy:         viper.GetString("outbound_proxy"),
 		OutboundProxyAuth:     viper.GetString("outbound_proxy_auth"),
 		OutboundProxyInsecure: viper.GetBool("outbound_proxy_insecure"),
