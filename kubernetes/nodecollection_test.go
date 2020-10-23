@@ -221,59 +221,7 @@ func TestDownloadNodeData(t *testing.T) {
 	defer ts.Close()
 
 	t.Run("Ensure node added to fail list when providerID doesn't exist", func(t *testing.T) {
-		c := http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					// nolint gosec
-					InsecureSkipVerify: true,
-				},
-			}}
-		rc := raw.NewClient(
-			c,
-			true,
-			"",
-			uint(1),
-		)
-		ka := kubernetes.KubeAgentConfig{
-			Clientset:       cs,
-			HTTPClient:      c,
-			InClusterClient: rc,
-			ClusterHostURL:  "https://" + ts.Listener.Addr().String(),
-		}
-		wd, _ := os.Getwd()
-		ed, _ := os.Open(fmt.Sprintf("%s/testdata", wd))
-
-		ns := testNodeSource{}
-
-		s := strings.Split(ts.Listener.Addr().String(), ":")
-		ip := s[0]
-		port, _ := strconv.Atoi(s[1])
-		ns.Nodes = []v1.Node{
-			{
-				ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
-				Status: v1.NodeStatus{
-					Addresses: []v1.NodeAddress{
-						{
-							Type:    "InternalIP",
-							Address: ip,
-						},
-					},
-					Conditions: []v1.NodeCondition{{
-						Type:   v1.NodeReady,
-						Status: v1.ConditionTrue,
-					}},
-					DaemonEndpoints: v1.NodeDaemonEndpoints{
-						KubeletEndpoint: v1.DaemonEndpoint{
-							Port: int32(port),
-						},
-					},
-				},
-				Spec: v1.NodeSpec{
-					PodCIDR: "",
-				},
-			},
-		}
-
+		ed, ns, ka := setupTestNodeDownloaderClients(ts, cs, 1)
 		failedNodeList, _ := kubernetes.DownloadNodeData(
 			"baseline",
 			ka,
@@ -293,28 +241,7 @@ func TestDownloadNodeData(t *testing.T) {
 	})
 
 	t.Run("Ensure error is returned when GetReadyNodes returns error", func(t *testing.T) {
-		c := http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					// nolint gosec
-					InsecureSkipVerify: true,
-				},
-			}}
-		rc := raw.NewClient(
-			c,
-			true,
-			"",
-			uint(1),
-		)
-		ka := kubernetes.KubeAgentConfig{
-			Clientset:       cs,
-			HTTPClient:      c,
-			InClusterClient: rc,
-			ClusterHostURL:  "https://" + ts.Listener.Addr().String(),
-		}
-		wd, _ := os.Getwd()
-		ed, _ := os.Open(fmt.Sprintf("%s/testdata", wd))
-
+		ed, _, ka := setupTestNodeDownloaderClients(ts, cs, 1)
 		ns := testNodeSource{}
 
 		_, err := kubernetes.DownloadNodeData(
@@ -352,60 +279,7 @@ func TestDownloadNodeDataRetries(t *testing.T) {
 
 	t.Run("should honor max collection retry limit", func(t *testing.T) {
 		var maxRetry uint = 1
-		c := http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					// nolint gosec
-					InsecureSkipVerify: true,
-				},
-			}}
-		rc := raw.NewClient(
-			c,
-			true,
-			"",
-			maxRetry,
-		)
-		ka := kubernetes.KubeAgentConfig{
-			Clientset:             cs,
-			HTTPClient:            c,
-			InClusterClient:       rc,
-			ClusterHostURL:        "https://" + ts.Listener.Addr().String(),
-			RetrieveNodeSummaries: true,
-		}
-		wd, _ := os.Getwd()
-		ed, _ := os.Open(fmt.Sprintf("%s/testdata", wd))
-
-		ns := testNodeSource{}
-
-		s := strings.Split(ts.Listener.Addr().String(), ":")
-		ip := s[0]
-		port, _ := strconv.Atoi(s[1])
-		ns.Nodes = []v1.Node{
-			{
-				ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
-				Status: v1.NodeStatus{
-					Addresses: []v1.NodeAddress{
-						{
-							Type:    "InternalIP",
-							Address: ip,
-						},
-					},
-					Conditions: []v1.NodeCondition{{
-						Type:   v1.NodeReady,
-						Status: v1.ConditionTrue,
-					}},
-					DaemonEndpoints: v1.NodeDaemonEndpoints{
-						KubeletEndpoint: v1.DaemonEndpoint{
-							Port: int32(port),
-						},
-					},
-				},
-				Spec: v1.NodeSpec{
-					PodCIDR: "",
-				},
-			},
-		}
-
+		ed, ns, ka := setupTestNodeDownloaderClients(ts, cs, maxRetry)
 		failedNodeList, err := kubernetes.DownloadNodeData(
 			"baseline",
 			ka,
@@ -456,4 +330,66 @@ func launchTLSTestServer(responseCodes []int) *httptest.Server {
 	}))
 
 	return ts
+}
+
+// setupTestNodeDownloaderClients returns commonly-needed configs and clients
+// for testing node downloads
+func setupTestNodeDownloaderClients(ts *httptest.Server,
+	cs *fake.Clientset,
+	retries uint) (*os.File, testNodeSource, kubernetes.KubeAgentConfig) {
+	c := http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				// nolint gosec
+				InsecureSkipVerify: true,
+			},
+		}}
+	rc := raw.NewClient(
+		c,
+		true,
+		"",
+		retries,
+	)
+	ka := kubernetes.KubeAgentConfig{
+		Clientset:             cs,
+		HTTPClient:            c,
+		InClusterClient:       rc,
+		ClusterHostURL:        "https://" + ts.Listener.Addr().String(),
+		RetrieveNodeSummaries: true,
+		CollectionRetryLimit:  retries,
+	}
+	wd, _ := os.Getwd()
+	ed, _ := os.Open(fmt.Sprintf("%s/testdata", wd))
+
+	ns := testNodeSource{}
+
+	s := strings.Split(ts.Listener.Addr().String(), ":")
+	ip := s[0]
+	port, _ := strconv.Atoi(s[1])
+	ns.Nodes = []v1.Node{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "proxyNode", Namespace: v1.NamespaceDefault},
+			Status: v1.NodeStatus{
+				Addresses: []v1.NodeAddress{
+					{
+						Type:    "InternalIP",
+						Address: ip,
+					},
+				},
+				Conditions: []v1.NodeCondition{{
+					Type:   v1.NodeReady,
+					Status: v1.ConditionTrue,
+				}},
+				DaemonEndpoints: v1.NodeDaemonEndpoints{
+					KubeletEndpoint: v1.DaemonEndpoint{
+						Port: int32(port),
+					},
+				},
+			},
+			Spec: v1.NodeSpec{
+				PodCIDR: "",
+			},
+		},
+	}
+	return ed, ns, ka
 }
