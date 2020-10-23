@@ -64,7 +64,6 @@ type KubeAgentConfig struct {
 	UseInClusterConfig    bool
 	CollectHeapsterExport bool
 	PollInterval          int
-	CollectionRetryLimit  uint
 	failedNodeList        map[string]error
 	AgentStartTime        time.Time
 	Clientset             kubernetes.Interface
@@ -82,7 +81,6 @@ type KubeAgentConfig struct {
 
 const uploadInterval time.Duration = 10
 const retryCount uint = 10
-const DefaultCollectionRetry = 1
 
 // node connection methods
 const proxy = "proxy"
@@ -96,8 +94,6 @@ const kbURL string = "https://support.cloudability.com/hc/en-us/articles/3600083
 func CollectKubeMetrics(config KubeAgentConfig) {
 
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
-	log.Infof("Metric collection retry limit set to %d (default is %d)",
-		config.CollectionRetryLimit, DefaultCollectionRetry)
 
 	validateMetricCollectionConfig(config.RetrieveNodeSummaries, config.CollectHeapsterExport)
 
@@ -432,8 +428,7 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	if err != nil {
 		return updatedConfig, err
 	}
-	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
-		config.BearerToken, config.CollectionRetryLimit)
+	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure, config.BearerToken, 3)
 
 	updatedConfig.clusterUID, err = getNamespaceUID(updatedConfig.Clientset, "default")
 	if err != nil {

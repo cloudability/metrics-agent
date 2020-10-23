@@ -131,6 +131,7 @@ func downloadNodeData(prefix string,
 			if err == nil {
 				continue
 			}
+			// TODO: Do we want to consider the node failed if we can still try proxy?
 			// make note of the error and fall through to proxy
 			failedNodeList[n.Name] = fmt.Errorf("direct connect failed (will attempt proxy): %s", err)
 		}
@@ -262,7 +263,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	clientSetNodeSource := NewClientsetNodeSource(config.Clientset)
 
-	nodeClient := raw.NewClient(nodeHTTPClient, true, config.BearerToken, config.CollectionRetryLimit)
+	nodeClient := raw.NewClient(nodeHTTPClient, true, config.BearerToken, 3)
 
 	config.NodeClient = nodeClient
 
