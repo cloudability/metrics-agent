@@ -248,10 +248,18 @@ func TestCollectMetrics(t *testing.T) {
 		}}}},
 	)
 
-	sv, _ := cs.Discovery().ServerVersion()
-	dir, _ := ioutil.TempDir("", "TestCollectMetrics")
-	tDir, _ := os.Open(dir)
-
+	sv, err := cs.Discovery().ServerVersion()
+	if err != nil {
+		t.Errorf("Error getting server version: %v", err)
+	}
+	dir, err := ioutil.TempDir("", "TestCollectMetrics")
+	if err != nil {
+		t.Errorf("Error getting creating temp dir: %v", err)
+	}
+	tDir, err := os.Open(dir)
+	if err != nil {
+		t.Errorf("Error opening temp dir: %v", err)
+	}
 	ka := KubeAgentConfig{
 		ClusterVersion: ClusterVersion{
 			version:     1.1,
