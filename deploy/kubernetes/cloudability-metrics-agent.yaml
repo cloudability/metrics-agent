@@ -129,3 +129,5 @@ spec:
               value: "NNNNNNNNN"
             - name: CLOUDABILITY_POLL_INTERVAL
               value: "180"
+            - name: CLOUDABILITY_COLLECTION_RETRY_LIMIT
+              value: "1"
