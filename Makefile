@@ -1,5 +1,5 @@
 ARCH?=amd64
-EXECUTABLES = go dep
+EXECUTABLES = go
 EXEC_CHECK := $(foreach exec,$(EXECUTABLES), \
 	$(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH.")))
 
