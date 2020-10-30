@@ -286,7 +286,13 @@ func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, e
 func fetchNodeBaselines(msd, exportDirectory string) error {
 	// get baseline metrics for each node
 	err := filepath.Walk(path.Dir(exportDirectory), func(filePath string, info os.FileInfo, err error) error {
-		if err != nil {
+		if err != nil && os.IsPermission(err) {
+			log.WithFields(log.Fields{
+				"exportDirectory": exportDirectory,
+				"filePath":        filePath,
+				"error":           err,
+			}).Warn("Error reading a folder or file when search for node baseline files")
+		} else if err != nil {
 			return err
 		}
 		if info.IsDir() && filePath != path.Dir(exportDirectory) {
