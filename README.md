@@ -11,6 +11,13 @@ By default, the agent runs in a namespace named "cloudability" (see options belo
 
 Every 10 minutes the metrics agent creates a tarball of the gathered metrics and uploads to an Amazon Web Service S3 bucket. This process requires outbound connections to https://metrics-collector.cloudability.com/, to obtain a pre-signed URL, and https://cldy-cake-pipeline.s3.amazonaws.com/ to upload the data. If the metrics agent is deployed behind a firewall, these addresses should be added to the outbound allow list.
 
+### Supported Versions
+
+At time of writing, the metrics agent requires some manual tweaks on every node in the cluster in order to run on Kubernetes 1.18. For this reason, Cloudability does not officially support Kubernetes 1.18 yet. This is being tracked in [Issue #90](https://github.com/cloudability/metrics-agent/issues/90).
+
+Kubernetes 1.18 [has disabled by default the cadvisor endpoints](https://github.com/kubernetes/kubernetes/issues/68522) that metrics agent uses to collect rich utilization data from the cluster. In order to run the metrics agent, you need to [manually enable the cadvisor endpoints on the kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) via the `--enable-cadvisor-json-endpoints` flag for every node in the cluster.
+
+
 ### Configuration Options
 
 | Environment Variable                    | Description                                                                                                                          |
