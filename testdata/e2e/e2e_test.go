@@ -76,7 +76,7 @@ func TestMetricSample(t *testing.T) {
 
 	t.Run("ensure that a metrics sample has expected pod data", func(t *testing.T) {
 		for _, po := range parsedK8sLists.Pods.Items {
-			if strings.HasPrefix(po.Name, "stress-") && po.Status.QOSClass == v1.PodQOSBestEffort {
+			if strings.HasPrefix(po.Name, "stress") && po.Status.QOSClass == v1.PodQOSBestEffort {
 				return
 			}
 
@@ -88,7 +88,7 @@ func TestMetricSample(t *testing.T) {
 
 		for _, ns := range parsedK8sLists.NodeSummaries {
 			for _, pf := range ns.Pods {
-				if strings.HasPrefix(pf.PodRef.Name, "stress-") && pf.PodRef.Namespace == "stress" && pf.CPU.UsageNanoCores != nil {
+				if strings.HasPrefix(pf.PodRef.Name, "stress") && pf.PodRef.Namespace == "stress" && pf.CPU.UsageNanoCores != nil {
 					return
 				}
 			}
@@ -102,7 +102,7 @@ func TestMetricSample(t *testing.T) {
 
 			for _, s := range nc {
 				if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(
-					s.Spec.Labels["io.kubernetes.pod.name"], "stress-") {
+					s.Spec.Labels["io.kubernetes.pod.name"], "stress") {
 					return
 				}
 			}
