@@ -162,13 +162,13 @@ func directNodeFetch(nodeSource NodeSource, config KubeAgentConfig, n *v1.Node, 
 		return fmt.Errorf("problem getting node address: %s", err)
 	}
 	d := directNodeEndpoints(ip, port)
-	return retrieveNodeData(nd, config.NodeClient, d.statsSummary(), d.statsContainer())
+	return retrieveNodeData(nd, config.NodeClient, d.statsSummary(), d.statsContainer(), d.mCAdvisor())
 }
 
 // proxyNodeFetch retrieves node data via the proxy api
 func proxyNodeFetch(nd nodeFetchData, config KubeAgentConfig) error {
 	proxy := proxyEndpoints(config.ClusterHostURL, nd.nodeName)
-	return retrieveNodeData(nd, config.InClusterClient, proxy.statsSummary(), proxy.statsContainer())
+	return retrieveNodeData(nd, config.InClusterClient, proxy.statsSummary(), proxy.statsContainer(), proxy.mCAdvisor())
 }
 
 type proxyAPI struct {
@@ -184,6 +184,11 @@ func (p proxyAPI) statsSummary() string {
 // statsContainer formats the proxy api stats/container endpoint for the node
 func (p proxyAPI) statsContainer() string {
 	return fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container/", p.clusterHostURL, p.nodeName)
+}
+
+// mCAdvisor formats the proxy api metrics/mCAdvisor endpoint, which outputs prometheus-format metrics
+func (p proxyAPI) mCAdvisor() string {
+	return fmt.Sprintf("%s/api/v1/nodes/%s/proxy/metrics/cadvisor", p.clusterHostURL, p.nodeName)
 }
 
 func proxyEndpoints(clusterHostURL, nodeName string) proxyAPI {
@@ -208,6 +213,11 @@ func (d directNode) statsContainer() string {
 	return fmt.Sprintf("https://%s:%v/stats/container/", d.ip, d.port)
 }
 
+// mCAdvisor formats the direct node metrics/mCAdvisor endpoint
+func (d directNode) mCAdvisor() string {
+	return fmt.Sprintf("https://%s:%v/metrics/cadvisor", d.ip, d.port)
+}
+
 func directNodeEndpoints(ip string, port int32) directNode {
 	return directNode{
 		ip:   ip,
@@ -228,14 +238,23 @@ func (s sourceName) container() string {
 	return fmt.Sprintf("%s-container-%s", s.prefix, s.nodeName)
 }
 
+func (s sourceName) cadvisorMetrics() string {
+	return fmt.Sprintf("%s-cadvisor_metrics-%s", s.prefix, s.nodeName)
+}
+
 // retrieveNodeData fetches summary and container data from the node
-func retrieveNodeData(nd nodeFetchData, c raw.Client, nodeStatSum, containerStats string) error {
+func retrieveNodeData(nd nodeFetchData, c raw.Client, nodeStatSum, containerStats, cadvisorMetrics string) error {
 	source := sourceName{
 		prefix:   nd.prefix,
 		nodeName: nd.nodeName,
 	}
 	// fetch stats/summary data
 	_, err := c.GetRawEndPoint(http.MethodGet, source.summary(), nd.workDir, nodeStatSum, nil, true)
+	if err != nil {
+		return err
+	}
+	// fetch metrics/mCAdvisor data
+	_, err = c.GetRawEndPoint(http.MethodGet, source.cadvisorMetrics(), nd.workDir, cadvisorMetrics, nil, true)
 	if err != nil {
 		return err
 	}
