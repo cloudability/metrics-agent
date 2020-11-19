@@ -1,0 +1,15 @@
+name: Playground
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Makefile
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: make version
+      - name: Run Tests
+        run: make test
