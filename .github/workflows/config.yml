@@ -3,6 +3,7 @@ name: Metrics-Agent
 on: [push]
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -16,3 +17,13 @@ jobs:
         run: make lint
       - name: Run Tests
         run: make test
+
+  test_e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.14'
+      - uses: actions/checkout@v2
+      - name: run e2e tests
+        run: make test-e2e-all
