@@ -5,20 +5,13 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      TEST_RESULTS: /tmp/test-results
     steps:
       - uses: actions/setup-go@v2
         with:
           go-version: '1.14'
       - uses: actions/checkout@v2
-      - name: make test dir
-        run: mkdir -p $TEST_RESULTS
       - name: Install tools
         run: make install-tools
-      #- name: Install helm TODO: make this work
-       # run: |
-        #  curl -sfL https://get.helm.sh/helm-v3.0.3-linux-amd64.tar.gz | tar xz && mv linux-amd64/helm /bin/helm && rm -rf linux-amd64
       - name: Lint
         run: make lint
       - name: Run Tests
