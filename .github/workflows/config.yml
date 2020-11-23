@@ -4,6 +4,24 @@ on: [push]
 
 jobs:
 
+  snyk_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.14'
+      - uses: snyk/actions/setup@master
+      - uses: actions/checkout@v2
+      - name: Snyk Test
+        run: snyk test  --severity-threshold=medium --org=cloudability
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Snyk monitor
+        run: snyk monitor --org=cloudability
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+
   build:
     runs-on: ubuntu-latest
     steps:
