@@ -1,0 +1,18 @@
+name: Master
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.14'
+      - uses: actions/checkout@v2
+      - name: build docker container
+        run: make -e container-build
+      # TODO: push to dockerhub
