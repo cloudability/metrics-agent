@@ -15,4 +15,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: build docker container
         run: make -e container-build
-      # TODO: push to dockerhub
+      - name: push to dockerhub
+        run: |
+          if [ "${GITHUB_REF}" == "master" ]; then
+              docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
+              make -e dockerhub-push
+          fi
