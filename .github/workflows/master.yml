@@ -18,6 +18,6 @@ jobs:
       - name: push to dockerhub
         run: |
           if [ "${GITHUB_REF}" == "master" ]; then
-              docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
+              docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
               make -e dockerhub-push
           fi
