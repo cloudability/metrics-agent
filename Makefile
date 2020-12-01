@@ -46,9 +46,6 @@ default:
 build:
 	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
 
-circleci-push:
-	docker push $(PREFIX)/metrics-agent:$(VERSION)
-
 container-build:
 	docker build --build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
