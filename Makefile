@@ -65,10 +65,12 @@ deploy-local: container-build
 	./deploy/kubernetes/cloudability-metrics-agent.yaml |kubectl apply -f - 
 
 dockerhub-push:
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)
 	docker push cloudability/metrics-agent:latest
 	docker push cloudability/metrics-agent:$(RELEASE-VERSION)
+
+docker-tag:
+	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
+	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)
 
 download-deps:
 	@echo Download go.mod dependencies
