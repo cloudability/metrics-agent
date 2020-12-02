@@ -46,9 +46,6 @@ default:
 build:
 	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
 
-circleci-push:
-	docker push $(PREFIX)/metrics-agent:$(VERSION)
-
 container-build:
 	docker build --build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
@@ -65,10 +62,12 @@ deploy-local: container-build
 	./deploy/kubernetes/cloudability-metrics-agent.yaml |kubectl apply -f - 
 
 dockerhub-push:
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)
 	docker push cloudability/metrics-agent:latest
 	docker push cloudability/metrics-agent:$(RELEASE-VERSION)
+
+docker-tag:
+	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
+	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)
 
 download-deps:
 	@echo Download go.mod dependencies
