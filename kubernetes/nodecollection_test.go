@@ -215,7 +215,7 @@ func TestFargateNodeDetection(t *testing.T) {
 }
 
 func TestDownloadNodeData(t *testing.T) {
-	returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
+	returnCodes := []int{200, 200, 200, 400, 400, 400, 200, 200, 200, 400}
 	ts := launchTLSTestServer(returnCodes)
 	cs := NewTestClient(ts, nodeSampleLabels)
 	defer ts.Close()
