@@ -298,7 +298,9 @@ func fetchNodeBaselines(msd, exportDirectory string) error {
 		if info.IsDir() && filePath != path.Dir(exportDirectory) {
 			return filepath.SkipDir
 		}
-		if strings.HasPrefix(info.Name(), "baseline-summary") || strings.HasPrefix(info.Name(), "baseline-container") {
+		if strings.HasPrefix(info.Name(), "baseline-summary") ||
+			strings.HasPrefix(info.Name(), "baseline-container") ||
+			strings.HasPrefix(info.Name(), "baseline-cadvisor") {
 			err = os.Rename(filePath, filepath.Join(msd, info.Name()))
 			if err != nil {
 				return err
@@ -318,8 +320,8 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 			return err
 		}
 		if strings.HasPrefix(info.Name(), "stats-") {
-			nodeName := getNodeName("stats", info.Name())
-			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s.json", nodeName)
+			nodeName, extension := extractNodeNameAndExtension("stats", info.Name())
+			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s%s", nodeName, extension)
 
 			// update baseline metric for this node with most recent sample from this collection
 			err = util.CopyFileContents(baselineNodeMetric, filePath)
@@ -730,12 +732,13 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	return err
 }
 
-func getNodeName(prefix, fileName string) string {
+func extractNodeNameAndExtension(prefix, fileName string) (string, string) {
+	extension := path.Ext(fileName)
 	if strings.Contains(fileName, prefix) {
-		name := fileName[len(prefix) : len(fileName)-5]
-		return name
+		name := fileName[len(prefix) : len(fileName)-len(extension)]
+		return name, extension
 	}
-	return ""
+	return "", extension
 }
 
 func getPodLogs(clientset kubernetes.Interface,
