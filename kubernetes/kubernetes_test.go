@@ -278,6 +278,10 @@ func TestCollectMetrics(t *testing.T) {
 		ForceKubeProxy:        false,
 	}
 
+	ka = updateWithEndpointMasks(ka)
+	ka.ProxyEndpointMask.SetAvailable(NodeStatsSummaryEndpoint, true)
+	ka.ProxyEndpointMask.SetAvailable(NodeContainerEndpoint, true)
+
 	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)
 	fns := NewClientsetNodeSource(cs)
 

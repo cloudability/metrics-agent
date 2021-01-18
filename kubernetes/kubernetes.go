@@ -78,6 +78,8 @@ type KubeAgentConfig struct {
 	TLSClientConfig       rest.TLSClientConfig
 	Namespace             string
 	ScratchDir            string
+	DirectEndpointMask    EndpointMask
+	ProxyEndpointMask     EndpointMask
 }
 
 const uploadInterval time.Duration = 10
@@ -435,6 +437,8 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 		log.Fatalf("cloudability metric agent is unable set internal configuration options: %v", err)
 	}
 
+	updatedConfig = updateWithEndpointMasks(updatedConfig)
+
 	updatedConfig = updateConfigWithOverrideURLs(updatedConfig)
 	updatedConfig, err = createKubeHTTPClient(updatedConfig)
 	if err != nil {
@@ -456,6 +460,12 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	updatedConfig.provisioningID, err = getProvisioningID(updatedConfig.APIKey)
 
 	return updatedConfig, err
+}
+
+func updateWithEndpointMasks(config KubeAgentConfig) KubeAgentConfig {
+	config.ProxyEndpointMask = EndpointMask{}
+	config.DirectEndpointMask = EndpointMask{}
+	return config
 }
 
 func updateConfigurationForServices(config KubeAgentConfig) (
