@@ -9,27 +9,31 @@ on:
 jobs:
   build:
   deploy:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/setup-go@v2
-          with:
-            go-version: '1.14'
-        - uses: actions/checkout@v2
-        - name: build docker container
-          run: make -e container-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.14'
+      - uses: actions/checkout@v2
+      - name: build docker container
+        run: make -e container-build
+      - if: github.ref == 'refs/heads/master'
         - name: docker tag
           run: make docker-tag
-        - name: Login to DockerHub
-          uses: docker/login-action@v1
-          with:
-            username: ${{ secrets.DOCKER_USER }}
-            password: ${{ secrets.DOCKER_PASSWORD }}
-        - if: github.ref == 'refs/heads/master'
-          - name: push to dockerhub
-            run: make dockerhub-push
-        - if: github.ref == 'refs/heads/beta'
-          - name: push to dockerhub
-            run: make dockerhub-push-beta
+      - if: github.ref == 'refs/heads/beta'
+        - name: docker beta tag
+          run: make docker-tag-beta
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - if: github.ref == 'refs/heads/master'
+        - name: push to dockerhub
+          run: make dockerhub-push
+      - if: github.ref == 'refs/heads/beta'
+        - name: push to dockerhub beta
+          run: make dockerhub-push-beta
 
   slackFinish:
     name: Notify Finish
