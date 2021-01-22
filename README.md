@@ -32,6 +32,7 @@ Kubernetes 1.18 [has disabled by default the cadvisor endpoints](https://github.
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE    | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
 | CLOUDABILITY_INSECURE                   | Optional: When true, does not verify certificates when making TLS connections. Default: False|
 | CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True|
+| CLOUDABILITY_RETRIEVE_STATS_CONTAINERS  | Optional: When true, attempts to collects metrics from the stats/container endpoint if available. When False, does not collect stats/container metrics. Default: True.
 | CLOUDABILITY_FORCE_KUBE_PROXY           | Optional: When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False|
 | CLOUDABILITY_COLLECT_HEAPSTER_EXPORT    | Optional: When true, attempts to collect metrics from Heapster if available. When False, does not collect Heapster metrics. Default: True|
 | CLOUDABILITY_COLLECTION_RETRY_LIMIT     | Optional: Number of times agent should attempt to gather metrics from each source upon a failure Default: 1|
