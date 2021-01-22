@@ -18,20 +18,22 @@ jobs:
       - name: build docker container
         run: make -e container-build
       - name: docker tag
-        - if: github.ref == 'refs/heads/master'
-            run: make docker-tag
-        - if: github.ref == 'refs/heads/beta'
-            run: make docker-tag-beta
+        if: github.ref == 'refs/heads/master'
+        run: make docker-tag
+      - name: docker beta tag
+        if: github.ref == 'refs/heads/beta'
+        run: make docker-tag-beta
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: push to dockerhub
-        - if: github.ref == 'refs/heads/master'
-            run: make dockerhub-push
-        - if: github.ref == 'refs/heads/beta'
-            run: make dockerhub-push-beta
+        if: github.ref == 'refs/heads/master'
+        run: make dockerhub-push
+      - name: push to beta dockerhub
+        if: github.ref == 'refs/heads/beta'
+        run: make dockerhub-push-beta
 
   slackFinish:
     name: Notify Finish
