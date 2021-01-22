@@ -353,8 +353,8 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	if allowDirectConnect(config, nodes) {
 		// test node direct connectivity
 		d := directNodeEndpoints(ip, port)
-		success, err := testNodeConn(&nodeHTTPClient, config.DirectEndpointMask, d.statsSummary(),
-			d.statsContainer(), d.mCAdvisor(), config.BearerToken)
+		success, err := testNodeConn(config, &nodeHTTPClient, config.DirectEndpointMask, d.statsSummary(),
+			d.statsContainer(), d.mCAdvisor())
 		if err != nil {
 			return config, err
 		}
@@ -366,8 +366,8 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	// test node connectivity via kube-proxy
 	p := proxyEndpoints(config.ClusterHostURL, firstNode.Name)
-	success, err := testNodeConn(&config.HTTPClient, config.ProxyEndpointMask, p.statsSummary(),
-		p.statsContainer(), p.mCAdvisor(), config.BearerToken)
+	success, err := testNodeConn(config, &config.HTTPClient, config.ProxyEndpointMask, p.statsSummary(),
+		p.statsContainer(), p.mCAdvisor())
 	if err != nil {
 		return config, err
 	}
@@ -382,25 +382,28 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	return config, fmt.Errorf("unable to retrieve node metrics. Please verify RBAC roles: %v", err)
 }
 
-func testNodeConn(client *http.Client, mask EndpointMask, nodeStatSum,
-	containerStats, cadvisorMetrics, bearerToken string) (success bool, err error) {
-	ns, _, err := util.TestHTTPConnection(client, nodeStatSum, http.MethodGet, bearerToken, 0, false)
+func testNodeConn(config KubeAgentConfig, client *http.Client, mask EndpointMask, nodeStatSum,
+	containerStats, cadvisorMetrics string) (success bool, err error) {
+	ns, _, err := util.TestHTTPConnection(client, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
 	mask.SetAvailable(NodeStatsSummaryEndpoint, ns)
 
-	cm, _, err := util.TestHTTPConnection(client, cadvisorMetrics, http.MethodGet, bearerToken, 0, false)
+	cm, _, err := util.TestHTTPConnection(client, cadvisorMetrics, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
 	mask.SetAvailable(NodeCadvisorEndpoint, cm)
 
-	cs, _, err := util.TestHTTPConnection(client, containerStats, http.MethodPost, bearerToken, 0, false)
-	if err != nil {
-		return false, err
+	var cs = false
+	if config.RetrieveStatsContainers {
+		cs, _, err = util.TestHTTPConnection(client, containerStats, http.MethodPost, config.BearerToken, 0, false)
+		if err != nil {
+			return false, err
+		}
+		mask.SetAvailable(NodeContainerEndpoint, cs)
 	}
-	mask.SetAvailable(NodeContainerEndpoint, cs)
 
 	return ns && (cm || cs), nil
 }

@@ -75,11 +75,12 @@ func TestEnsureNodeSource(t *testing.T) {
 	ts := launchTLSTestServer(returnCodes)
 	cs := NewTestClient(ts, nodeSampleLabels)
 	ka := kubernetes.KubeAgentConfig{
-		Clientset:            cs,
-		HTTPClient:           http.Client{},
-		CollectionRetryLimit: 0,
-		DirectEndpointMask:   kubernetes.EndpointMask{},
-		ProxyEndpointMask:    kubernetes.EndpointMask{},
+		Clientset:               cs,
+		HTTPClient:              http.Client{},
+		CollectionRetryLimit:    0,
+		RetrieveStatsContainers: true,
+		DirectEndpointMask:      kubernetes.EndpointMask{},
+		ProxyEndpointMask:       kubernetes.EndpointMask{},
 	}
 
 	defer ts.Close()
@@ -95,6 +96,37 @@ func TestEnsureNodeSource(t *testing.T) {
 			return
 		}
 
+		if !ka.DirectEndpointMask.GetAvailable(kubernetes.NodeContainerEndpoint) {
+			t.Errorf("Expected node container endpoint to be available")
+		}
+	})
+
+	t.Run("Ensure successful direct node source test without stats containers", func(t *testing.T) {
+		returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
+		ts := launchTLSTestServer(returnCodes)
+		cs := NewTestClient(ts, nodeSampleLabels)
+		ka := kubernetes.KubeAgentConfig{
+			Clientset:               cs,
+			HTTPClient:              http.Client{},
+			CollectionRetryLimit:    0,
+			RetrieveStatsContainers: false,
+			DirectEndpointMask:      kubernetes.EndpointMask{},
+			ProxyEndpointMask:       kubernetes.EndpointMask{},
+		}
+
+		ka, err := kubernetes.EnsureNodeSource(ka)
+
+		if ka.GetNodeRetrievalMethod() != kubernetes.Direct || err != nil {
+			t.Errorf("Expected direct node retrieval method but got %v: %v",
+				ka.GetNodeRetrievalMethod(),
+				err)
+			return
+		}
+
+		if ka.DirectEndpointMask.GetAvailable(kubernetes.NodeContainerEndpoint) {
+			t.Errorf("Expected node container endpoint to not be available")
+		}
+
 	})
 
 	t.Run("Ensure successful proxy node source test", func(t *testing.T) {
@@ -106,9 +138,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL:     "https://" + ts.Listener.Addr().String(),
-			DirectEndpointMask: kubernetes.EndpointMask{},
-			ProxyEndpointMask:  kubernetes.EndpointMask{},
+			ClusterHostURL:          "https://" + ts.Listener.Addr().String(),
+			RetrieveStatsContainers: true,
+			DirectEndpointMask:      kubernetes.EndpointMask{},
+			ProxyEndpointMask:       kubernetes.EndpointMask{},
 		}
 
 		ka, err := kubernetes.EnsureNodeSource(ka)
@@ -137,9 +170,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL:     "https://" + ts.Listener.Addr().String(),
-			DirectEndpointMask: kubernetes.EndpointMask{},
-			ProxyEndpointMask:  kubernetes.EndpointMask{},
+			ClusterHostURL:          "https://" + ts.Listener.Addr().String(),
+			RetrieveStatsContainers: true,
+			DirectEndpointMask:      kubernetes.EndpointMask{},
+			ProxyEndpointMask:       kubernetes.EndpointMask{},
 		}
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
@@ -162,10 +196,11 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL:     "https://" + ts.Listener.Addr().String(),
-			ForceKubeProxy:     true,
-			DirectEndpointMask: kubernetes.EndpointMask{},
-			ProxyEndpointMask:  kubernetes.EndpointMask{},
+			ClusterHostURL:          "https://" + ts.Listener.Addr().String(),
+			RetrieveStatsContainers: true,
+			ForceKubeProxy:          true,
+			DirectEndpointMask:      kubernetes.EndpointMask{},
+			ProxyEndpointMask:       kubernetes.EndpointMask{},
 		}
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
