@@ -93,7 +93,7 @@ const (
 	// NodeStatsSummaryEndpoint the /stats/summary endpoint
 	NodeStatsSummaryEndpoint Endpoint = iota
 
-	// NodeContainerEndpoint the /stats/containers endpoint
+	// NodeContainerEndpoint the /stats/container endpoint
 	NodeContainerEndpoint
 
 	// NodeCadvisorEndpoint the /metrics/cadvisor/prometheus endpoint
@@ -113,8 +113,8 @@ func (m EndpointMask) SetAvailable(endpoint Endpoint, available bool) {
 	}
 }
 
-// GetAvailable gets the availability of an endpoint
-func (m EndpointMask) GetAvailable(endpoint Endpoint) bool {
+// Available gets the availability of an endpoint
+func (m EndpointMask) Available(endpoint Endpoint) bool {
 	_, ok := m[endpoint]
 	return ok
 }
@@ -289,7 +289,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 	}
 	var err error
 
-	if mask.GetAvailable(NodeStatsSummaryEndpoint) {
+	if mask.Available(NodeStatsSummaryEndpoint) {
 		// fetch stats/summary data
 		_, err = c.GetRawEndPoint(http.MethodGet, source.summary(), nd.workDir, api.statsSummary(), nil, true)
 		if err != nil {
@@ -297,7 +297,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 		}
 	}
 
-	if mask.GetAvailable(NodeCadvisorEndpoint) {
+	if mask.Available(NodeCadvisorEndpoint) {
 		// fetch metrics/mCAdvisor data
 		_, err = c.GetRawEndPoint(http.MethodGet, source.cadvisorMetrics(), nd.workDir, api.mCAdvisor(), nil, true)
 		if err != nil {
@@ -305,7 +305,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 		}
 	}
 
-	if mask.GetAvailable(NodeContainerEndpoint) {
+	if mask.Available(NodeContainerEndpoint) {
 		// fetch container details
 		_, err = c.GetRawEndPoint(
 			http.MethodPost, source.container(), nd.workDir, api.statsContainer(), nd.containersRequest, true)
@@ -397,7 +397,7 @@ func testNodeConn(config KubeAgentConfig, client *http.Client, mask EndpointMask
 	mask.SetAvailable(NodeCadvisorEndpoint, cm)
 
 	var cs = false
-	if config.RetrieveStatsContainers {
+	if config.RetrieveStatsContainer {
 		cs, _, err = util.TestHTTPConnection(client, containerStats, http.MethodPost, config.BearerToken, 0, false)
 		if err != nil {
 			return false, err
