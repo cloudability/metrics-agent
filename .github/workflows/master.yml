@@ -7,7 +7,6 @@ on:
       - beta
 
 jobs:
-  build:
   deploy:
     runs-on: ubuntu-latest
     steps:
