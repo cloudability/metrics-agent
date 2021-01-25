@@ -59,15 +59,21 @@ deploy-local: container-build
 	kubectl config use-context docker-for-desktop
 	cat ./deploy/kubernetes/cloudability-metrics-agent.yaml | \
 	sed "s/latest/$(VERSION)/g; s/XXXXXXXXX/$(CLDY_API_KEY)/g; s/Always/Never/g; s/NNNNNNNNN/local-dev-$(shell hostname)/g" \
-	./deploy/kubernetes/cloudability-metrics-agent.yaml |kubectl apply -f - 
+	./deploy/kubernetes/cloudability-metrics-agent.yaml |kubectl apply -f -
 
 dockerhub-push:
 	docker push cloudability/metrics-agent:latest
 	docker push cloudability/metrics-agent:$(RELEASE-VERSION)
 
+dockerhub-push-beta:
+	docker push cloudability/metrics-agent:$(RELEASE-VERSION)-beta
+
 docker-tag:
 	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
 	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)
+
+docker-tag-beta:
+	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)-beta
 
 download-deps:
 	@echo Download go.mod dependencies
