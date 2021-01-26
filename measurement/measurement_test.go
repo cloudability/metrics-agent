@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -130,10 +131,22 @@ func TestMarshalJSON(t *testing.T) {
 		}
 	})
 }
+
+type testMeasurement measurement.Measurement
+
+func (t testMeasurement) Generate(rand *rand.Rand, size int) reflect.Value {
+	tm := testMeasurement{
+		Name:      test.SecureRandomAlphaString(size),
+		Timestamp: rand.Int63(),
+		Value:     rand.Float64(),
+	}
+	return reflect.ValueOf(tm)
+}
+
 func TestMarshalJSON_Blackbox(t *testing.T) {
 	t.Parallel()
 
-	assertion := func(m measurement.Measurement) bool {
+	assertion := func(m testMeasurement) bool {
 		res, err := json.Marshal(m)
 		jsonString := string(res)
 
