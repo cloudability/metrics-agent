@@ -102,7 +102,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	log.Infof("Metric collection retry limit set to %d (default is %d)",
 		config.CollectionRetryLimit, DefaultCollectionRetry)
 
-	validateMetricCollectionConfig(config.RetrieveNodeSummaries, config.CollectHeapsterExport)
+	validateMetricCollectionConfig(config)
 
 	// Create k8s agent
 	kubeAgent := newKubeAgent(config)
@@ -168,16 +168,19 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-func validateMetricCollectionConfig(retrieveNodeSummaries bool, collectHeapsterExport bool) {
-	if !retrieveNodeSummaries && !collectHeapsterExport {
+func validateMetricCollectionConfig(config KubeAgentConfig) {
+	if !config.RetrieveNodeSummaries && !config.CollectHeapsterExport {
 		log.Fatal("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
 	}
-	if retrieveNodeSummaries {
+	if config.RetrieveStatsContainer {
+		log.Info("Collecting stats container metrics.")
+	}
+	if config.RetrieveNodeSummaries {
 		log.Info("Primary metrics will be collected from each node.")
 	}
-	if retrieveNodeSummaries && collectHeapsterExport {
+	if config.RetrieveNodeSummaries && config.CollectHeapsterExport {
 		log.Debug("Collecting Heapster exports if found in cluster.")
-	} else if collectHeapsterExport {
+	} else if config.CollectHeapsterExport {
 		log.Warn("Primary metrics collected from Heapster exports. WARNING: Heapster is being deprecated.")
 	}
 }

@@ -106,7 +106,7 @@ func init() {
 		&config.RetrieveStatsContainer,
 		"retrieve_stats_container",
 		true,
-		"When true, includes stats container metrics in metric collection.",
+		"When true, includes stats container metrics in metric collection. Default: True",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.ForceKubeProxy,
