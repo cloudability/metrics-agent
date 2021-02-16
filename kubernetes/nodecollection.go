@@ -291,6 +291,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 
 	if mask.Available(NodeStatsSummaryEndpoint) {
 		// fetch stats/summary data
+		log.Debug("Fetching data from /stats/summary endpoint")
 		_, err = c.GetRawEndPoint(http.MethodGet, source.summary(), nd.workDir, api.statsSummary(), nil, true)
 		if err != nil {
 			return err
@@ -299,6 +300,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 
 	if mask.Available(NodeCadvisorEndpoint) {
 		// fetch metrics/mCAdvisor data
+		log.Debug("Fetching data from /metrics/cadvisor endpoint")
 		_, err = c.GetRawEndPoint(http.MethodGet, source.cadvisorMetrics(), nd.workDir, api.mCAdvisor(), nil, true)
 		if err != nil {
 			return err
@@ -307,6 +309,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 
 	if mask.Available(NodeContainerEndpoint) {
 		// fetch container details
+		log.Debug("Fetching data from /stats/container endpoint")
 		_, err = c.GetRawEndPoint(
 			http.MethodPost, source.container(), nd.workDir, api.statsContainer(), nd.containersRequest, true)
 		if err != nil {
@@ -388,12 +391,14 @@ func testNodeConn(config KubeAgentConfig, client *http.Client, mask EndpointMask
 	if err != nil {
 		return false, err
 	}
+	log.Infof("Availability of the /stats/summary endpoint is: %v", ns)
 	mask.SetAvailable(NodeStatsSummaryEndpoint, ns)
 
 	cm, _, err := util.TestHTTPConnection(client, cadvisorMetrics, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
+	log.Infof("Availability of the /metrics/cadvisor endpoint is: %v", cm)
 	mask.SetAvailable(NodeCadvisorEndpoint, cm)
 
 	var cs = false
@@ -402,6 +407,7 @@ func testNodeConn(config KubeAgentConfig, client *http.Client, mask EndpointMask
 		if err != nil {
 			return false, err
 		}
+		log.Infof("Availability of the /stats/container endpoint is: %v", cs)
 		mask.SetAvailable(NodeContainerEndpoint, cs)
 	}
 
