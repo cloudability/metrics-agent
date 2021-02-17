@@ -14,10 +14,21 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 ### Supported Versions
 
-At time of writing, the metrics agent requires some manual tweaks on every node in the cluster in order to run on Kubernetes 1.18. For this reason, Cloudability does not officially support Kubernetes 1.18 yet. This is being tracked in [Issue #90](https://github.com/cloudability/metrics-agent/issues/90).
+#### AKS 1.18 Beta
 
-Kubernetes 1.18 [has disabled by default the cadvisor endpoints](https://github.com/kubernetes/kubernetes/issues/68522) that metrics agent uses to collect rich utilization data from the cluster. In order to run the metrics agent, you need to [manually enable the cadvisor endpoints on the kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) via the `--enable-cadvisor-json-endpoints` flag for every node in the cluster.
+Support for AKS Kubernetes 1.18 is now in beta. Please use the [latest 1.4.x-beta tag on Docker Hub](https://hub.docker.com/r/cloudability/metrics-agent/tags?page=1&ordering=last_updated&name=beta) to participate in the Open Beta.
 
+#### 1.18 with Manual Kubelet Modification
+
+At time of writing, metrics agent versions <= `1.3.x` require some manual tweaks on every node in the cluster in order to run on Kubernetes 1.18. For this reason, Cloudability does not officially support Kubernetes 1.18 for all platforms yet. This is being tracked in [Issue #90](https://github.com/cloudability/metrics-agent/issues/90).
+
+##### Background
+
+Kubernetes 1.18 [has disabled by default the cadvisor endpoints](https://github.com/kubernetes/kubernetes/issues/68522) that the metrics agent uses to collect rich utilization data from the cluster. In order to run metrics agent versions <= `1.3.x` on 1.18, you need to [manually enable the cadvisor endpoints on the kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) via the `--enable-cadvisor-json-endpoints` flag for every node in the cluster.
+
+#### 1.17 and below
+
+Kubernetes versions 1.17 and below are supported by the metrics agent.
 
 ### Configuration Options
 
