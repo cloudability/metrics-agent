@@ -66,6 +66,7 @@ dockerhub-push:
 	docker push cloudability/metrics-agent:$(RELEASE-VERSION)
 
 dockerhub-push-beta:
+	docker push cloudability/metrics-agent:beta-latest
 	docker push cloudability/metrics-agent:$(RELEASE-VERSION)-beta
 
 docker-tag:
@@ -73,6 +74,7 @@ docker-tag:
 	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)
 
 docker-tag-beta:
+	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:beta-latest
 	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)-beta
 
 download-deps:
