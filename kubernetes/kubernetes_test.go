@@ -112,15 +112,16 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			RetrieveNodeSummaries: true,
 			CollectHeapsterExport: false,
 			Clientset:             cs,
-			MetricsEndpoints:      EndpointMask{},
+			NodeMetrics:           EndpointMask{},
 		}
 		config, err := ensureMetricServicesAvailable(config)
 		if err == nil {
 			t.Errorf("expected an error for ensureMetricServicesAvailable")
 			return
 		}
-		if config.nodeRetrievalMethod != Unreachable {
-			t.Errorf("expected nodeRetrievalMethod to be asdf, instead was %s", config.nodeRetrievalMethod)
+		if !config.NodeMetrics.Unreachable(NodeStatsSummaryEndpoint) {
+			t.Errorf("expected connection to be unreachable, instead was %s",
+				config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
 		}
 	})
 
@@ -255,7 +256,7 @@ func TestCollectMetrics(t *testing.T) {
 	}
 	dir, err := ioutil.TempDir("", "TestCollectMetrics")
 	if err != nil {
-		t.Errorf("error getting reating temp dir: %v", err)
+		t.Errorf("error creating temp dir: %v", err)
 	}
 	tDir, err := os.Open(dir)
 	if err != nil {
@@ -277,10 +278,16 @@ func TestCollectMetrics(t *testing.T) {
 		BearerToken:           "",
 		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
+		GetAllConStats:        true,
 	}
-	ka.MetricsEndpoints = EndpointMask{}
-	ka.MetricsEndpoints.SetAvailable(NodeStatsSummaryEndpoint, Proxy, true)
-	ka.MetricsEndpoints.SetAvailable(NodeContainerEndpoint, Proxy, true)
+	ka.NodeMetrics = EndpointMask{}
+	// set Proxy method available
+	ka.NodeMetrics.SetAvailable(NodeStatsSummaryEndpoint, Proxy, true)
+	ka.NodeMetrics.SetAvailable(NodeContainerEndpoint, Proxy, true)
+	ka.NodeMetrics.SetAvailable(NodeCadvisorEndpoint, Proxy, true)
+	// set Direct as option as well
+	ka.NodeMetrics.SetAvailable(NodeStatsSummaryEndpoint, Direct, true)
+	ka.NodeMetrics.SetAvailable(NodeContainerEndpoint, Direct, true)
 
 	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)
 	fns := NewClientsetNodeSource(cs)
@@ -296,6 +303,7 @@ func TestCollectMetrics(t *testing.T) {
 			t.Error(err)
 		}
 
+		// TODO: add cprom files to this list
 		nodeBaselineFiles := []string{}
 		nodeSummaryFiles := []string{}
 		expectedBaselineFiles := []string{

@@ -47,7 +47,7 @@ Kubernetes versions 1.17 and below are supported by the metrics agent.
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE    | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
 | CLOUDABILITY_INSECURE                   | Optional: When true, does not verify certificates when making TLS connections. Default: False|
 | CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True|
-| CLOUDABILITY_RETRIEVE_STATS_CONTAINER   | Optional: When true, attempts to collects metrics from the stats/container endpoint if available. When False, does not collect stats/container metrics. Default: True.
+| CLOUDABILITY_GET_ALL_CONTAINER_STATS    | Optional: When true, attempts to collect from both the stats/container and metrics/cadvisor endpoints, which may result in a larger metrics payload. When False, only collects first successful endpoint. Default: True|
 | CLOUDABILITY_FORCE_KUBE_PROXY           | Optional: When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False|
 | CLOUDABILITY_COLLECT_HEAPSTER_EXPORT    | Optional: When true, attempts to collect metrics from Heapster if available. When False, does not collect Heapster metrics. Default: True|
 | CLOUDABILITY_COLLECTION_RETRY_LIMIT     | Optional: Number of times agent should attempt to gather metrics from each source upon a failure Default: 1|
@@ -77,6 +77,7 @@ Flags:
       --outbound_proxy_auth string               Outbound proxy basic authentication credentials. Must defined in the form username:password - Optional
       --outbound_proxy_insecure                  When true, does not verify TLS certificates when using the outbound proxy. Default: False
       --retrieve_node_summaries                  When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True
+      --get_all_container_stats                  When true, attempts to collect from both the stats/container and metrics/cadvisor endpoints, which may result in a larger metrics payload. Default: True
       --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)

@@ -53,35 +53,32 @@ type KubeAgentConfig struct {
 	HeapsterOverrideURL   string
 	HeapsterURL           string
 	Key                   string
-	nodeRetrievalMethod   Connection
 	OutboundProxyAuth     string
 	OutboundProxy         string
 	provisioningID        string
 	RetrieveNodeSummaries bool
-	// TODO: delete this
-	RetrieveStatsContainer bool
-	RetrieveAllConStats    bool
-	ForceKubeProxy         bool
-	Insecure               bool
-	OutboundProxyInsecure  bool
-	UseInClusterConfig     bool
-	CollectHeapsterExport  bool
-	PollInterval           int
-	CollectionRetryLimit   uint
-	failedNodeList         map[string]error
-	AgentStartTime         time.Time
-	Clientset              kubernetes.Interface
-	ClusterVersion         ClusterVersion
-	HeapsterProxyURL       url.URL
-	OutboundProxyURL       url.URL
-	HTTPClient             http.Client
-	NodeClient             raw.Client
-	InClusterClient        raw.Client
-	msExportDirectory      *os.File
-	TLSClientConfig        rest.TLSClientConfig
-	Namespace              string
-	ScratchDir             string
-	MetricsEndpoints       EndpointMask
+	GetAllConStats        bool
+	ForceKubeProxy        bool
+	Insecure              bool
+	OutboundProxyInsecure bool
+	UseInClusterConfig    bool
+	CollectHeapsterExport bool
+	PollInterval          int
+	CollectionRetryLimit  uint
+	failedNodeList        map[string]error
+	AgentStartTime        time.Time
+	Clientset             kubernetes.Interface
+	ClusterVersion        ClusterVersion
+	HeapsterProxyURL      url.URL
+	OutboundProxyURL      url.URL
+	HTTPClient            http.Client
+	NodeClient            raw.Client
+	InClusterClient       raw.Client
+	msExportDirectory     *os.File
+	TLSClientConfig       rest.TLSClientConfig
+	Namespace             string
+	ScratchDir            string
+	NodeMetrics           EndpointMask
 }
 
 const uploadInterval time.Duration = 10
@@ -173,13 +170,13 @@ func validateMetricCollectionConfig(config KubeAgentConfig) {
 	if !config.RetrieveNodeSummaries && !config.CollectHeapsterExport {
 		log.Fatal("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
 	}
-	if config.RetrieveAllConStats {
-		log.Info("Collecting all available container metrics.")
-	} else {
-		log.Infof("Collecting minimum viable set of container metrics.")
-	}
 	if config.RetrieveNodeSummaries {
 		log.Info("Primary metrics will be collected from each node.")
+		if config.GetAllConStats {
+			log.Info("All available node container metrics will be collected.")
+		} else {
+			log.Infof("Minimum viable set of node container metrics will be collected.")
+		}
 	}
 	if config.RetrieveNodeSummaries && config.CollectHeapsterExport {
 		log.Debug("Collecting Heapster exports if found in cluster.")
@@ -444,8 +441,7 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 		log.Fatalf("cloudability metric agent is unable set internal configuration options: %v", err)
 	}
 
-	// TODO: populate endpoint masks?
-	updatedConfig.MetricsEndpoints = EndpointMask{}
+	updatedConfig.NodeMetrics = EndpointMask{}
 
 	updatedConfig = updateConfigWithOverrideURLs(updatedConfig)
 	updatedConfig, err = createKubeHTTPClient(updatedConfig)
@@ -468,11 +464,6 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	updatedConfig.provisioningID, err = getProvisioningID(updatedConfig.APIKey)
 
 	return updatedConfig, err
-}
-
-func updateWithEndpointMasks(config KubeAgentConfig) KubeAgentConfig {
-	config.MetricsEndpoints = EndpointMask{}
-	return config
 }
 
 func updateConfigurationForServices(config KubeAgentConfig) (
@@ -506,11 +497,6 @@ func setProxyURL(op string) (u url.URL, err error) {
 	}
 
 	return u, err
-}
-
-// GetNodeRetrievalMethod returns the nodeRetrievalMethod of the config
-func (ka KubeAgentConfig) GetNodeRetrievalMethod() Connection {
-	return ka.nodeRetrievalMethod
 }
 
 // returns the UID of a given Namespace
@@ -601,10 +587,12 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 	if config.RetrieveNodeSummaries {
 		config, err = ensureNodeSource(config)
 		if err != nil {
-			log.Warnf("Warning non-fatal error: Agent error occurred retrieving node source metrics: %s ", err)
+			log.Warnf("Warning non-fatal error: Agent error occurred verifying node source metrics: %s ", err)
 			log.Warnf("For more information see: %v", kbURL)
 		} else {
-			log.Infof("Using %s connection to gather node summaries", config.nodeRetrievalMethod)
+			log.Infof("Node summaries connection method: %s", config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
+			log.Infof("Node container metrics connection method: %s", config.NodeMetrics.Options(NodeContainerEndpoint))
+			log.Infof("Node cadvisor metrics connection method: %s", config.NodeMetrics.Options(NodeCadvisorEndpoint))
 		}
 	}
 	if config.CollectHeapsterExport {
@@ -716,8 +704,9 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["poll_interval"] = strconv.Itoa(config.PollInterval)
 	m.Values["provisioning_id"] = config.provisioningID
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
-	// TODO: replace with endpoint mask values
-	m.Values["node_retrieval_method"] = config.nodeRetrievalMethod.String()
+	m.Values["stats_summary_retrieval_method"] = config.NodeMetrics.Options(NodeStatsSummaryEndpoint)
+	m.Values["stats_container_retrieval_method"] = config.NodeMetrics.Options(NodeContainerEndpoint)
+	m.Values["cadvisor_metrics_retrieval_method"] = config.NodeMetrics.Options(NodeCadvisorEndpoint)
 	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	if len(config.OutboundProxyAuth) > 0 {
