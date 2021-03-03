@@ -75,12 +75,11 @@ func TestEnsureNodeSource(t *testing.T) {
 	ts := launchTLSTestServer(returnCodes)
 	cs := NewTestClient(ts, nodeSampleLabels)
 	ka := kubernetes.KubeAgentConfig{
-		Clientset:              cs,
-		HTTPClient:             http.Client{},
-		CollectionRetryLimit:   0,
-		RetrieveStatsContainer: true,
-		DirectEndpointMask:     kubernetes.EndpointMask{},
-		ProxyEndpointMask:      kubernetes.EndpointMask{},
+		Clientset:            cs,
+		HTTPClient:           http.Client{},
+		CollectionRetryLimit: 0,
+		RetrieveAllConStats:  true,
+		MetricsEndpoints:     kubernetes.EndpointMask{},
 	}
 
 	defer ts.Close()
@@ -96,22 +95,21 @@ func TestEnsureNodeSource(t *testing.T) {
 			return
 		}
 
-		if !ka.DirectEndpointMask.Available(kubernetes.NodeContainerEndpoint) {
+		if !ka.MetricsEndpoints.Available(kubernetes.NodeContainerEndpoint, kubernetes.Direct) {
 			t.Errorf("Expected node container endpoint to be available")
 		}
 	})
 
-	t.Run("Ensure successful direct node source test without stats containers", func(t *testing.T) {
+	t.Run("Ensure successful direct node source test without both containers metrics endpoints", func(t *testing.T) {
 		returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
 		ts := launchTLSTestServer(returnCodes)
 		cs := NewTestClient(ts, nodeSampleLabels)
 		ka := kubernetes.KubeAgentConfig{
-			Clientset:              cs,
-			HTTPClient:             http.Client{},
-			CollectionRetryLimit:   0,
-			RetrieveStatsContainer: false,
-			DirectEndpointMask:     kubernetes.EndpointMask{},
-			ProxyEndpointMask:      kubernetes.EndpointMask{},
+			Clientset:            cs,
+			HTTPClient:           http.Client{},
+			CollectionRetryLimit: 0,
+			RetrieveAllConStats:  false,
+			MetricsEndpoints:     kubernetes.EndpointMask{},
 		}
 
 		ka, err := kubernetes.EnsureNodeSource(ka)
@@ -123,7 +121,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			return
 		}
 
-		if ka.DirectEndpointMask.Available(kubernetes.NodeContainerEndpoint) {
+		if ka.MetricsEndpoints.Available(kubernetes.NodeContainerEndpoint, kubernetes.Direct) {
 			t.Errorf("Expected node container endpoint to not be available")
 		}
 
@@ -138,15 +136,14 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL:         "https://" + ts.Listener.Addr().String(),
-			RetrieveStatsContainer: true,
-			DirectEndpointMask:     kubernetes.EndpointMask{},
-			ProxyEndpointMask:      kubernetes.EndpointMask{},
+			ClusterHostURL:      "https://" + ts.Listener.Addr().String(),
+			RetrieveAllConStats: true,
+			MetricsEndpoints:    kubernetes.EndpointMask{},
 		}
 
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
-		if ka.GetNodeRetrievalMethod() != kubernetes.Proxy || err != nil {
+		if !ka.MetricsEndpoints[kubernetes.NodeStatsSummaryEndpoint].HasMethod(kubernetes.Proxy) {
 			t.Errorf("Expected proxy node retrieval method but got %v: %v", ka.GetNodeRetrievalMethod(), err)
 			return
 		}
@@ -170,14 +167,16 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL:         "https://" + ts.Listener.Addr().String(),
-			RetrieveStatsContainer: true,
-			DirectEndpointMask:     kubernetes.EndpointMask{},
-			ProxyEndpointMask:      kubernetes.EndpointMask{},
+			ClusterHostURL:      "https://" + ts.Listener.Addr().String(),
+			RetrieveAllConStats: true,
+			MetricsEndpoints:    kubernetes.EndpointMask{},
 		}
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
-		if ka.GetNodeRetrievalMethod() != kubernetes.Proxy || err != nil {
+		if ka.GetNodeRetrievalMethod().HasMethod(kubernetes.Direct) {
+			t.Errorf("Direct connection should not be enabled with fargate nodes present")
+		}
+		if !ka.GetNodeRetrievalMethod().HasMethod(kubernetes.Proxy) || err != nil {
 			t.Errorf("Expected proxy node retrieval method for Fargate node but got %v. Error: %v, Config: %+v",
 				ka.GetNodeRetrievalMethod(),
 				err,
@@ -196,11 +195,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL:         "https://" + ts.Listener.Addr().String(),
-			RetrieveStatsContainer: true,
-			ForceKubeProxy:         true,
-			DirectEndpointMask:     kubernetes.EndpointMask{},
-			ProxyEndpointMask:      kubernetes.EndpointMask{},
+			ClusterHostURL:      "https://" + ts.Listener.Addr().String(),
+			RetrieveAllConStats: true,
+			ForceKubeProxy:      true,
+			MetricsEndpoints:    kubernetes.EndpointMask{},
 		}
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
@@ -350,11 +348,11 @@ func TestEndpointMask(t *testing.T) {
 	t.Run("should have all endpoints available", func(t *testing.T) {
 		allAvailable := kubernetes.EndpointMask{}
 		for _, endpoint := range allEndpoints {
-			allAvailable.SetAvailable(endpoint, true)
+			allAvailable.SetAvailable(endpoint, kubernetes.Proxy, true)
 		}
 
 		for _, endpoint := range allEndpoints {
-			if !allAvailable.Available(endpoint) {
+			if !allAvailable.Available(endpoint, kubernetes.Proxy) {
 				t.Errorf("expected endpoint to return an availability of true")
 			}
 		}
@@ -363,11 +361,11 @@ func TestEndpointMask(t *testing.T) {
 	t.Run("should have no endpoints available", func(t *testing.T) {
 		noneAvailable := kubernetes.EndpointMask{}
 		for _, endpoint := range allEndpoints {
-			noneAvailable.SetAvailable(endpoint, false)
+			noneAvailable.SetAvailable(endpoint, kubernetes.Proxy, false)
 		}
 
 		for _, endpoint := range allEndpoints {
-			if noneAvailable.Available(endpoint) {
+			if noneAvailable.Available(endpoint, kubernetes.Proxy) {
 				t.Errorf("expected endpoint to return an availability of true")
 			}
 		}
@@ -375,17 +373,17 @@ func TestEndpointMask(t *testing.T) {
 
 	t.Run("should be able to set and unset endpoint", func(t *testing.T) {
 		mask := kubernetes.EndpointMask{}
-		if mask.Available(kubernetes.NodeStatsSummaryEndpoint) {
+		if mask.Available(kubernetes.NodeStatsSummaryEndpoint, kubernetes.Proxy) {
 			t.Errorf("expected the availability of an endpoint to default to false")
 		}
 
-		mask.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, true)
-		if !mask.Available(kubernetes.NodeStatsSummaryEndpoint) {
+		mask.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, kubernetes.Proxy, true)
+		if !mask.Available(kubernetes.NodeStatsSummaryEndpoint, kubernetes.Proxy) {
 			t.Errorf("expected the availability of an endpoint to be true after being set as available")
 		}
 
-		mask.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, false)
-		if mask.Available(kubernetes.NodeStatsSummaryEndpoint) {
+		mask.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, kubernetes.Proxy, false)
+		if mask.Available(kubernetes.NodeStatsSummaryEndpoint, kubernetes.Proxy) {
 			t.Errorf("expected the availability of an endpoint to be false after being set as unavailable")
 		}
 	})
@@ -452,10 +450,9 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 		RetrieveNodeSummaries: true,
 		CollectionRetryLimit:  retries,
 	}
-
-	ka = kubernetes.UpdateWithEndpointMasks(ka)
-	ka.ProxyEndpointMask.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, true)
-	ka.ProxyEndpointMask.SetAvailable(kubernetes.NodeContainerEndpoint, true)
+	ka.MetricsEndpoints = kubernetes.EndpointMask{}
+	ka.MetricsEndpoints.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, kubernetes.Proxy, true)
+	ka.MetricsEndpoints.SetAvailable(kubernetes.NodeContainerEndpoint, kubernetes.Proxy, true)
 
 	wd, _ := os.Getwd()
 	ed, _ := os.Open(fmt.Sprintf("%s/testdata", wd))

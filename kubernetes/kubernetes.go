@@ -44,21 +44,23 @@ type ClusterVersion struct {
 
 //KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                 string
-	BearerToken            string
-	Cert                   string
-	ClusterName            string
-	ClusterHostURL         string
-	clusterUID             string
-	HeapsterOverrideURL    string
-	HeapsterURL            string
-	Key                    string
-	nodeRetrievalMethod    string
-	OutboundProxyAuth      string
-	OutboundProxy          string
-	provisioningID         string
-	RetrieveNodeSummaries  bool
+	APIKey                string
+	BearerToken           string
+	Cert                  string
+	ClusterName           string
+	ClusterHostURL        string
+	clusterUID            string
+	HeapsterOverrideURL   string
+	HeapsterURL           string
+	Key                   string
+	nodeRetrievalMethod   Connection
+	OutboundProxyAuth     string
+	OutboundProxy         string
+	provisioningID        string
+	RetrieveNodeSummaries bool
+	// TODO: delete this
 	RetrieveStatsContainer bool
+	RetrieveAllConStats    bool
 	ForceKubeProxy         bool
 	Insecure               bool
 	OutboundProxyInsecure  bool
@@ -79,8 +81,7 @@ type KubeAgentConfig struct {
 	TLSClientConfig        rest.TLSClientConfig
 	Namespace              string
 	ScratchDir             string
-	DirectEndpointMask     EndpointMask
-	ProxyEndpointMask      EndpointMask
+	MetricsEndpoints       EndpointMask
 }
 
 const uploadInterval time.Duration = 10
@@ -172,8 +173,10 @@ func validateMetricCollectionConfig(config KubeAgentConfig) {
 	if !config.RetrieveNodeSummaries && !config.CollectHeapsterExport {
 		log.Fatal("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
 	}
-	if config.RetrieveStatsContainer {
-		log.Info("Collecting stats container metrics.")
+	if config.RetrieveAllConStats {
+		log.Info("Collecting all available container metrics.")
+	} else {
+		log.Infof("Collecting minimum viable set of container metrics.")
 	}
 	if config.RetrieveNodeSummaries {
 		log.Info("Primary metrics will be collected from each node.")
@@ -441,7 +444,8 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 		log.Fatalf("cloudability metric agent is unable set internal configuration options: %v", err)
 	}
 
-	updatedConfig = updateWithEndpointMasks(updatedConfig)
+	// TODO: populate endpoint masks?
+	updatedConfig.MetricsEndpoints = EndpointMask{}
 
 	updatedConfig = updateConfigWithOverrideURLs(updatedConfig)
 	updatedConfig, err = createKubeHTTPClient(updatedConfig)
@@ -467,8 +471,7 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 }
 
 func updateWithEndpointMasks(config KubeAgentConfig) KubeAgentConfig {
-	config.ProxyEndpointMask = EndpointMask{}
-	config.DirectEndpointMask = EndpointMask{}
+	config.MetricsEndpoints = EndpointMask{}
 	return config
 }
 
@@ -506,7 +509,7 @@ func setProxyURL(op string) (u url.URL, err error) {
 }
 
 // GetNodeRetrievalMethod returns the nodeRetrievalMethod of the config
-func (ka KubeAgentConfig) GetNodeRetrievalMethod() string {
+func (ka KubeAgentConfig) GetNodeRetrievalMethod() Connection {
 	return ka.nodeRetrievalMethod
 }
 
@@ -713,7 +716,8 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["poll_interval"] = strconv.Itoa(config.PollInterval)
 	m.Values["provisioning_id"] = config.provisioningID
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
-	m.Values["node_retrieval_method"] = config.nodeRetrievalMethod
+	// TODO: replace with endpoint mask values
+	m.Values["node_retrieval_method"] = config.nodeRetrievalMethod.String()
 	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	if len(config.OutboundProxyAuth) > 0 {

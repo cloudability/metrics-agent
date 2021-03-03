@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
@@ -86,8 +87,37 @@ func (cns ClientsetNodeSource) NodeAddress(node *v1.Node) (string, int32, error)
 	return "", 0, fmt.Errorf("Could not find internal IP address for node %s ", node.Name)
 }
 
+// Connection is a bitmask that describes the manner(s) in which
+// the agent can connect to an endpoint
+type Connection uint16
+
+const (
+	Direct Connection = 1 << iota
+	Proxy
+	Unreachable
+)
+
+func (c Connection) HasMethod(method Connection) bool { return c&method != 0 }
+func (c *Connection) AddMethod(method Connection)     { *c |= method }
+func (c *Connection) ClearMethod(method Connection)   { *c &= ^method }
+func (c *Connection) ToggleMethod(method Connection)  { *c ^= method }
+
+func (c Connection) String() string {
+	if c.HasMethod(Unreachable) {
+		return "unreachable"
+	}
+	var options []string
+	if c.HasMethod(Proxy) {
+		options = append(options, "proxy")
+	}
+	if c.HasMethod(Direct) {
+		options = append(options, "direct")
+	}
+	return strings.Join(options, ",")
+}
+
 // Endpoint an enumeration representing the various metrics endpoints
-type Endpoint uint8
+type Endpoint uint16
 
 const (
 	// NodeStatsSummaryEndpoint the /stats/summary endpoint
@@ -102,21 +132,26 @@ const (
 
 // EndpointMask a map representing the currently active endpoints.
 // The keys of the map are the currently active endpoints.
-type EndpointMask map[Endpoint]struct{}
+type EndpointMask map[Endpoint]Connection
 
 // SetAvailable sets an endpoint availability state according to the supplied boolean
-func (m EndpointMask) SetAvailable(endpoint Endpoint, available bool) {
+func (m EndpointMask) SetAvailable(endpoint Endpoint, method Connection, available bool) {
+	e := m[endpoint]
 	if available {
-		m[endpoint] = struct{}{}
+		e.AddMethod(method)
 	} else {
-		delete(m, endpoint)
+		e.ClearMethod(method)
 	}
+	m[endpoint] = e
 }
 
-// Available gets the availability of an endpoint
-func (m EndpointMask) Available(endpoint Endpoint) bool {
-	_, ok := m[endpoint]
-	return ok
+// Available gets the availability of an endpoint for the specified connection method
+func (m EndpointMask) Available(endpoint Endpoint, method Connection) bool {
+	e, ok := m[endpoint]
+	if !ok {
+		return false
+	}
+	return e.HasMethod(method)
 }
 
 func downloadNodeData(prefix string,
@@ -158,7 +193,7 @@ func downloadNodeData(prefix string,
 		// retrieve node summary directly from node if possible and allowed.
 		// The config shouldn't allow direct connection if Fargate nodes were
 		// found in the cluster at startup, but check again here to be safe.
-		if config.nodeRetrievalMethod == direct && !isFargateNode(n) {
+		if config.nodeRetrievalMethod.HasMethod(Direct) && !isFargateNode(n) {
 			err := directNodeFetch(nodeSource, config, &n, nd)
 			// no error, no need to try proxy
 			if err == nil {
@@ -167,6 +202,8 @@ func downloadNodeData(prefix string,
 			// make note of the error and fall through to proxy
 			failedNodeList[n.Name] = fmt.Errorf("direct connect failed (will attempt proxy): %s", err)
 		}
+		// TODO: why not try proxy and direct in same method?
+		// TODO: will this skip collecting one endpoint if most of them passed the above direct collection?
 		// retrieve node summary via proxy
 		err := proxyNodeFetch(nd, config)
 		if err != nil {
@@ -195,13 +232,13 @@ func directNodeFetch(nodeSource NodeSource, config KubeAgentConfig, n *v1.Node, 
 		return fmt.Errorf("problem getting node address: %s", err)
 	}
 	d := directNodeEndpoints(ip, port)
-	return retrieveNodeData(nd, config.NodeClient, config.DirectEndpointMask, d)
+	return retrieveNodeData(nd, config.NodeClient, config.MetricsEndpoints, Direct, d)
 }
 
 // proxyNodeFetch retrieves node data via the proxy api
 func proxyNodeFetch(nd nodeFetchData, config KubeAgentConfig) error {
 	proxy := proxyEndpoints(config.ClusterHostURL, nd.nodeName)
-	return retrieveNodeData(nd, config.InClusterClient, config.ProxyEndpointMask, proxy)
+	return retrieveNodeData(nd, config.InClusterClient, config.MetricsEndpoints, Proxy, proxy)
 }
 
 type nodeAPI interface {
@@ -282,14 +319,14 @@ func (s sourceName) cadvisorMetrics() string {
 }
 
 // retrieveNodeData fetches summary and container data from the node
-func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nodeAPI) error {
+func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, method Connection, api nodeAPI) error {
 	source := sourceName{
 		prefix:   nd.prefix,
 		nodeName: nd.nodeName,
 	}
 	var err error
 
-	if mask.Available(NodeStatsSummaryEndpoint) {
+	if mask.Available(NodeStatsSummaryEndpoint, method) {
 		// fetch stats/summary data
 		log.Debug("Fetching data from /stats/summary endpoint")
 		_, err = c.GetRawEndPoint(http.MethodGet, source.summary(), nd.workDir, api.statsSummary(), nil, true)
@@ -298,7 +335,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 		}
 	}
 
-	if mask.Available(NodeCadvisorEndpoint) {
+	if mask.Available(NodeCadvisorEndpoint, method) {
 		// fetch metrics/mCAdvisor data
 		log.Debug("Fetching data from /metrics/cadvisor endpoint")
 		_, err = c.GetRawEndPoint(http.MethodGet, source.cadvisorMetrics(), nd.workDir, api.mCAdvisor(), nil, true)
@@ -307,7 +344,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 		}
 	}
 
-	if mask.Available(NodeContainerEndpoint) {
+	if mask.Available(NodeContainerEndpoint, method) {
 		// fetch container details
 		log.Debug("Fetching data from /stats/container endpoint")
 		_, err = c.GetRawEndPoint(
@@ -316,9 +353,7 @@ func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nod
 			return err
 		}
 	}
-
 	return err
-
 }
 
 //ensureNodeSource validates connectivity to the kubelet metrics endpoints.
@@ -356,62 +391,71 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	if allowDirectConnect(config, nodes) {
 		// test node direct connectivity
 		d := directNodeEndpoints(ip, port)
-		success, err := testNodeConn(config, &nodeHTTPClient, config.DirectEndpointMask, d.statsSummary(),
+		success, err := testNodeConn(config, &nodeHTTPClient, Direct, d.statsSummary(),
 			d.statsContainer(), d.mCAdvisor())
 		if err != nil {
 			return config, err
 		}
 		if success {
-			config.nodeRetrievalMethod = direct
+			// TODO: nuke nodeRM and just check endpoints directly
+			config.nodeRetrievalMethod.AddMethod(Direct)
 			return config, nil
 		}
 	}
 
 	// test node connectivity via kube-proxy
 	p := proxyEndpoints(config.ClusterHostURL, firstNode.Name)
-	success, err := testNodeConn(config, &config.HTTPClient, config.ProxyEndpointMask, p.statsSummary(),
+	success, err := testNodeConn(config, &config.HTTPClient, Proxy, p.statsSummary(),
 		p.statsContainer(), p.mCAdvisor())
 	if err != nil {
 		return config, err
 	}
 	if success {
 		config.NodeClient = raw.Client{}
-		config.nodeRetrievalMethod = proxy
+		config.nodeRetrievalMethod.AddMethod(Proxy)
+	}
+	// TODO: add a more readable method?
+	if config.nodeRetrievalMethod > 0 {
 		return config, nil
 	}
-
-	config.nodeRetrievalMethod = unreachable
+	config.nodeRetrievalMethod = Unreachable
 	config.RetrieveNodeSummaries = false
 	return config, fmt.Errorf("unable to retrieve node metrics. Please verify RBAC roles: %v", err)
 }
 
-func testNodeConn(config KubeAgentConfig, client *http.Client, mask EndpointMask, nodeStatSum,
+func testNodeConn(config KubeAgentConfig, client *http.Client, method Connection, nodeStatSum,
 	containerStats, cadvisorMetrics string) (success bool, err error) {
 	ns, _, err := util.TestHTTPConnection(client, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
 	log.Infof("Availability of the /stats/summary endpoint is: %v", ns)
-	mask.SetAvailable(NodeStatsSummaryEndpoint, ns)
+	config.MetricsEndpoints.SetAvailable(NodeStatsSummaryEndpoint, method, ns)
 
 	cm, _, err := util.TestHTTPConnection(client, cadvisorMetrics, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
 	log.Infof("Availability of the /metrics/cadvisor endpoint is: %v", cm)
-	mask.SetAvailable(NodeCadvisorEndpoint, cm)
+	config.MetricsEndpoints.SetAvailable(NodeCadvisorEndpoint, method, cm)
 
-	var cs = false
-	if config.RetrieveStatsContainer {
-		cs, _, err = util.TestHTTPConnection(client, containerStats, http.MethodPost, config.BearerToken, 0, false)
-		if err != nil {
-			return false, err
-		}
-		log.Infof("Availability of the /stats/container endpoint is: %v", cs)
-		mask.SetAvailable(NodeContainerEndpoint, cs)
+	cs, _, err := util.TestHTTPConnection(client, containerStats, http.MethodPost, config.BearerToken, 0, false)
+	if err != nil {
+		return false, err
 	}
+	log.Infof("Availability of the /stats/container endpoint is: %v", cs)
+	config.MetricsEndpoints.SetAvailable(NodeContainerEndpoint, method, cs)
 
-	return ns && (cm || cs), nil
+	con := MetricsRequirementsSatisfied(config, cm, cs)
+	return ns && con, nil
+}
+
+// MetricsRequirementsSatisfied returns whether all of the desired containers metrics endpoints were reached
+func MetricsRequirementsSatisfied(config KubeAgentConfig, cm, cs bool) bool {
+	if config.RetrieveAllConStats {
+		return cm && cs
+	}
+	return cm || cs
 }
 
 // isFargateNode detects whether a node is a Fargate node, which affects

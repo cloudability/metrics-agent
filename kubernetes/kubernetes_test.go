@@ -112,6 +112,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			RetrieveNodeSummaries: true,
 			CollectHeapsterExport: false,
 			Clientset:             cs,
+			MetricsEndpoints:      EndpointMask{},
 		}
 		config, err := ensureMetricServicesAvailable(config)
 		if err == nil {
@@ -277,10 +278,9 @@ func TestCollectMetrics(t *testing.T) {
 		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
 	}
-
-	ka = updateWithEndpointMasks(ka)
-	ka.ProxyEndpointMask.SetAvailable(NodeStatsSummaryEndpoint, true)
-	ka.ProxyEndpointMask.SetAvailable(NodeContainerEndpoint, true)
+	ka.MetricsEndpoints = EndpointMask{}
+	ka.MetricsEndpoints.SetAvailable(NodeStatsSummaryEndpoint, Proxy, true)
+	ka.MetricsEndpoints.SetAvailable(NodeContainerEndpoint, Proxy, true)
 
 	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)
 	fns := NewClientsetNodeSource(cs)
