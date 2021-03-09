@@ -13,7 +13,7 @@ ENV GOOS=linux
 COPY . /go/src/${package}
 RUN go build
 
-FROM alpine:3.9
+FROM alpine:3.13
 ARG package
 ARG application
 
@@ -22,7 +22,7 @@ ARG application
 RUN apk --update upgrade && apk add ca-certificates
 
 RUN addgroup -g 1000 agent && \
-    adduser agent -S -u 1000 -s /bin/nologin -g metrics-agent -H -G agent 
+    adduser agent -S -u 1000 -s /bin/nologin -g metrics-agent -H -G agent
 
 WORKDIR /
 
