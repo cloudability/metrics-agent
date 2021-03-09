@@ -71,13 +71,16 @@ func TestEnsureNodeSource(t *testing.T) {
 	// The final 400 fails the direct connection test, and as no proxy client is provided
 	// for the "unsuccessful" node test, it falls through to unreachable status.
 	// If no status code is provided, the default response is 200.
-	returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
+	returnCodes := []int{200, 200, 200, 400, 400, 400, 200, 200, 200, 400}
 	ts := launchTLSTestServer(returnCodes)
 	cs := NewTestClient(ts, nodeSampleLabels)
 	ka := kubernetes.KubeAgentConfig{
-		Clientset:            cs,
-		HTTPClient:           http.Client{},
-		CollectionRetryLimit: 0,
+		Clientset:              cs,
+		HTTPClient:             http.Client{},
+		CollectionRetryLimit:   0,
+		RetrieveStatsContainer: true,
+		DirectEndpointMask:     kubernetes.EndpointMask{},
+		ProxyEndpointMask:      kubernetes.EndpointMask{},
 	}
 
 	defer ts.Close()
@@ -93,6 +96,37 @@ func TestEnsureNodeSource(t *testing.T) {
 			return
 		}
 
+		if !ka.DirectEndpointMask.Available(kubernetes.NodeContainerEndpoint) {
+			t.Errorf("Expected node container endpoint to be available")
+		}
+	})
+
+	t.Run("Ensure successful direct node source test without stats containers", func(t *testing.T) {
+		returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
+		ts := launchTLSTestServer(returnCodes)
+		cs := NewTestClient(ts, nodeSampleLabels)
+		ka := kubernetes.KubeAgentConfig{
+			Clientset:              cs,
+			HTTPClient:             http.Client{},
+			CollectionRetryLimit:   0,
+			RetrieveStatsContainer: false,
+			DirectEndpointMask:     kubernetes.EndpointMask{},
+			ProxyEndpointMask:      kubernetes.EndpointMask{},
+		}
+
+		ka, err := kubernetes.EnsureNodeSource(ka)
+
+		if ka.GetNodeRetrievalMethod() != kubernetes.Direct || err != nil {
+			t.Errorf("Expected direct node retrieval method but got %v: %v",
+				ka.GetNodeRetrievalMethod(),
+				err)
+			return
+		}
+
+		if ka.DirectEndpointMask.Available(kubernetes.NodeContainerEndpoint) {
+			t.Errorf("Expected node container endpoint to not be available")
+		}
+
 	})
 
 	t.Run("Ensure successful proxy node source test", func(t *testing.T) {
@@ -104,7 +138,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
+			ClusterHostURL:         "https://" + ts.Listener.Addr().String(),
+			RetrieveStatsContainer: true,
+			DirectEndpointMask:     kubernetes.EndpointMask{},
+			ProxyEndpointMask:      kubernetes.EndpointMask{},
 		}
 
 		ka, err := kubernetes.EnsureNodeSource(ka)
@@ -133,7 +170,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
+			ClusterHostURL:         "https://" + ts.Listener.Addr().String(),
+			RetrieveStatsContainer: true,
+			DirectEndpointMask:     kubernetes.EndpointMask{},
+			ProxyEndpointMask:      kubernetes.EndpointMask{},
 		}
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
@@ -156,8 +196,11 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
-			ForceKubeProxy: true,
+			ClusterHostURL:         "https://" + ts.Listener.Addr().String(),
+			RetrieveStatsContainer: true,
+			ForceKubeProxy:         true,
+			DirectEndpointMask:     kubernetes.EndpointMask{},
+			ProxyEndpointMask:      kubernetes.EndpointMask{},
 		}
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
@@ -215,7 +258,7 @@ func TestFargateNodeDetection(t *testing.T) {
 }
 
 func TestDownloadNodeData(t *testing.T) {
-	returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
+	returnCodes := []int{200, 200, 200, 400, 400, 400, 200, 200, 200, 400}
 	ts := launchTLSTestServer(returnCodes)
 	cs := NewTestClient(ts, nodeSampleLabels)
 	defer ts.Close()
@@ -297,12 +340,63 @@ func TestDownloadNodeDataRetries(t *testing.T) {
 
 }
 
+func TestEndpointMask(t *testing.T) {
+	allEndpoints := []kubernetes.Endpoint{
+		kubernetes.NodeStatsSummaryEndpoint,
+		kubernetes.NodeContainerEndpoint,
+		kubernetes.NodeCadvisorEndpoint,
+	}
+
+	t.Run("should have all endpoints available", func(t *testing.T) {
+		allAvailable := kubernetes.EndpointMask{}
+		for _, endpoint := range allEndpoints {
+			allAvailable.SetAvailable(endpoint, true)
+		}
+
+		for _, endpoint := range allEndpoints {
+			if !allAvailable.Available(endpoint) {
+				t.Errorf("expected endpoint to return an availability of true")
+			}
+		}
+	})
+
+	t.Run("should have no endpoints available", func(t *testing.T) {
+		noneAvailable := kubernetes.EndpointMask{}
+		for _, endpoint := range allEndpoints {
+			noneAvailable.SetAvailable(endpoint, false)
+		}
+
+		for _, endpoint := range allEndpoints {
+			if noneAvailable.Available(endpoint) {
+				t.Errorf("expected endpoint to return an availability of true")
+			}
+		}
+	})
+
+	t.Run("should be able to set and unset endpoint", func(t *testing.T) {
+		mask := kubernetes.EndpointMask{}
+		if mask.Available(kubernetes.NodeStatsSummaryEndpoint) {
+			t.Errorf("expected the availability of an endpoint to default to false")
+		}
+
+		mask.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, true)
+		if !mask.Available(kubernetes.NodeStatsSummaryEndpoint) {
+			t.Errorf("expected the availability of an endpoint to be true after being set as available")
+		}
+
+		mask.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, false)
+		if mask.Available(kubernetes.NodeStatsSummaryEndpoint) {
+			t.Errorf("expected the availability of an endpoint to be false after being set as unavailable")
+		}
+	})
+}
+
 type testNodeSource struct {
 	Nodes []v1.Node
 }
 
 func (tns testNodeSource) GetReadyNodes() ([]v1.Node, error) {
-	returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
+	returnCodes := []int{200, 200, 200, 400, 400, 400, 200, 200, 200, 400}
 
 	ts := launchTLSTestServer(returnCodes)
 	nodes := tns.Nodes
@@ -358,6 +452,11 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 		RetrieveNodeSummaries: true,
 		CollectionRetryLimit:  retries,
 	}
+
+	ka = kubernetes.UpdateWithEndpointMasks(ka)
+	ka.ProxyEndpointMask.SetAvailable(kubernetes.NodeStatsSummaryEndpoint, true)
+	ka.ProxyEndpointMask.SetAvailable(kubernetes.NodeContainerEndpoint, true)
+
 	wd, _ := os.Getwd()
 	ed, _ := os.Open(fmt.Sprintf("%s/testdata", wd))
 

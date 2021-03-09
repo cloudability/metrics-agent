@@ -44,40 +44,43 @@ type ClusterVersion struct {
 
 //KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                string
-	BearerToken           string
-	Cert                  string
-	ClusterName           string
-	ClusterHostURL        string
-	clusterUID            string
-	HeapsterOverrideURL   string
-	HeapsterURL           string
-	Key                   string
-	nodeRetrievalMethod   string
-	OutboundProxyAuth     string
-	OutboundProxy         string
-	provisioningID        string
-	RetrieveNodeSummaries bool
-	ForceKubeProxy        bool
-	Insecure              bool
-	OutboundProxyInsecure bool
-	UseInClusterConfig    bool
-	CollectHeapsterExport bool
-	PollInterval          int
-	CollectionRetryLimit  uint
-	failedNodeList        map[string]error
-	AgentStartTime        time.Time
-	Clientset             kubernetes.Interface
-	ClusterVersion        ClusterVersion
-	HeapsterProxyURL      url.URL
-	OutboundProxyURL      url.URL
-	HTTPClient            http.Client
-	NodeClient            raw.Client
-	InClusterClient       raw.Client
-	msExportDirectory     *os.File
-	TLSClientConfig       rest.TLSClientConfig
-	Namespace             string
-	ScratchDir            string
+	APIKey                 string
+	BearerToken            string
+	Cert                   string
+	ClusterName            string
+	ClusterHostURL         string
+	clusterUID             string
+	HeapsterOverrideURL    string
+	HeapsterURL            string
+	Key                    string
+	nodeRetrievalMethod    string
+	OutboundProxyAuth      string
+	OutboundProxy          string
+	provisioningID         string
+	RetrieveNodeSummaries  bool
+	RetrieveStatsContainer bool
+	ForceKubeProxy         bool
+	Insecure               bool
+	OutboundProxyInsecure  bool
+	UseInClusterConfig     bool
+	CollectHeapsterExport  bool
+	PollInterval           int
+	CollectionRetryLimit   uint
+	failedNodeList         map[string]error
+	AgentStartTime         time.Time
+	Clientset              kubernetes.Interface
+	ClusterVersion         ClusterVersion
+	HeapsterProxyURL       url.URL
+	OutboundProxyURL       url.URL
+	HTTPClient             http.Client
+	NodeClient             raw.Client
+	InClusterClient        raw.Client
+	msExportDirectory      *os.File
+	TLSClientConfig        rest.TLSClientConfig
+	Namespace              string
+	ScratchDir             string
+	DirectEndpointMask     EndpointMask
+	ProxyEndpointMask      EndpointMask
 }
 
 const uploadInterval time.Duration = 10
@@ -99,7 +102,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	log.Infof("Metric collection retry limit set to %d (default is %d)",
 		config.CollectionRetryLimit, DefaultCollectionRetry)
 
-	validateMetricCollectionConfig(config.RetrieveNodeSummaries, config.CollectHeapsterExport)
+	validateMetricCollectionConfig(config)
 
 	// Create k8s agent
 	kubeAgent := newKubeAgent(config)
@@ -165,16 +168,19 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-func validateMetricCollectionConfig(retrieveNodeSummaries bool, collectHeapsterExport bool) {
-	if !retrieveNodeSummaries && !collectHeapsterExport {
+func validateMetricCollectionConfig(config KubeAgentConfig) {
+	if !config.RetrieveNodeSummaries && !config.CollectHeapsterExport {
 		log.Fatal("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
 	}
-	if retrieveNodeSummaries {
+	if config.RetrieveStatsContainer {
+		log.Info("Collecting stats container metrics.")
+	}
+	if config.RetrieveNodeSummaries {
 		log.Info("Primary metrics will be collected from each node.")
 	}
-	if retrieveNodeSummaries && collectHeapsterExport {
+	if config.RetrieveNodeSummaries && config.CollectHeapsterExport {
 		log.Debug("Collecting Heapster exports if found in cluster.")
-	} else if collectHeapsterExport {
+	} else if config.CollectHeapsterExport {
 		log.Warn("Primary metrics collected from Heapster exports. WARNING: Heapster is being deprecated.")
 	}
 }
@@ -298,7 +304,9 @@ func fetchNodeBaselines(msd, exportDirectory string) error {
 		if info.IsDir() && filePath != path.Dir(exportDirectory) {
 			return filepath.SkipDir
 		}
-		if strings.HasPrefix(info.Name(), "baseline-summary") || strings.HasPrefix(info.Name(), "baseline-container") {
+		if strings.HasPrefix(info.Name(), "baseline-summary") ||
+			strings.HasPrefix(info.Name(), "baseline-container") ||
+			strings.HasPrefix(info.Name(), "baseline-cadvisor") {
 			err = os.Rename(filePath, filepath.Join(msd, info.Name()))
 			if err != nil {
 				return err
@@ -318,8 +326,8 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 			return err
 		}
 		if strings.HasPrefix(info.Name(), "stats-") {
-			nodeName := getNodeName("stats", info.Name())
-			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s.json", nodeName)
+			nodeName, extension := extractNodeNameAndExtension("stats", info.Name())
+			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s%s", nodeName, extension)
 
 			// update baseline metric for this node with most recent sample from this collection
 			err = util.CopyFileContents(baselineNodeMetric, filePath)
@@ -433,6 +441,8 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 		log.Fatalf("cloudability metric agent is unable set internal configuration options: %v", err)
 	}
 
+	updatedConfig = updateWithEndpointMasks(updatedConfig)
+
 	updatedConfig = updateConfigWithOverrideURLs(updatedConfig)
 	updatedConfig, err = createKubeHTTPClient(updatedConfig)
 	if err != nil {
@@ -454,6 +464,12 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	updatedConfig.provisioningID, err = getProvisioningID(updatedConfig.APIKey)
 
 	return updatedConfig, err
+}
+
+func updateWithEndpointMasks(config KubeAgentConfig) KubeAgentConfig {
+	config.ProxyEndpointMask = EndpointMask{}
+	config.DirectEndpointMask = EndpointMask{}
+	return config
 }
 
 func updateConfigurationForServices(config KubeAgentConfig) (
@@ -730,12 +746,13 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	return err
 }
 
-func getNodeName(prefix, fileName string) string {
+func extractNodeNameAndExtension(prefix, fileName string) (string, string) {
+	extension := path.Ext(fileName)
 	if strings.Contains(fileName, prefix) {
-		name := fileName[len(prefix) : len(fileName)-5]
-		return name
+		name := fileName[len(prefix) : len(fileName)-len(extension)]
+		return name, extension
 	}
-	return ""
+	return "", extension
 }
 
 func getPodLogs(clientset kubernetes.Interface,

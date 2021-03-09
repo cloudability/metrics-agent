@@ -278,6 +278,10 @@ func TestCollectMetrics(t *testing.T) {
 		ForceKubeProxy:        false,
 	}
 
+	ka = updateWithEndpointMasks(ka)
+	ka.ProxyEndpointMask.SetAvailable(NodeStatsSummaryEndpoint, true)
+	ka.ProxyEndpointMask.SetAvailable(NodeContainerEndpoint, true)
+
 	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)
 	fns := NewClientsetNodeSource(cs)
 
@@ -344,6 +348,42 @@ func TestCollectMetrics(t *testing.T) {
 		}
 	})
 
+}
+
+func TestExtractNodeNameAndExtension(t *testing.T) {
+	t.Run("should return node name and json extension", func(t *testing.T) {
+		wantedNodeName := "-container-ip-10-110-217-3.ec2.internal"
+		wantedExtension := ".json"
+
+		filename := "stats-container-ip-10-110-217-3.ec2.internal.json"
+
+		nodeName, extension := extractNodeNameAndExtension("stats", filename)
+
+		if nodeName != wantedNodeName {
+			t.Errorf("expected %s but got %s", wantedNodeName, nodeName)
+		}
+
+		if extension != wantedExtension {
+			t.Errorf("expected %s but got %s", wantedExtension, extension)
+		}
+	})
+
+	t.Run("should return node name and txt extension", func(t *testing.T) {
+		wantedNodeName := "-cadvisor_metrics-ip-10-110-214-235.ec2.internal"
+		wantedExtension := ".txt"
+
+		filename := "stats-cadvisor_metrics-ip-10-110-214-235.ec2.internal.txt"
+
+		nodeName, extension := extractNodeNameAndExtension("stats", filename)
+
+		if nodeName != wantedNodeName {
+			t.Errorf("expected %s but got %s", wantedNodeName, nodeName)
+		}
+
+		if extension != wantedExtension {
+			t.Errorf("expected %s but got %s", wantedExtension, extension)
+		}
+	})
 }
 
 func TestSetProxyURL(t *testing.T) {

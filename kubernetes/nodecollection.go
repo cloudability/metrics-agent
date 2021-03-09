@@ -86,6 +86,39 @@ func (cns ClientsetNodeSource) NodeAddress(node *v1.Node) (string, int32, error)
 	return "", 0, fmt.Errorf("Could not find internal IP address for node %s ", node.Name)
 }
 
+// Endpoint an enumeration representing the various metrics endpoints
+type Endpoint uint8
+
+const (
+	// NodeStatsSummaryEndpoint the /stats/summary endpoint
+	NodeStatsSummaryEndpoint Endpoint = iota
+
+	// NodeContainerEndpoint the /stats/container endpoint
+	NodeContainerEndpoint
+
+	// NodeCadvisorEndpoint the /metrics/cadvisor/prometheus endpoint
+	NodeCadvisorEndpoint
+)
+
+// EndpointMask a map representing the currently active endpoints.
+// The keys of the map are the currently active endpoints.
+type EndpointMask map[Endpoint]struct{}
+
+// SetAvailable sets an endpoint availability state according to the supplied boolean
+func (m EndpointMask) SetAvailable(endpoint Endpoint, available bool) {
+	if available {
+		m[endpoint] = struct{}{}
+	} else {
+		delete(m, endpoint)
+	}
+}
+
+// Available gets the availability of an endpoint
+func (m EndpointMask) Available(endpoint Endpoint) bool {
+	_, ok := m[endpoint]
+	return ok
+}
+
 func downloadNodeData(prefix string,
 	config KubeAgentConfig,
 	workDir *os.File,
@@ -162,13 +195,19 @@ func directNodeFetch(nodeSource NodeSource, config KubeAgentConfig, n *v1.Node, 
 		return fmt.Errorf("problem getting node address: %s", err)
 	}
 	d := directNodeEndpoints(ip, port)
-	return retrieveNodeData(nd, config.NodeClient, d.statsSummary(), d.statsContainer())
+	return retrieveNodeData(nd, config.NodeClient, config.DirectEndpointMask, d)
 }
 
 // proxyNodeFetch retrieves node data via the proxy api
 func proxyNodeFetch(nd nodeFetchData, config KubeAgentConfig) error {
 	proxy := proxyEndpoints(config.ClusterHostURL, nd.nodeName)
-	return retrieveNodeData(nd, config.InClusterClient, proxy.statsSummary(), proxy.statsContainer())
+	return retrieveNodeData(nd, config.InClusterClient, config.ProxyEndpointMask, proxy)
+}
+
+type nodeAPI interface {
+	statsSummary() string
+	statsContainer() string
+	mCAdvisor() string
 }
 
 type proxyAPI struct {
@@ -184,6 +223,11 @@ func (p proxyAPI) statsSummary() string {
 // statsContainer formats the proxy api stats/container endpoint for the node
 func (p proxyAPI) statsContainer() string {
 	return fmt.Sprintf("%s/api/v1/nodes/%s/proxy/stats/container/", p.clusterHostURL, p.nodeName)
+}
+
+// mCAdvisor formats the proxy api metrics/mCAdvisor endpoint, which outputs prometheus-format metrics
+func (p proxyAPI) mCAdvisor() string {
+	return fmt.Sprintf("%s/api/v1/nodes/%s/proxy/metrics/cadvisor", p.clusterHostURL, p.nodeName)
 }
 
 func proxyEndpoints(clusterHostURL, nodeName string) proxyAPI {
@@ -208,6 +252,11 @@ func (d directNode) statsContainer() string {
 	return fmt.Sprintf("https://%s:%v/stats/container/", d.ip, d.port)
 }
 
+// mCAdvisor formats the direct node metrics/mCAdvisor endpoint
+func (d directNode) mCAdvisor() string {
+	return fmt.Sprintf("https://%s:%v/metrics/cadvisor", d.ip, d.port)
+}
+
 func directNodeEndpoints(ip string, port int32) directNode {
 	return directNode{
 		ip:   ip,
@@ -228,20 +277,46 @@ func (s sourceName) container() string {
 	return fmt.Sprintf("%s-container-%s", s.prefix, s.nodeName)
 }
 
+func (s sourceName) cadvisorMetrics() string {
+	return fmt.Sprintf("%s-cadvisor_metrics-%s", s.prefix, s.nodeName)
+}
+
 // retrieveNodeData fetches summary and container data from the node
-func retrieveNodeData(nd nodeFetchData, c raw.Client, nodeStatSum, containerStats string) error {
+func retrieveNodeData(nd nodeFetchData, c raw.Client, mask EndpointMask, api nodeAPI) error {
 	source := sourceName{
 		prefix:   nd.prefix,
 		nodeName: nd.nodeName,
 	}
-	// fetch stats/summary data
-	_, err := c.GetRawEndPoint(http.MethodGet, source.summary(), nd.workDir, nodeStatSum, nil, true)
-	if err != nil {
-		return err
+	var err error
+
+	if mask.Available(NodeStatsSummaryEndpoint) {
+		// fetch stats/summary data
+		log.Debug("Fetching data from /stats/summary endpoint")
+		_, err = c.GetRawEndPoint(http.MethodGet, source.summary(), nd.workDir, api.statsSummary(), nil, true)
+		if err != nil {
+			return err
+		}
 	}
-	// fetch container details
-	_, err = c.GetRawEndPoint(
-		http.MethodPost, source.container(), nd.workDir, containerStats, nd.containersRequest, true)
+
+	if mask.Available(NodeCadvisorEndpoint) {
+		// fetch metrics/mCAdvisor data
+		log.Debug("Fetching data from /metrics/cadvisor endpoint")
+		_, err = c.GetRawEndPoint(http.MethodGet, source.cadvisorMetrics(), nd.workDir, api.mCAdvisor(), nil, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	if mask.Available(NodeContainerEndpoint) {
+		// fetch container details
+		log.Debug("Fetching data from /stats/container endpoint")
+		_, err = c.GetRawEndPoint(
+			http.MethodPost, source.container(), nd.workDir, api.statsContainer(), nd.containersRequest, true)
+		if err != nil {
+			return err
+		}
+	}
+
 	return err
 
 }
@@ -281,7 +356,8 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	if allowDirectConnect(config, nodes) {
 		// test node direct connectivity
 		d := directNodeEndpoints(ip, port)
-		success, err := testNodeConn(&nodeHTTPClient, d.statsSummary(), d.statsContainer(), config.BearerToken)
+		success, err := testNodeConn(config, &nodeHTTPClient, config.DirectEndpointMask, d.statsSummary(),
+			d.statsContainer(), d.mCAdvisor())
 		if err != nil {
 			return config, err
 		}
@@ -293,7 +369,8 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	// test node connectivity via kube-proxy
 	p := proxyEndpoints(config.ClusterHostURL, firstNode.Name)
-	success, err := testNodeConn(&config.HTTPClient, p.statsSummary(), p.statsContainer(), config.BearerToken)
+	success, err := testNodeConn(config, &config.HTTPClient, config.ProxyEndpointMask, p.statsSummary(),
+		p.statsContainer(), p.mCAdvisor())
 	if err != nil {
 		return config, err
 	}
@@ -308,16 +385,33 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 	return config, fmt.Errorf("unable to retrieve node metrics. Please verify RBAC roles: %v", err)
 }
 
-func testNodeConn(client *http.Client, nodeStatSum, containerStats, bearerToken string) (success bool, err error) {
-	ns, _, err := util.TestHTTPConnection(client, nodeStatSum, http.MethodGet, bearerToken, 0, false)
+func testNodeConn(config KubeAgentConfig, client *http.Client, mask EndpointMask, nodeStatSum,
+	containerStats, cadvisorMetrics string) (success bool, err error) {
+	ns, _, err := util.TestHTTPConnection(client, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
-	cs, _, err := util.TestHTTPConnection(client, containerStats, http.MethodPost, bearerToken, 0, false)
+	log.Infof("Availability of the /stats/summary endpoint is: %v", ns)
+	mask.SetAvailable(NodeStatsSummaryEndpoint, ns)
+
+	cm, _, err := util.TestHTTPConnection(client, cadvisorMetrics, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
-	return ns && cs, nil
+	log.Infof("Availability of the /metrics/cadvisor endpoint is: %v", cm)
+	mask.SetAvailable(NodeCadvisorEndpoint, cm)
+
+	var cs = false
+	if config.RetrieveStatsContainer {
+		cs, _, err = util.TestHTTPConnection(client, containerStats, http.MethodPost, config.BearerToken, 0, false)
+		if err != nil {
+			return false, err
+		}
+		log.Infof("Availability of the /stats/container endpoint is: %v", cs)
+		mask.SetAvailable(NodeContainerEndpoint, cs)
+	}
+
+	return ns && (cm || cs), nil
 }
 
 // isFargateNode detects whether a node is a Fargate node, which affects
