@@ -153,12 +153,12 @@ func TestEnsureNodeSource(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 		if !ka.NodeMetrics.ProxyAllowed(kubernetes.NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
+			t.Errorf("Expected /stats/summary to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeStatsSummaryEndpoint), err)
 			return
 		}
 		if !ka.NodeMetrics.ProxyAllowed(kubernetes.NodeCadvisorEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
+			t.Errorf("Expected /metrics/cadvisor to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeCadvisorEndpoint), err)
 			return
 		}
@@ -216,22 +216,22 @@ func TestEnsureNodeSource(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 		if !ka.NodeMetrics.ProxyAllowed(kubernetes.NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
+			t.Errorf("Expected /stats/summary to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeStatsSummaryEndpoint), err)
 			return
 		}
 		if !ka.NodeMetrics.DirectAllowed(kubernetes.NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
+			t.Errorf("Expected /stats/summary to allow direct method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeStatsSummaryEndpoint), err)
 			return
 		}
 		if !ka.NodeMetrics.ProxyAllowed(kubernetes.NodeCadvisorEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
+			t.Errorf("Expected /metrics/cadvisor to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeCadvisorEndpoint), err)
 			return
 		}
 		if !ka.NodeMetrics.DirectAllowed(kubernetes.NodeContainerEndpoint) {
-			t.Errorf("Expected direct method but got %v: %v",
+			t.Errorf("Expected /stats/container to allow direct method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeContainerEndpoint), err)
 			return
 		}
@@ -265,7 +265,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 		if !ka.NodeMetrics.ProxyAllowed(kubernetes.NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
+			t.Errorf("Expected /stats/summary to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeStatsSummaryEndpoint), err)
 			return
 		}
@@ -275,7 +275,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			return
 		}
 		if !ka.NodeMetrics.ProxyAllowed(kubernetes.NodeCadvisorEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
+			t.Errorf("Expected metrics/cadvisor to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeCadvisorEndpoint), err)
 			return
 		}
@@ -310,7 +310,7 @@ func TestEnsureNodeSource(t *testing.T) {
 		ka, err := kubernetes.EnsureNodeSource(ka)
 
 		if !ka.NodeMetrics.ProxyAllowed(kubernetes.NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
+			t.Errorf("Expected stats/summary to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(kubernetes.NodeStatsSummaryEndpoint), err)
 			return
 		}

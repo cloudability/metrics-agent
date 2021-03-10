@@ -123,18 +123,18 @@ type ConnectionMethod struct {
 	FriendlyName string
 }
 
-// Endpoint an enumeration representing the various metrics endpoints
-type Endpoint uint8
+// Endpoint represents the various metrics endpoints we hit
+type Endpoint string
 
 const (
 	// NodeStatsSummaryEndpoint the /stats/summary endpoint
-	NodeStatsSummaryEndpoint Endpoint = iota
+	NodeStatsSummaryEndpoint Endpoint = "/stats/summary"
 
 	// NodeContainerEndpoint the /stats/container endpoint
-	NodeContainerEndpoint
+	NodeContainerEndpoint Endpoint = "/stats/container"
 
-	// NodeCadvisorEndpoint the /metrics/cadvisor/prometheus endpoint
-	NodeCadvisorEndpoint
+	// NodeCadvisorEndpoint the /metrics/cadvisor endpoint
+	NodeCadvisorEndpoint Endpoint = "/metrics/cadvisor"
 )
 
 // EndpointMask a map representing the currently active endpoints.
@@ -325,47 +325,57 @@ func retrieveNodeData(nd nodeFetchData, config KubeAgentConfig, ns NodeSource, n
 		prefix:   nd.prefix,
 		nodeName: nd.nodeName,
 	}
-	var (
-		statsSummaryFetched    bool
-		metricsCadvisorFetched bool
-		statsContainerFetched  bool
-	)
+	toFetch := map[Endpoint]bool{
+		NodeStatsSummaryEndpoint: true,
+		NodeCadvisorEndpoint:     true,
+		NodeContainerEndpoint:    true,
+	}
 	// if we receive an error after the max number of retries when attempting to hit an endpoint that
 	// we had previously verified to work, we fail and assume the node is unreachable at this time
 	for _, cm := range connectionMethods {
-		if !statsSummaryFetched && config.NodeMetrics.Available(NodeStatsSummaryEndpoint, cm.ConnType) {
-			log.Debugf("Fetching data from /stats/summary endpoint via %s connection", cm.FriendlyName)
-			_, err := cm.client.GetRawEndPoint(http.MethodGet, source.summary(),
+		err := fetchEndpoint(toFetch, NodeStatsSummaryEndpoint, config, cm, func() (string, error) {
+			return cm.client.GetRawEndPoint(http.MethodGet, source.summary(),
 				nd.workDir, cm.API.statsSummary(), nil, true)
-			if err != nil {
-				log.Debugf("Unable to fetch /stats/summary metrics: %v", err)
-				return err
-			}
-			statsSummaryFetched = true
+		})
+		if err != nil {
+			return err
 		}
-		if !metricsCadvisorFetched && config.NodeMetrics.Available(NodeCadvisorEndpoint, cm.ConnType) {
-			// fetch metrics/CAdvisor data
-			log.Debugf("Fetching data from /metrics/cadvisor endpoint via %s connection", cm.FriendlyName)
-			_, err := cm.client.GetRawEndPoint(http.MethodGet, source.cadvisorMetrics(),
+		err = fetchEndpoint(toFetch, NodeCadvisorEndpoint, config, cm, func() (string, error) {
+			return cm.client.GetRawEndPoint(http.MethodGet, source.cadvisorMetrics(),
 				nd.workDir, cm.API.mCAdvisor(), nil, true)
-			if err != nil {
-				log.Debugf("Unable to fetch /metrics/cadvisor metrics: %v", err)
-				return err
-			}
-			metricsCadvisorFetched = true
+		})
+		if err != nil {
+			return err
 		}
-		if !statsContainerFetched && config.NodeMetrics.Available(NodeContainerEndpoint, cm.ConnType) {
-			// fetch container details
-			log.Debugf("Fetching data from /stats/container endpoint via %s connection", cm.FriendlyName)
-			_, err := cm.client.GetRawEndPoint(
+		err = fetchEndpoint(toFetch, NodeContainerEndpoint, config, cm, func() (string, error) {
+			return cm.client.GetRawEndPoint(
 				http.MethodPost, source.container(), nd.workDir, cm.API.statsContainer(),
 				nd.containersRequest, true)
-			if err != nil {
-				log.Debugf("Unable to fetch /stats/container metrics: %v", err)
-				return err
-			}
-			statsContainerFetched = true
+		})
+		if err != nil {
+			return err
 		}
+	}
+	return nil
+}
+
+// fetchEndpoint is a convenience function to provide consistent logging, uniqueness,
+// and error handling around fetching data from metrics endpoints
+func fetchEndpoint(fetch map[Endpoint]bool, endpoint Endpoint, config KubeAgentConfig,
+	cm ConnectionMethod, executeEndpointRequest func() (filename string, err error)) error {
+	// Don't fetch if we already got it once
+	if !fetch[endpoint] {
+		return nil
+	}
+	if config.NodeMetrics.Available(endpoint, cm.ConnType) {
+		// fetch metrics from the endpoint
+		log.Debugf("Fetching data from %s endpoint via %s connection", endpoint, cm.FriendlyName)
+		_, err := executeEndpointRequest()
+		if err != nil {
+			log.Debugf("Unable to fetch %s metrics: %v", endpoint, err)
+			return err
+		}
+		delete(fetch, endpoint)
 	}
 	return nil
 }
