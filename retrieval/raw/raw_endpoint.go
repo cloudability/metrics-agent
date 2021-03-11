@@ -66,7 +66,7 @@ func (c *Client) GetRawEndPoint(method, sourceName string,
 			return filename, nil
 		}
 		if verbose {
-			log.Warnf("%v URL: %s using %s -- retrying: %v", err, URL, method, i+1)
+			log.Warnf("%v URL: %s -- retrying: %v", err, URL, i+1)
 		}
 	}
 	return filename, err
