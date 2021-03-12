@@ -68,6 +68,10 @@ func TestConnection(t *testing.T) {
 			t.Errorf("connection should not be unreachable, got %s", exampleConnection)
 		}
 
+		if !exampleConnection.hasMethod(Direct | Proxy) {
+			t.Errorf("expected to be able to check multiple flags at once")
+		}
+
 		exampleConnection.ClearMethod(Direct)
 
 		// should have lost direct but not proxy
