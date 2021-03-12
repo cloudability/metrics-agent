@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
@@ -85,96 +84,6 @@ func (cns ClientsetNodeSource) NodeAddress(node *v1.Node) (string, int32, error)
 		}
 	}
 	return "", 0, fmt.Errorf("Could not find internal IP address for node %s ", node.Name)
-}
-
-// Connection is a bitmask that describes the manner(s) in which
-// the agent can connect to an endpoint
-type Connection uint8
-
-const (
-	Unreachable Connection = 0
-	Direct      Connection = 1 << iota
-	Proxy
-)
-
-func (c Connection) HasMethod(method Connection) bool { return c&method != 0 }
-func (c *Connection) AddMethod(method Connection)     { *c |= method }
-func (c *Connection) ClearMethod(method Connection)   { *c &= ^method }
-func (c *Connection) ToggleMethod(method Connection)  { *c ^= method }
-
-func (c Connection) String() string {
-	if c == Unreachable {
-		return unreachable
-	}
-	var options []string
-	if c.HasMethod(Proxy) {
-		options = append(options, proxy)
-	}
-	if c.HasMethod(Direct) {
-		options = append(options, direct)
-	}
-	return strings.Join(options, ",")
-}
-
-type ConnectionMethod struct {
-	ConnType     Connection
-	API          nodeAPI
-	client       raw.Client
-	FriendlyName string
-}
-
-// Endpoint represents the various metrics endpoints we hit
-type Endpoint string
-
-const (
-	// NodeStatsSummaryEndpoint the /stats/summary endpoint
-	NodeStatsSummaryEndpoint Endpoint = "/stats/summary"
-
-	// NodeContainerEndpoint the /stats/container endpoint
-	NodeContainerEndpoint Endpoint = "/stats/container"
-
-	// NodeCadvisorEndpoint the /metrics/cadvisor endpoint
-	NodeCadvisorEndpoint Endpoint = "/metrics/cadvisor"
-)
-
-// EndpointMask a map representing the currently active endpoints.
-// The keys of the map are the currently active endpoints.
-type EndpointMask map[Endpoint]Connection
-
-// SetAvailable sets an endpoint availability state according to the supplied boolean
-func (m EndpointMask) SetAvailable(endpoint Endpoint, method Connection, available bool) {
-	e := m[endpoint]
-	if available {
-		e.AddMethod(method)
-	} else {
-		e.ClearMethod(method)
-	}
-	m[endpoint] = e
-}
-
-// Available gets the availability of an endpoint for the specified connection method
-func (m EndpointMask) Available(endpoint Endpoint, method Connection) bool {
-	e, ok := m[endpoint]
-	if !ok {
-		return false
-	}
-	return e.HasMethod(method)
-}
-
-func (m EndpointMask) Unreachable(endpoint Endpoint) bool {
-	return m[endpoint] == Unreachable
-}
-
-func (m EndpointMask) DirectAllowed(endpoint Endpoint) bool {
-	return m[endpoint].HasMethod(Direct)
-}
-
-func (m EndpointMask) ProxyAllowed(endpoint Endpoint) bool {
-	return m[endpoint].HasMethod(Proxy)
-}
-
-func (m EndpointMask) Options(endpoint Endpoint) string {
-	return m[endpoint].String()
 }
 
 func downloadNodeData(prefix string,
@@ -466,21 +375,21 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 		return false, err
 	}
 	log.Infof("/stats/summary endpoint available via %s connection? %v", method, ns)
-	config.NodeMetrics.SetAvailable(NodeStatsSummaryEndpoint, method, ns)
+	config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, method, ns)
 
 	cm, _, err := util.TestHTTPConnection(client, cadvisorMetrics, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
 	log.Infof("/metrics/cadvisor endpoint available via %s connection? %v", method, cm)
-	config.NodeMetrics.SetAvailable(NodeCadvisorEndpoint, method, cm)
+	config.NodeMetrics.SetAvailability(NodeCadvisorEndpoint, method, cm)
 
 	cs, _, err := util.TestHTTPConnection(client, containerStats, http.MethodPost, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
 	log.Infof("/stats/container endpoint available via %s connection? %v", method, cs)
-	config.NodeMetrics.SetAvailable(NodeContainerEndpoint, method, cs)
+	config.NodeMetrics.SetAvailability(NodeContainerEndpoint, method, cs)
 
 	con := metricsRequirementsSatisfied(config, cm, cs, method)
 	return ns && con, nil
@@ -490,7 +399,7 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 func metricsRequirementsSatisfied(config KubeAgentConfig, cm, cs bool, method Connection) bool {
 	// Don't fail if the connection method is proxy and one of the endpoints
 	// is still missing, as this is expected in 1.18+
-	if config.GetAllConStats && method.HasMethod(Direct) {
+	if config.GetAllConStats && method.hasMethod(Direct) {
 		return cm && cs
 	}
 	return cm || cs

@@ -282,12 +282,12 @@ func TestCollectMetrics(t *testing.T) {
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
-	ka.NodeMetrics.SetAvailable(NodeStatsSummaryEndpoint, Proxy, true)
-	ka.NodeMetrics.SetAvailable(NodeContainerEndpoint, Proxy, true)
-	ka.NodeMetrics.SetAvailable(NodeCadvisorEndpoint, Proxy, true)
+	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
+	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Proxy, true)
+	ka.NodeMetrics.SetAvailability(NodeCadvisorEndpoint, Proxy, true)
 	// set Direct as option as well
-	ka.NodeMetrics.SetAvailable(NodeStatsSummaryEndpoint, Direct, true)
-	ka.NodeMetrics.SetAvailable(NodeContainerEndpoint, Direct, true)
+	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
+	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Direct, true)
 
 	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)
 	fns := NewClientsetNodeSource(cs)

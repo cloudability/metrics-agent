@@ -130,7 +130,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	log.Infof("Cloudability Metrics Agent successfully started.")
+	log.Info("Cloudability Metrics Agent successfully started.")
 
 	for {
 		select {
@@ -150,7 +150,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				}
 			}
 			//Send metric sample
-			log.Infof("Uploading Metrics")
+			log.Info("Uploading Metrics")
 			go kubeAgent.sendMetrics(metricSample)
 
 		case <-pollChan.C:
@@ -175,7 +175,7 @@ func validateMetricCollectionConfig(config KubeAgentConfig) {
 		if config.GetAllConStats {
 			log.Info("All available node container metrics will be collected.")
 		} else {
-			log.Infof("Minimum viable set of node container metrics will be collected.")
+			log.Info("Minimum viable set of node container metrics will be collected.")
 		}
 	}
 	if config.RetrieveNodeSummaries && config.CollectHeapsterExport {
