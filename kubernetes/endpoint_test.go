@@ -127,7 +127,7 @@ func TestEndpointMask(t *testing.T) {
 		// set unavailable
 		mask.SetAvailability(NodeStatsSummaryEndpoint, Direct, false)
 		if mask.DirectAllowed(NodeStatsSummaryEndpoint) {
-			t.Errorf("expected direct connection allowed, but got %s", mask.Options(NodeStatsSummaryEndpoint))
+			t.Errorf("expected direct connection unavailable, but got %s", mask.Options(NodeStatsSummaryEndpoint))
 		}
 		// an endpoint with no methods available should be unreachable
 		if !mask.Unreachable(NodeStatsSummaryEndpoint) {

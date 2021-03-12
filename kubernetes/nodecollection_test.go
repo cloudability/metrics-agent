@@ -24,16 +24,19 @@ func TestFetchEndpoint(t *testing.T) {
 			NodeCadvisorEndpoint:     true,
 		}
 		mask := EndpointMask{}
+		// Direct method is enabled
 		mask.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 		config := KubeAgentConfig{
 			NodeMetrics: mask,
 		}
+		// Use Direct method for connection
 		cm := ConnectionMethod{
 			ConnType: Direct,
 		}
-		handlerFunc := func() (filename string, err error) { return "file-name", nil }
+		// returns no error, so endpoint call should "succeed"
+		endpointFetcherMock := func() (filename string, err error) { return "file-name", nil }
 
-		err := fetchEndpoint(endpointsToFetch, NodeStatsSummaryEndpoint, config, cm, handlerFunc)
+		err := fetchEndpoint(endpointsToFetch, NodeStatsSummaryEndpoint, config, cm, endpointFetcherMock)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -59,6 +62,7 @@ func TestFetchEndpoint(t *testing.T) {
 		cm := ConnectionMethod{
 			ConnType: Direct,
 		}
+		// fetcher returns an error, so we should not mark endpoint as fetched
 		endpointFetcherFunc := func() (filename string, err error) {
 			return "", fmt.Errorf("whoa there buddy you can't fetch that there endpoint pardner")
 		}
@@ -87,14 +91,14 @@ func TestFetchEndpoint(t *testing.T) {
 		cm := ConnectionMethod{
 			ConnType: Direct,
 		}
-		// this returns an error but we shouldn't call it
-		endpointFetcherFunc := func() (filename string, err error) {
+		// this returns an error but we shouldn't call it because this endpoint doesn't have Direct conn as an option
+		endpointFetcherMock := func() (filename string, err error) {
 			return "", fmt.Errorf("whoa there buddy you can't fetch that there endpoint pardner")
 		}
 
-		err := fetchEndpoint(endpointsToFetch, NodeCadvisorEndpoint, config, cm, endpointFetcherFunc)
+		err := fetchEndpoint(endpointsToFetch, NodeCadvisorEndpoint, config, cm, endpointFetcherMock)
 		if err != nil {
-			t.Errorf("should not have error because endpointFetcherFunc shouldn't have been called: %v", err)
+			t.Errorf("should not have error because endpointFetcherMock shouldn't have been called: %v", err)
 		}
 		if !endpointsToFetch[NodeCadvisorEndpoint] {
 			t.Errorf("%s should not have been removed from map upon failed fetch, got %+v",
