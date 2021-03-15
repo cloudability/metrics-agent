@@ -103,10 +103,10 @@ func init() {
 		"When true, includes node summary metrics in metric collection.",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
-		&config.RetrieveStatsContainer,
-		"retrieve_stats_container",
+		&config.GetAllConStats,
+		"get_all_container_stats",
 		true,
-		"When true, includes stats container metrics in metric collection. Default: True",
+		"When true, includes all available container metrics in metric collection. Default: True",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.ForceKubeProxy,
@@ -146,7 +146,7 @@ func init() {
 	_ = viper.BindPFlag("outbound_proxy_insecure", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_insecure"))
 	_ = viper.BindPFlag("insecure", kubernetesCmd.PersistentFlags().Lookup("insecure"))
 	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
-	_ = viper.BindPFlag("retrieve_stats_container", kubernetesCmd.PersistentFlags().Lookup("retrieve_stats_container"))
+	_ = viper.BindPFlag("get_all_container_stats", kubernetesCmd.PersistentFlags().Lookup("get_all_container_stats"))
 	_ = viper.BindPFlag("force_kube_proxy", kubernetesCmd.PersistentFlags().Lookup("force_kube_proxy"))
 	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
 	_ = viper.BindPFlag("collect_heapster_export", kubernetesCmd.PersistentFlags().Lookup("collect_heapster_export"))
@@ -158,23 +158,23 @@ func init() {
 	RootCmd.AddCommand(kubernetesCmd)
 
 	config = kubernetes.KubeAgentConfig{
-		APIKey:                 viper.GetString("api_key"),
-		ClusterName:            viper.GetString("cluster_name"),
-		CollectHeapsterExport:  viper.GetBool("collect_heapster_export"),
-		HeapsterOverrideURL:    viper.GetString("heapster_override_url"),
-		PollInterval:           viper.GetInt("poll_interval"),
-		CollectionRetryLimit:   viper.GetUint("collection_retry_limit"),
-		OutboundProxy:          viper.GetString("outbound_proxy"),
-		OutboundProxyAuth:      viper.GetString("outbound_proxy_auth"),
-		OutboundProxyInsecure:  viper.GetBool("outbound_proxy_insecure"),
-		Insecure:               viper.GetBool("insecure"),
-		Cert:                   viper.GetString("certificate_file"),
-		Key:                    viper.GetString("key_file"),
-		RetrieveNodeSummaries:  viper.GetBool("retrieve_node_summaries"),
-		RetrieveStatsContainer: viper.GetBool("retrieve_stats_container"),
-		ForceKubeProxy:         viper.GetBool("force_kube_proxy"),
-		Namespace:              viper.GetString("namespace"),
-		ScratchDir:             viper.GetString("scratch_dir"),
+		APIKey:                viper.GetString("api_key"),
+		ClusterName:           viper.GetString("cluster_name"),
+		CollectHeapsterExport: viper.GetBool("collect_heapster_export"),
+		HeapsterOverrideURL:   viper.GetString("heapster_override_url"),
+		PollInterval:          viper.GetInt("poll_interval"),
+		CollectionRetryLimit:  viper.GetUint("collection_retry_limit"),
+		OutboundProxy:         viper.GetString("outbound_proxy"),
+		OutboundProxyAuth:     viper.GetString("outbound_proxy_auth"),
+		OutboundProxyInsecure: viper.GetBool("outbound_proxy_insecure"),
+		Insecure:              viper.GetBool("insecure"),
+		Cert:                  viper.GetString("certificate_file"),
+		Key:                   viper.GetString("key_file"),
+		RetrieveNodeSummaries: viper.GetBool("retrieve_node_summaries"),
+		GetAllConStats:        viper.GetBool("get_all_container_stats"),
+		ForceKubeProxy:        viper.GetBool("force_kube_proxy"),
+		Namespace:             viper.GetString("namespace"),
+		ScratchDir:            viper.GetString("scratch_dir"),
 	}
 
 }

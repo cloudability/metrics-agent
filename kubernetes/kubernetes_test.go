@@ -112,14 +112,16 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			RetrieveNodeSummaries: true,
 			CollectHeapsterExport: false,
 			Clientset:             cs,
+			NodeMetrics:           EndpointMask{},
 		}
 		config, err := ensureMetricServicesAvailable(config)
 		if err == nil {
 			t.Errorf("expected an error for ensureMetricServicesAvailable")
 			return
 		}
-		if config.nodeRetrievalMethod != Unreachable {
-			t.Errorf("expected nodeRetrievalMethod to be asdf, instead was %s", config.nodeRetrievalMethod)
+		if !config.NodeMetrics.Unreachable(NodeStatsSummaryEndpoint) {
+			t.Errorf("expected connection to be unreachable, instead was %s",
+				config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
 		}
 	})
 
@@ -254,7 +256,7 @@ func TestCollectMetrics(t *testing.T) {
 	}
 	dir, err := ioutil.TempDir("", "TestCollectMetrics")
 	if err != nil {
-		t.Errorf("error getting reating temp dir: %v", err)
+		t.Errorf("error creating temp dir: %v", err)
 	}
 	tDir, err := os.Open(dir)
 	if err != nil {
@@ -276,11 +278,16 @@ func TestCollectMetrics(t *testing.T) {
 		BearerToken:           "",
 		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
+		GetAllConStats:        true,
 	}
-
-	ka = updateWithEndpointMasks(ka)
-	ka.ProxyEndpointMask.SetAvailable(NodeStatsSummaryEndpoint, true)
-	ka.ProxyEndpointMask.SetAvailable(NodeContainerEndpoint, true)
+	ka.NodeMetrics = EndpointMask{}
+	// set Proxy method available
+	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
+	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Proxy, true)
+	ka.NodeMetrics.SetAvailability(NodeCadvisorEndpoint, Proxy, true)
+	// set Direct as option as well
+	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
+	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Direct, true)
 
 	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, 0)
 	fns := NewClientsetNodeSource(cs)
@@ -299,6 +306,9 @@ func TestCollectMetrics(t *testing.T) {
 		nodeBaselineFiles := []string{}
 		nodeSummaryFiles := []string{}
 		expectedBaselineFiles := []string{
+			"baseline-cadvisor_metrics-node0.json",
+			"baseline-cadvisor_metrics-node1.json",
+			"baseline-cadvisor_metrics-node2.json",
 			"baseline-container-node0.json",
 			"baseline-container-node1.json",
 			"baseline-container-node2.json",
@@ -307,6 +317,9 @@ func TestCollectMetrics(t *testing.T) {
 			"baseline-summary-node2.json",
 		}
 		expectedSummaryFiles := []string{
+			"stats-cadvisor_metrics-node0.json",
+			"stats-cadvisor_metrics-node1.json",
+			"stats-cadvisor_metrics-node2.json",
 			"stats-container-node0.json",
 			"stats-container-node1.json",
 			"stats-container-node2.json",
@@ -319,21 +332,21 @@ func TestCollectMetrics(t *testing.T) {
 
 			if strings.HasPrefix(info.Name(), "stats-") || strings.HasPrefix(info.Name(), "baseline-") {
 
-				if strings.Contains(info.Name(), "baseline-summary") || strings.Contains(info.Name(), "baseline-container-") {
+				if isRequiredFile(info.Name(), "baseline-") {
 					nodeBaselineFiles = append(nodeBaselineFiles, info.Name())
 				}
-				if strings.Contains(info.Name(), "stats-summary") || strings.Contains(info.Name(), "stats-container-") {
+				if isRequiredFile(info.Name(), "stats-") {
 					nodeSummaryFiles = append(nodeSummaryFiles, info.Name())
 				}
 			}
 			return nil
 		})
 		if len(nodeBaselineFiles) != len(expectedBaselineFiles) {
-			t.Errorf("Expected %d baseline metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
+			t.Errorf("Expected %d baseline metrics, instead got %d", len(expectedBaselineFiles), len(nodeBaselineFiles))
 			return
 		}
 		if len(nodeSummaryFiles) != len(expectedSummaryFiles) {
-			t.Errorf("Expected %d summary metrics, instead got %d", len(expectedSummaryFiles), len(nodeBaselineFiles))
+			t.Errorf("Expected %d summary metrics, instead got %d", len(expectedSummaryFiles), len(nodeSummaryFiles))
 			return
 		}
 		for i, n := range expectedBaselineFiles {
@@ -343,11 +356,27 @@ func TestCollectMetrics(t *testing.T) {
 		}
 		for i, n := range expectedSummaryFiles {
 			if n != nodeSummaryFiles[i] {
-				t.Errorf("Expected file name %s instead got %s", n, nodeBaselineFiles[i])
+				t.Errorf("Expected file name %s instead got %s", n, nodeSummaryFiles[i])
 			}
 		}
 	})
 
+}
+
+// isRequiredFile checks if the filename matches one of the filenames
+// we require to be in a metrics payload
+// ex: baseline-summary
+func isRequiredFile(filename string, fileType string) bool {
+	if strings.Contains(filename, fileType+"summary") {
+		return true
+	}
+	if strings.Contains(filename, fileType+"container-") {
+		return true
+	}
+	if strings.Contains(filename, fileType+"cadvisor_metrics-") {
+		return true
+	}
+	return false
 }
 
 func TestExtractNodeNameAndExtension(t *testing.T) {
