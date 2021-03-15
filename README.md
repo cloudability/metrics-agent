@@ -16,19 +16,12 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 #### 1.18 
 
-Support for Kubernetes 1.18+ is being tracked in [Issue #90](https://github.com/cloudability/metrics-agent/issues/90).
+Metrics agent versions >= `1.5.0` support Kubernetes 1.18. It is fully backwards compatible with all previous supported versions as well.
+Metrics agent versions < `1.5.0` require some manual tweaks on every node in the cluster in order to run on Kubernetes 1.18. 
 
-##### Beta Agent
+##### Background
 
-Support for Kubernetes 1.18 is now in beta for all supported vendors (AKS, GKE, EKS, and self-managed). Please use the [latest 1.4.x-beta tag on Docker Hub](https://hub.docker.com/r/cloudability/metrics-agent/tags?page=1&ordering=last_updated&name=beta) to participate in the Open Beta.
-
-##### Manual Kubelet Modification
-
-At time of writing, metrics agent versions <= `1.3.x` require some manual tweaks on every node in the cluster in order to run on Kubernetes 1.18.
-
-###### Background
-
-Kubernetes 1.18 [has disabled by default the cadvisor endpoints](https://github.com/kubernetes/kubernetes/issues/68522) that the metrics agent uses to collect rich utilization data from the cluster. In order to run metrics agent versions <= `1.3.x` on 1.18, you need to [manually enable the cadvisor endpoints on the kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) via the `--enable-cadvisor-json-endpoints` flag for every node in the cluster.
+Kubernetes 1.18 [disabled by default the cadvisor endpoints](https://github.com/kubernetes/kubernetes/issues/68522) that the original metrics agent used to collect rich utilization data from the cluster. In order to run metrics agent versions < `1.5.0` on 1.18, you need to [manually enable the cadvisor endpoints on the kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) via the `--enable-cadvisor-json-endpoints` flag for every node in the cluster.
 
 #### 1.17 and below
 
