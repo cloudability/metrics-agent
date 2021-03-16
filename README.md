@@ -16,19 +16,12 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 #### 1.18 
 
-Support for Kubernetes 1.18+ is being tracked in [Issue #90](https://github.com/cloudability/metrics-agent/issues/90).
+Metrics agent versions >= `1.5.0` support Kubernetes 1.18. It is fully backwards compatible with all previous supported versions as well.
+Metrics agent versions < `1.5.0` require some manual tweaks on every node in the cluster in order to run on Kubernetes 1.18. 
 
-##### Beta Agent
+##### Background
 
-Support for Kubernetes 1.18 is now in beta for all supported vendors (AKS, GKE, EKS, and self-managed). Please use the [latest 1.4.x-beta tag on Docker Hub](https://hub.docker.com/r/cloudability/metrics-agent/tags?page=1&ordering=last_updated&name=beta) to participate in the Open Beta.
-
-##### Manual Kubelet Modification
-
-At time of writing, metrics agent versions <= `1.3.x` require some manual tweaks on every node in the cluster in order to run on Kubernetes 1.18.
-
-###### Background
-
-Kubernetes 1.18 [has disabled by default the cadvisor endpoints](https://github.com/kubernetes/kubernetes/issues/68522) that the metrics agent uses to collect rich utilization data from the cluster. In order to run metrics agent versions <= `1.3.x` on 1.18, you need to [manually enable the cadvisor endpoints on the kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) via the `--enable-cadvisor-json-endpoints` flag for every node in the cluster.
+Kubernetes 1.18 [disabled by default the cadvisor endpoints](https://github.com/kubernetes/kubernetes/issues/68522) that the original metrics agent used to collect rich utilization data from the cluster. In order to run metrics agent versions < `1.5.0` on 1.18, you need to [manually enable the cadvisor endpoints on the kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) via the `--enable-cadvisor-json-endpoints` flag for every node in the cluster.
 
 #### 1.17 and below
 
@@ -47,6 +40,7 @@ Kubernetes versions 1.17 and below are supported by the metrics agent.
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE    | Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False |
 | CLOUDABILITY_INSECURE                   | Optional: When true, does not verify certificates when making TLS connections. Default: False|
 | CLOUDABILITY_RETRIEVE_NODE_SUMMARIES    | Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True|
+| CLOUDABILITY_GET_ALL_CONTAINER_STATS    | Optional: When true, attempts to collect from both the stats/container and metrics/cadvisor endpoints, which may result in a larger metrics payload. When False, only collects first successful endpoint. Default: True|
 | CLOUDABILITY_FORCE_KUBE_PROXY           | Optional: When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False|
 | CLOUDABILITY_COLLECT_HEAPSTER_EXPORT    | Optional: When true, attempts to collect metrics from Heapster if available. When False, does not collect Heapster metrics. Default: True|
 | CLOUDABILITY_COLLECTION_RETRY_LIMIT     | Optional: Number of times agent should attempt to gather metrics from each source upon a failure Default: 1|
@@ -76,6 +70,7 @@ Flags:
       --outbound_proxy_auth string               Outbound proxy basic authentication credentials. Must defined in the form username:password - Optional
       --outbound_proxy_insecure                  When true, does not verify TLS certificates when using the outbound proxy. Default: False
       --retrieve_node_summaries                  When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True
+      --get_all_container_stats                  When true, attempts to collect from both the stats/container and metrics/cadvisor endpoints, which may result in a larger metrics payload. Default: True
       --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
