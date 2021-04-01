@@ -44,6 +44,7 @@ rules:
     - "pods/proxy"
     - "nodes/proxy"
     - "nodes/stats"
+    - "nodes/metrics"
   verbs:
     - "get"
     - "list"

@@ -1,13 +1,22 @@
 package test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
+
+	"github.com/prometheus/common/expfmt"
+
 	"strings"
 	"testing"
+
+	"github.com/prometheus/prom2json"
 
 	cadvisor "github.com/google/cadvisor/info/v1"
 	v1 "k8s.io/api/core/v1"
@@ -18,16 +27,24 @@ import (
 func TestMetricSample(t *testing.T) {
 
 	wd := os.Getenv("WORKING_DIR")
+	kv := os.Getenv("KUBERNETES_VERSION")
+	versionParts := strings.Split(kv, ".")
+	minorVersion, err := strconv.Atoi(versionParts[1])
+	if err != nil {
+		t.Errorf("Unable to determine kubernetes minor version: %s", err)
+	}
 
 	parsedK8sLists := &ParsedK8sLists{
-		NodeSummaries:          make(map[string]statsapi.Summary),
-		BaselineNodeSummaries:  make(map[string]statsapi.Summary),
-		NodeContainers:         make(map[string]map[string]cadvisor.ContainerInfo),
-		BaselineNodeContainers: make(map[string]map[string]cadvisor.ContainerInfo),
+		NodeSummaries:              make(map[string]statsapi.Summary),
+		BaselineNodeSummaries:      make(map[string]statsapi.Summary),
+		NodeContainers:             make(map[string]map[string]cadvisor.ContainerInfo),
+		BaselineNodeContainers:     make(map[string]map[string]cadvisor.ContainerInfo),
+		CadvisorPrometheus:         make(map[string]map[string]cadvisor.ContainerInfo),
+		BaselineCadvisorPrometheus: make(map[string]map[string]cadvisor.ContainerInfo),
 	}
 	t.Parallel()
 
-	t.Run("ensure that a metrics sample has expected files", func(t *testing.T) {
+	t.Run("ensure that a metrics sample has expected files for cluster version", func(t *testing.T) {
 		seen := make(map[string]bool, len(knownFileTypes))
 
 		err := filepath.Walk(wd, func(path string, info os.FileInfo, e error) error {
@@ -59,7 +76,7 @@ func TestMetricSample(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed: %v", err)
 		}
-		err = checkForRequiredFiles(seen)
+		err = checkForRequiredFiles(seen, minorVersion)
 		if err != nil {
 			t.Fatalf("Failed: %v", err)
 		}
@@ -97,17 +114,31 @@ func TestMetricSample(t *testing.T) {
 	})
 
 	t.Run("ensure that a metrics sample has expected containers stat data", func(t *testing.T) {
+		if minorVersion < 18 {
+			for _, nc := range parsedK8sLists.NodeContainers {
 
-		for _, nc := range parsedK8sLists.NodeContainers {
+				for _, s := range nc {
+					if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(
+						s.Spec.Labels["io.kubernetes.pod.name"], "stress") {
+						return
+					}
+				}
+			}
+			t.Error("pod container stat data not found in metric sample")
+		}
+		return
+	})
 
-			for _, s := range nc {
-				if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(
-					s.Spec.Labels["io.kubernetes.pod.name"], "stress") {
+	t.Run("ensure that a metrics sample has expected cadvisor prometheus data", func(t *testing.T) {
+		for _, containerInfos := range parsedK8sLists.CadvisorPrometheus {
+			for _, containerInfo := range containerInfos {
+				if strings.HasPrefix(containerInfo.Name, "/kubepods/besteffort/pod") && containerInfo.Namespace == "stress" && strings.HasPrefix(
+					containerInfo.Spec.Labels["io.kubernetes.pod.name"], "stress") {
 					return
 				}
 			}
 		}
-		t.Error("pod container stat data not found in metric sample")
+		t.Error("pod cadvisor prometheus data not found in metric sample")
 	})
 
 }
@@ -129,32 +160,38 @@ var knownFileTypes = map[string]UnmarshalForK8sListFn{
 	"baseline-summary-":           AsNodeSummary(true),
 	"stats-container-":            AsContainerNodeSummary(false),
 	"baseline-container-":         AsContainerNodeSummary(true),
+	"stats-cadvisor_metrics-":     AsCadvisorMetrics(false),
+	"baseline-cadvisor_metrics-":  AsCadvisorMetrics(true),
 }
 
 var agentFileTypes = map[string]bool{
-	"stats-summary-":      true,
-	"baseline-summary-":   true,
-	"stats-container-":    true,
-	"baseline-container-": true,
+	"stats-summary-":             true,
+	"baseline-summary-":          true,
+	"stats-container-":           true,
+	"baseline-container-":        true,
+	"stats-cadvisor_metrics-":    true,
+	"baseline-cadvisor_metrics-": true,
 }
 
 type ParsedK8sLists struct {
-	Namespaces             NamespaceList
-	Pods                   PodList
-	Deployments            LabelSelectorMatchedResourceList
-	ReplicaSets            LabelSelectorMatchedResourceList
-	Services               LabelMapMatchedResourceList
-	Jobs                   LabelSelectorMatchedResourceList
-	DaemonSets             LabelSelectorMatchedResourceList
-	Nodes                  NodeList
-	PersistentVolumes      PersistentVolumeList
-	PersistentVolumeClaims PersistentVolumeClaimList
-	ReplicationControllers LabelMapMatchedResourceList
-	NodeSummaries          map[string]statsapi.Summary
-	BaselineNodeSummaries  map[string]statsapi.Summary
-	NodeContainers         map[string]map[string]cadvisor.ContainerInfo
-	BaselineNodeContainers map[string]map[string]cadvisor.ContainerInfo
-	CldyAgent              CldyAgent
+	Namespaces                 NamespaceList
+	Pods                       PodList
+	Deployments                LabelSelectorMatchedResourceList
+	ReplicaSets                LabelSelectorMatchedResourceList
+	Services                   LabelMapMatchedResourceList
+	Jobs                       LabelSelectorMatchedResourceList
+	DaemonSets                 LabelSelectorMatchedResourceList
+	Nodes                      NodeList
+	PersistentVolumes          PersistentVolumeList
+	PersistentVolumeClaims     PersistentVolumeClaimList
+	ReplicationControllers     LabelMapMatchedResourceList
+	NodeSummaries              map[string]statsapi.Summary
+	BaselineNodeSummaries      map[string]statsapi.Summary
+	NodeContainers             map[string]map[string]cadvisor.ContainerInfo
+	BaselineNodeContainers     map[string]map[string]cadvisor.ContainerInfo
+	CadvisorPrometheus         map[string]map[string]cadvisor.ContainerInfo
+	BaselineCadvisorPrometheus map[string]map[string]cadvisor.ContainerInfo
+	CldyAgent                  CldyAgent
 }
 
 // UnmarshalForK8sListFn function alias type for a function that unmarshals data into a ParsedK8sLists ref
@@ -162,8 +199,11 @@ type UnmarshalForK8sListFn func(fname string, fdata []byte, parsedK8sList *Parse
 
 type k8sRefFn func(lists *ParsedK8sLists) interface{}
 
-func checkForRequiredFiles(seen map[string]bool) error {
+func checkForRequiredFiles(seen map[string]bool, k8sMinorVersion int) error {
 	for f := range knownFileTypes {
+		if shouldSkipFileCheck(f, k8sMinorVersion) {
+			continue
+		}
 		if seen[f] {
 			continue
 		}
@@ -171,6 +211,13 @@ func checkForRequiredFiles(seen map[string]bool) error {
 		return fmt.Errorf("missing expected files: %#v, SEEN: %#v", f, seen)
 	}
 	return nil
+}
+
+func shouldSkipFileCheck(fileType string, k8sMinorVersion int) bool {
+	if k8sMinorVersion >= 18 && (fileType == "baseline-container-" || fileType == "stats-container-") {
+		return true
+	}
+	return false
 }
 
 func toAgentFileType(n string) string {
@@ -230,6 +277,279 @@ func AsContainerNodeSummary(baseline bool) UnmarshalForK8sListFn {
 func parseHostFromFileName(fileName string) string {
 	s := strings.SplitAfterN(fileName, "-", 3)
 	return strings.TrimSuffix(s[2], filepath.Ext(s[2]))
+}
+
+func AsCadvisorMetrics(baseline bool) UnmarshalForK8sListFn {
+	return func(fname string, fdata []byte, parsedK8sList *ParsedK8sLists) error {
+		cPromMetrics, err := parseRawCadvisorPrometheusFile(fdata)
+		if err != nil {
+			return err
+		}
+		cPromMetricsCI := parsedK8sList.CadvisorPrometheus
+		if baseline {
+			cPromMetricsCI = parsedK8sList.BaselineCadvisorPrometheus
+		}
+		cPromMetricsCI[parseHostFromFileName(fname)] = cPromToContainerInfo(cPromMetrics)
+		return nil
+	}
+}
+
+func parseRawCadvisorPrometheusFile(fdata []byte) (map[string]*prom2json.Family, error) {
+	cPromMetrics := make(map[string]*prom2json.Family)
+	in := bytes.NewReader(fdata)
+	var parser expfmt.TextParser
+	metricFamilies, err := parser.TextToMetricFamilies(in)
+	if err != nil {
+		return nil, fmt.Errorf("reading cadvisor prometheus text format failed: %v", err)
+	}
+	for name, mf := range metricFamilies {
+		cPromMetrics[name] = prom2json.NewFamily(mf)
+	}
+	return cPromMetrics, nil
+}
+
+func cPromToContainerInfo(metricFamilies map[string]*prom2json.Family) map[string]cadvisor.ContainerInfo {
+	containerInfos := make(map[string]cadvisor.ContainerInfo)
+	missingMetrics := make(map[string]bool)
+	for metricName, metricsFamily := range metricFamilies {
+		for _, containerMetric := range metricsFamily.Metrics {
+			metric, ok := containerMetric.(prom2json.Metric)
+			if !ok {
+				continue
+			}
+			container := metric.Labels["id"]
+			if container == "" {
+				container = "node-level-metric"
+			}
+			var ci cadvisor.ContainerInfo
+			var err error
+			if ci, ok = containerInfos[container]; !ok {
+				ci, err = newContainerInfoFromCProm(metric, container)
+				if err != nil {
+					continue
+				}
+			}
+			ci = containerMetricsFromCProm(ci, metricName, metric, missingMetrics)
+			containerInfos[container] = ci
+		}
+	}
+	return containerInfos
+}
+
+func containerMetricsFromCProm(
+	ci cadvisor.ContainerInfo,
+	metricName string,
+	metric prom2json.Metric,
+	tmp map[string]bool) cadvisor.ContainerInfo {
+	converterFunc, ok := cPromToCIConversions[metricName]
+	if !ok {
+		tmp[metricName] = true
+		return ci
+	}
+	converterFunc(metric, &ci)
+	return ci
+}
+
+var cPromToCIConversions = map[string]metricConverter{
+	"container_fs_io_time_seconds_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
+			fs.IoTime = (strToUint(metric.Value) * 1000) // convert to milliseconds
+			return fs
+		})
+	},
+	// DiskIO
+	"container_fs_writes_bytes_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		updateDiskIOEntry(metric, ci, func(disk cadvisor.PerDiskStats) cadvisor.PerDiskStats {
+			metricVal := strToUint(metric.Value)
+			disk.Stats["Write"] = metricVal
+			disk.Stats["Total"] += metricVal
+			disk.Stats["Sync"] = metricVal
+			return disk
+		})
+	},
+	"container_fs_reads_bytes_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		updateDiskIOEntry(metric, ci, func(disk cadvisor.PerDiskStats) cadvisor.PerDiskStats {
+			bytesRead := strToUint(metric.Value)
+			disk.Stats["Read"] = bytesRead
+			// TODO: is it correct to include read in total?
+			disk.Stats["Total"] += bytesRead
+			return disk
+		})
+	},
+	// Filesystem
+	"container_fs_sector_reads_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
+			// Cumulative count of sector reads completed
+			fs.ReadsCompleted = strToUint(metric.Value)
+			return fs
+		})
+	},
+	"container_fs_limit_bytes": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
+			fs.Limit = strToUint(metric.Value)
+			return fs
+		})
+	},
+	"container_fs_usage_bytes": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
+			fs.Usage = strToUint(metric.Value)
+			var writeBytes uint64
+			// TODO: this is a bit sketchy, but we recalculate Available every time Usage or Writes is updated
+			updateDiskIOEntry(metric, ci, func(disk cadvisor.PerDiskStats) cadvisor.PerDiskStats {
+				writeBytes = disk.Stats["Write"]
+				return disk
+			})
+			if writeBytes >= fs.Usage {
+				fs.Available = writeBytes - fs.Usage
+			}
+			return fs
+		})
+	},
+	"container_start_time_seconds": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		tm := time.Unix(strToInt(metric.Value, 64), 0)
+		ci.Spec.CreationTime = tm.UTC()
+	},
+	"container_network_receive_errors_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		addNetworkEntries(metric, ci, func(net cadvisor.InterfaceStats) cadvisor.InterfaceStats {
+			net.RxErrors = strToUint(metric.Value)
+			return net
+		})
+	},
+	"container_spec_memory_limit_bytes": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		ci.Spec.Memory.Limit = strToUint(metric.Value)
+		ci.Spec.HasMemory = true
+	},
+	"container_memory_rss": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		ci.Stats[0].Memory.RSS = strToUint(metric.Value)
+	},
+	"container_memory_swap": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		ci.Stats[0].Memory.Swap = strToUint(metric.Value)
+
+	},
+	"container_cpu_cfs_periods_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		ci.Stats[0].Cpu.CFS.Periods = strToUint(metric.Value)
+	},
+	"container_cpu_load_average_10s": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		ci.Stats[0].Cpu.LoadAverage = int32(strToInt(metric.Value, 32))
+	},
+	"container_cpu_cfs_throttled_seconds_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		ci.Stats[0].Cpu.CFS.ThrottledTime = (strToUint(metric.Value) * 1e+9) // convert to nanoseconds
+	},
+	"container_cpu_usage_seconds_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		ci.Stats[0].Cpu.Usage.Total = strToUint(metric.Value)
+	},
+	"container_memory_failures_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
+		ci.Stats[0].Memory.Failcnt = strToUint(metric.Value)
+	},
+}
+
+func strToUint(str string) uint64 {
+	bitSize := 64
+	fl, err := strconv.ParseFloat(str, bitSize)
+	if err != nil {
+		return 0
+	}
+	rounded := math.Round(fl)
+	return uint64(rounded)
+}
+
+func strToInt(str string, bitSize int) int64 {
+	fl, err := strconv.ParseFloat(str, bitSize)
+	if err != nil {
+		return 0
+	}
+	rounded := math.Round(fl)
+	return int64(rounded)
+}
+
+func updateFileSystemEntry(m prom2json.Metric, ci *cadvisor.ContainerInfo, fn FileSystemMetricAdder) {
+	var fs cadvisor.FsStats
+	ci.Spec.HasFilesystem = true
+	for i, entry := range ci.Stats[0].Filesystem {
+		if entry.Device == m.Labels["device"] {
+			fs = fn(entry)
+			ci.Stats[0].Filesystem[i] = fs
+			return
+		}
+	}
+	fs.Device = m.Labels["device"]
+	fs = fn(fs)
+	ci.Stats[0].Filesystem = append(ci.Stats[0].Filesystem, fs)
+}
+
+func updateDiskIOEntry(m prom2json.Metric, ci *cadvisor.ContainerInfo, fn DiskIOMetricAdder) {
+	var fs cadvisor.PerDiskStats
+	ci.Spec.HasDiskIo = true
+	for i, entry := range ci.Stats[0].DiskIo.IoServiceBytes {
+		if entry.Device == m.Labels["device"] {
+			if entry.Stats == nil {
+				entry.Stats = make(map[string]uint64)
+			}
+			fs = fn(entry)
+			ci.Stats[0].DiskIo.IoServiceBytes[i] = fs
+			return
+		}
+	}
+	fs.Device = m.Labels["device"]
+	fs.Stats = make(map[string]uint64)
+	fs = fn(fs)
+	ci.Stats[0].DiskIo.IoServiceBytes = append(ci.Stats[0].DiskIo.IoServiceBytes, fs)
+}
+
+func addNetworkEntries(m prom2json.Metric, ci *cadvisor.ContainerInfo, fn NetworkMetricAdder) {
+	var net cadvisor.InterfaceStats
+	for i, entry := range ci.Stats[0].Network.Interfaces {
+		if entry.Name == m.Labels["interface"] {
+			net = fn(entry)
+			ci.Stats[0].Network.Interfaces[i] = net
+			return
+		}
+	}
+	net.Name = m.Labels["interface"]
+	net = fn(net)
+	ci.Stats[0].Network.Interfaces = append(ci.Stats[0].Network.Interfaces, net)
+}
+
+func newContainerInfoFromCProm(metric prom2json.Metric, container string) (cadvisor.ContainerInfo, error) {
+	if metric.TimestampMs == "" {
+		metric.TimestampMs = "0"
+	}
+	i, err := strconv.ParseInt(metric.TimestampMs, 10, 64)
+	if err != nil {
+		return cadvisor.ContainerInfo{}, fmt.Errorf("could not parse timestamp: %v", err)
+	}
+	tm := time.Unix(i, 0)
+	ci := cadvisor.ContainerInfo{
+		ContainerReference: cadvisor.ContainerReference{
+			Id:        metric.Labels["name"],
+			Name:      container,
+			Namespace: metric.Labels["namespace"],
+		},
+		Subcontainers: nil,
+		Spec: cadvisor.ContainerSpec{
+			Labels: map[string]string{
+				"io.kubernetes.container.name": metric.Labels["container"],
+				"io.kubernetes.pod.namespace":  metric.Labels["namespace"],
+				"io.kubernetes.pod.name":       metric.Labels["pod"],
+			},
+			Image: metric.Labels["image"],
+		},
+		Stats: []*cadvisor.ContainerStats{
+			{
+				Timestamp:     tm,
+				Cpu:           cadvisor.CpuStats{},
+				DiskIo:        cadvisor.DiskIoStats{},
+				Memory:        cadvisor.MemoryStats{},
+				Network:       cadvisor.NetworkStats{},
+				Filesystem:    nil,
+				TaskStats:     cadvisor.LoadStats{},
+				Accelerators:  nil,
+				Processes:     cadvisor.ProcessStats{},
+				CustomMetrics: nil,
+			},
+		},
+	}
+	return ci, nil
 }
 
 // ListResponse is a base object for unmarshaling k8s objects from the JSON files containing them. It captures
@@ -323,3 +643,11 @@ type CldyAgent struct {
 	Value     float64           `json:"value,omitempty"`
 	Values    map[string]string `json:"values,omitempty"`
 }
+
+type FileSystemMetricAdder func(cadvisor.FsStats) cadvisor.FsStats
+
+type NetworkMetricAdder func(cadvisor.InterfaceStats) cadvisor.InterfaceStats
+
+type DiskIOMetricAdder func(stats cadvisor.PerDiskStats) cadvisor.PerDiskStats
+
+type metricConverter func(metric prom2json.Metric, info *cadvisor.ContainerInfo)
