@@ -371,7 +371,6 @@ var cPromToCIConversions = map[string]metricConverter{
 		updateDiskIOEntry(metric, ci, func(disk cadvisor.PerDiskStats) cadvisor.PerDiskStats {
 			bytesRead := strToUint(metric.Value)
 			disk.Stats["Read"] = bytesRead
-			// TODO: is it correct to include read in total?
 			disk.Stats["Total"] += bytesRead
 			return disk
 		})
@@ -394,7 +393,6 @@ var cPromToCIConversions = map[string]metricConverter{
 		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
 			fs.Usage = strToUint(metric.Value)
 			var writeBytes uint64
-			// TODO: this is a bit sketchy, but we recalculate Available every time Usage or Writes is updated
 			updateDiskIOEntry(metric, ci, func(disk cadvisor.PerDiskStats) cadvisor.PerDiskStats {
 				writeBytes = disk.Stats["Write"]
 				return disk
