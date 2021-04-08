@@ -21,7 +21,8 @@ require (
 	github.com/moby/ipvs v1.0.1 // indirect
 	github.com/onsi/gomega v1.10.2
 	github.com/opencontainers/runc v1.0.0-rc91.0.20200707015106-819fcc687efb // indirect
-	github.com/prometheus/prom2json v1.3.0 // indirect
+	github.com/prometheus/common v0.10.0
+	github.com/prometheus/prom2json v1.3.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
