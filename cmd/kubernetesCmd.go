@@ -105,8 +105,8 @@ func init() {
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.GetAllConStats,
 		"get_all_container_stats",
-		true,
-		"When true, includes all available container metrics in metric collection. Default: True",
+		false,
+		"When true, includes all available container metrics in metric collection. Default: False",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.ForceKubeProxy,
