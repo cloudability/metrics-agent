@@ -100,8 +100,8 @@ get_sample_data(){
 }
 
 run_tests() {
-  echo "running tests: WORKING_DIR=${WORKINGDIR} KUBERNETES_VERSION=${KUBERNETES_VERSION} go test testdata/e2e/e2e_test.go -v"
-  WORKING_DIR=${WORKINGDIR} KUBERNETES_VERSION=${KUBERNETES_VERSION} go test testdata/e2e/e2e_test.go -v
+  echo "running tests: WORKING_DIR=${WORKINGDIR} KUBERNETES_VERSION=${KUBERNETES_VERSION} go test ./testdata/e2e/... -v"
+  WORKING_DIR=${WORKINGDIR} KUBERNETES_VERSION=${KUBERNETES_VERSION} go test ./testdata/e2e/... -v
 }
 
 trap cleanup EXIT
