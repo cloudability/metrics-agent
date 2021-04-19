@@ -9,7 +9,7 @@ fullnameOverride: ""
 # apiKey is REQUIRED.
 # You must generate a template to get your apiKey.
 # In the Cloudability app, go to Insights -> Containers, then click
-# the orange plus sign to provision a cluster.
+# the provisioning cluster button that will take you through our provisioning workflow.
 apiKey: ""
 # clusterName is REQUIRED.
 # The cluster name to be used for the cluster the agent runs in.
