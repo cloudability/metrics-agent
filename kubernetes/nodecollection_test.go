@@ -541,7 +541,7 @@ func TestDownloadNodeData(t *testing.T) {
 			t.Error("Expected error for nodename \"proxyNode\"")
 		}
 
-		if errFromList.Error() != "Provider ID for node does not exist. "+
+		if errFromList.Error() != "provider ID for node does not exist. "+
 			"If this condition persists it will cause inconsistent cluster allocation" {
 			t.Error("unexpected error")
 		}

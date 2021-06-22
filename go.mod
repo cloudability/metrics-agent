@@ -19,6 +19,7 @@ require (
 	github.com/ishidawataru/sctp v0.0.0-20190723014705-7c296d48a2b5 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/moby/ipvs v1.0.1 // indirect
+	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.2
 	github.com/opencontainers/runc v1.0.0-rc91.0.20200707015106-819fcc687efb // indirect
 	github.com/prometheus/common v0.10.0

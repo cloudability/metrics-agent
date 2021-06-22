@@ -9,8 +9,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cloudability/metrics-agent/client"
+	"github.com/cloudability/metrics-agent/measurement"
+	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"
+	"github.com/cloudability/metrics-agent/util"
+	cldyVersion "github.com/cloudability/metrics-agent/version"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,19 +30,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudability/metrics-agent/client"
-	"github.com/cloudability/metrics-agent/measurement"
-	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"
 	"github.com/cloudability/metrics-agent/retrieval/raw"
-	"github.com/cloudability/metrics-agent/util"
-	cldyVersion "github.com/cloudability/metrics-agent/version"
-	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 //ClusterVersion contains a concatenated version number as well as the k8s version discovery info
@@ -90,8 +90,25 @@ const proxy = "proxy"
 const direct = "direct"
 const unreachable = "unreachable"
 
-//nolint llll
-const kbURL string = "https://support.cloudability.com/hc/en-us/articles/360008368193-Kubernetes-Metrics-Agent-Error-Messages"
+const kbTroubleShootingURL string = "https://help.apptio.com/en-us/cloudability/product/k8s-metrics-agent.htm"
+const kbProvisionURL string = "https://help.apptio.com/en-us/cloudability/product/k8s-cluster-provisioning.htm"
+const apiEndpoint string = "https://metrics-collector.cloudability.com"
+
+const forbiddenError string = uploadURIError + ": 403"
+const uploadURIError string = "Error retrieving upload URI"
+
+//nolint lll
+const transportError string = `Network transport issues are potentially blocking the agent from contacting the metrics collection API.
+	Please confirm that the metrics-agent is able to establish a connection to: %s`
+//nolint lll
+const apiKeyError string = `Current Cloudability API Key is expired and access needs to be re-enabled before re-provisioning the metrics-agent as detailed here: %s.
+	Please contact support to re-activate the API keys.
+	Note: Be sure to use the exact same cluster name as what is currently in use.
+	***IMPORTANT*** If the cluster is managed by GKE - there are special instructions for provisioning.`
+const rbacError string = `RBAC role in the Cloudability namespace may need to be updated.
+	Re-provision the metrics-agent for this cluster as detailed here: ` + kbProvisionURL +
+	`Note: Be sure to use the exact same cluster name as what is currently in use.
+	***IMPORTANT*** If the cluster is managed by GKE - there are special instructions for provisioning.`
 
 //CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
 func CollectKubeMetrics(config KubeAgentConfig) {
@@ -120,8 +137,9 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	err := fetchDiagnostics(kubeAgent.Clientset, config.Namespace, kubeAgent.msExportDirectory)
 
 	if err != nil {
+		log.Warnf(rbacError)
 		log.Warnf("Warning non-fatal error: Agent error occurred retrieving runtime diagnostics: %s ", err)
-		log.Warnf("For more information see: %v", kbURL)
+		log.Warnf("For more information see: %v", kbTroubleShootingURL)
 	}
 
 	err = downloadBaselineMetricExport(kubeAgent, clientSetNodeSource)
@@ -358,8 +376,20 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 
 	err = SendData(metricSample, ka.clusterUID, cldyMetricClient)
 	if err != nil {
+		if warnErr := handleError(err); warnErr != "" {
+			log.Warnf(warnErr)
+		}
 		log.Fatalf("error sending metrics: %v", err)
 	}
+}
+
+func handleError(err error) string {
+	if err.Error() == forbiddenError {
+		return fmt.Sprintf(apiKeyError, kbProvisionURL)
+	} else if strings.Contains(err.Error(), uploadURIError) {
+		return fmt.Sprintf(transportError, apiEndpoint)
+	}
+	return ""
 }
 
 // SendData takes Cloudability metric sample and sends data to Cloudability via go client
@@ -587,8 +617,7 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 	if config.RetrieveNodeSummaries {
 		config, err = ensureNodeSource(config)
 		if err != nil {
-			log.Warnf("Warning non-fatal error: Agent error occurred verifying node source metrics: %s ", err)
-			log.Warnf("For more information see: %v", kbURL)
+			log.Warnf(handleNodeSourceError(err))
 		} else {
 			log.Infof("Node summaries connection method: %s", config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
 			log.Infof("Node container metrics connection method: %s", config.NodeMetrics.Options(NodeContainerEndpoint))
@@ -608,10 +637,24 @@ func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, err
 	}
 
 	if !config.RetrieveNodeSummaries && !config.CollectHeapsterExport {
+		//nolint lll
+		log.Debugf(`Unable to retrieve data due to metrics-agent configuration.
+			May be caused by cluster security mis-configurations or the RBAC role in the Cloudability namespace needs to be updated.
+			Please confirm with your cluster security administrators that the RBAC role is able to work within your cluster's security configurations.`)
 		return config, fmt.Errorf("unable to retrieve node summaries or heapster export: %s", err)
 	}
 
 	return config, nil
+}
+
+func handleNodeSourceError(err error) string {
+	var nodeError string
+	if strings.Contains(err.Error(), "Please verify RBAC roles") {
+		nodeError = rbacError
+	}
+	errStr := "Warning non-fatal error: Agent error occurred verifying node source metrics: %v\n" +
+		"For more information see: %s"
+	return nodeError + fmt.Sprintf(errStr, err, kbTroubleShootingURL)
 }
 
 func createKubeHTTPClient(config KubeAgentConfig) (KubeAgentConfig, error) {
