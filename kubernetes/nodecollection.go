@@ -108,6 +108,8 @@ func downloadNodeData(prefix string,
 		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
+	// this is not a real change, woo!
+
 	for _, n := range nodes {
 		if n.Spec.ProviderID == "" {
 			failedNodeList[n.Name] = errors.New("Provider ID for node does not exist. " +
