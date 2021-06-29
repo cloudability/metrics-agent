@@ -110,7 +110,10 @@ func downloadNodeData(prefix string,
 
 	for _, n := range nodes {
 		if n.Spec.ProviderID == "" {
-			failedNodeList[n.Name] = errors.New("Provider ID for node does not exist. " +
+			errMessage := "Node ProviderID is not set which may be because the node is running in a " +
+				"self managed environment, and this may cause inconsistent gathering of metrics data."
+			log.Warnf(errMessage)
+			failedNodeList[n.Name] = errors.New("provider ID for node does not exist. " +
 				"If this condition persists it will cause inconsistent cluster allocation")
 		}
 
@@ -429,7 +432,10 @@ func allowDirectConnect(config KubeAgentConfig, nodes []v1.Node) bool {
 	// if any Fargate nodes are found.
 	for _, n := range nodes {
 		if isFargateNode(n) {
-			log.Infof("Fargate node found in cluster, direct node connection disabled. Learn more about Fargate support: %s", kbURL) //nolint: lll
+			//nolint: lll
+			log.Infof(`Direct connection to an AWS Fargate node is not possible, so when a Fargate node is detected in the cluster, the agent switches to using a proxy connection for all node connections in the cluster. 
+				The allocation of EKS Fargate tasks are not currently supported via the containers feature dashboard.
+				Please contact your technical account manager for instructions on how to access EKS Fargate information via the reporting feature.`)
 			return false
 		}
 	}

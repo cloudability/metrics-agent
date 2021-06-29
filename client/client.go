@@ -256,6 +256,7 @@ func (c httpMetricClient) retryWithBackoff(
 		var uploadURL, hash string
 		uploadURL, hash, err = c.GetUploadURL(metricFile, metricSampleURL, agentVersion, UID)
 		if err != nil {
+			log.Debugf("Client proxy or deployment YAML may be misconfigured.  Please check your client settings.")
 			log.Errorf("error encountered while retrieving upload location: %v", err)
 			continue
 		}
