@@ -76,11 +76,11 @@ wait_for_metrics() {
   if [ "${CI}" = "true" ]; then
     while [[ $(${CI_KUBECTL} get pods -n cloudability -l app=metrics-agent -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
       kubectl describe nodes
-      echo "waiting for pod ready" && sleep 5;
+      echo "waiting for pod ready" && sleep 60;
     done
   else
     while [[ $(kubectl get pods -n cloudability -l app=metrics-agent -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
-      echo "waiting for pod ready" && sleep 5;
+      echo "waiting for pod ready" && sleep 60;
     done
   fi
 }
