@@ -5,7 +5,7 @@ on: [push]
 jobs:
   snyk_scan:
     name: Snyk Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/setup-go@v2
         with:
@@ -24,7 +24,7 @@ jobs:
   build:
     name: Build
     needs: snyk_scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/setup-go@v2
         with:
@@ -40,7 +40,7 @@ jobs:
   test_e2e:
     name: Test E2E
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/setup-go@v2
         with:
@@ -52,7 +52,7 @@ jobs:
   slackFinish:
     name: Notify Finish
     needs: test_e2e
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     if: always()
     steps:
       - uses: technote-space/workflow-conclusion-action@v2

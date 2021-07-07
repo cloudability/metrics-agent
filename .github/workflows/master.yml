@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/setup-go@v2
         with:
@@ -37,7 +37,7 @@ jobs:
   slackFinish:
     name: Notify Finish
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     if: always()
     steps:
       - uses: technote-space/workflow-conclusion-action@v2
