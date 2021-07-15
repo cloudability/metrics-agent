@@ -14,9 +14,9 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 ### Supported Versions
 
-#### 1.19 and below
+#### 1.20 and below
 
-Kubernetes versions 1.19 and below are supported by the metrics agent.
+Kubernetes versions 1.20 and below are supported by the metrics agent.
 
 #### 1.18 
 
