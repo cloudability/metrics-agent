@@ -1,7 +1,7 @@
+//nolint:gosec
 package kubernetes
 
 import (
-	//nolint gosec
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
