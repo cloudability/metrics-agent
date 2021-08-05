@@ -3,50 +3,40 @@ module github.com/cloudability/metrics-agent
 go 1.16
 
 require (
-	github.com/Azure/azure-sdk-for-go v43.0.0+incompatible // indirect
-	github.com/GoogleCloudPlatform/k8s-cloud-provider v0.0.0-20200415212048-7901bc822317 // indirect
-	github.com/Microsoft/hcsshim v0.8.10-0.20200715222032-5eafd1556990 // indirect
-	github.com/containernetworking/cni v0.8.0 // indirect
-	github.com/coredns/corefile-migration v1.0.10 // indirect
-	github.com/docker/docker v1.4.2-0.20200309214505-aa6a9891b09c // indirect
 	github.com/evanphx/json-patch v4.9.0+incompatible // indirect
-	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golangci/golangci-lint v1.38.0
-	github.com/google/cadvisor v0.36.1-0.20200323171535-8af10c683a96
+	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/googleapis/gnostic v0.4.0 // indirect
-	github.com/ishidawataru/sctp v0.0.0-20190723014705-7c296d48a2b5 // indirect
+	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
-	github.com/kr/pretty v0.2.0 // indirect
-	github.com/moby/ipvs v1.0.1 // indirect
-	github.com/onsi/ginkgo v1.14.2
-	github.com/onsi/gomega v1.10.4
-	github.com/opencontainers/runc v1.0.0-rc91.0.20200707015106-819fcc687efb // indirect
-	github.com/prometheus/common v0.10.0
-	github.com/prometheus/prom2json v1.3.0
-	github.com/sirupsen/logrus v1.8.0
+	github.com/kr/text v0.2.0 // indirect
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/onsi/ginkgo v1.16.1
+	github.com/onsi/gomega v1.11.0
+	github.com/pelletier/go-toml v1.6.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.7.1
-	github.com/stretchr/objx v0.2.0 // indirect
-	go.etcd.io/etcd v0.5.0-alpha.5.0.20200819165624-17cef6e3e9d5 // indirect
-	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6 // indirect
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
-	google.golang.org/api v0.15.1 // indirect
-	google.golang.org/appengine v1.6.5 // indirect
-	google.golang.org/protobuf v1.24.0 // indirect
+	github.com/stretchr/testify v1.7.0 // indirect
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
+	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
+	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
+	golang.org/x/text v0.3.5 // indirect
+	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
+	google.golang.org/appengine v1.6.6 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3
-	k8s.io/gengo v0.0.0-20200428234225-8167cfdcfc14 // indirect
-	k8s.io/klog/v2 v2.2.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c // indirect
-	k8s.io/kubernetes v1.19.0-alpha.1
-	k8s.io/system-validators v1.1.2 // indirect
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73 // indirect
-	sigs.k8s.io/kind v0.7.0
-	sigs.k8s.io/structured-merge-diff/v4 v4.0.1 // indirect
+	sigs.k8s.io/kind v0.7.0 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
