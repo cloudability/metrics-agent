@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -22,7 +23,7 @@ import (
 
 // NodeSource is an interface to get a list of Nodes
 type NodeSource interface {
-	GetReadyNodes() ([]v1.Node, error)
+	GetReadyNodes(ctx context.Context) ([]v1.Node, error)
 	NodeAddress(node *v1.Node) (string, int32, error)
 }
 
@@ -45,8 +46,8 @@ func NewClientsetNodeSource(clientSet kubernetes.Interface) ClientsetNodeSource 
 }
 
 // GetReadyNodes fetches the list of nodes from the clientSet and filters down to only ready nodes
-func (cns ClientsetNodeSource) GetReadyNodes() ([]v1.Node, error) {
-	allNodes, err := cns.clientSet.CoreV1().Nodes().List(metav1.ListOptions{})
+func (cns ClientsetNodeSource) GetReadyNodes(ctx context.Context) ([]v1.Node, error) {
+	allNodes, err := cns.clientSet.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 
 	if err != nil {
 		return nil, err
@@ -86,17 +87,13 @@ func (cns ClientsetNodeSource) NodeAddress(node *v1.Node) (string, int32, error)
 	return "", 0, fmt.Errorf("Could not find internal IP address for node %s ", node.Name)
 }
 
-func downloadNodeData(prefix string,
-	config KubeAgentConfig,
-	workDir *os.File,
-	nodeSource NodeSource) (map[string]error, error) {
-
+func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig,
+	workDir *os.File, nodeSource NodeSource) (map[string]error, error) {
 	var nodes []v1.Node
-
 	failedNodeList := make(map[string]error)
 
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
-		nodes, err = nodeSource.GetReadyNodes()
+		nodes, err = nodeSource.GetReadyNodes(ctx)
 		return
 	})
 	if err != nil {
@@ -314,8 +311,7 @@ func connectionOptions(config KubeAgentConfig, n v1.Node, nd nodeFetchData, ns N
 //ensureNodeSource validates connectivity to the kubelet metrics endpoints.
 // Attempts direct connection to the node summary & container stats endpoint
 // if possible and allowed, otherwise attempts to connect via kube-proxy
-func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
-
+func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {
 	nodeHTTPClient := http.Client{
 		Timeout: time.Second * 30,
 		Transport: &http.Transport{
@@ -331,7 +327,7 @@ func ensureNodeSource(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 	config.NodeClient = nodeClient
 
-	nodes, err := clientSetNodeSource.GetReadyNodes()
+	nodes, err := clientSetNodeSource.GetReadyNodes(ctx)
 	if err != nil {
 		return config, fmt.Errorf("error retrieving nodes: %s", err)
 	}
@@ -442,13 +438,13 @@ func allowDirectConnect(config KubeAgentConfig, nodes []v1.Node) bool {
 	return true
 }
 
-func retrieveNodeSummaries(
-	config KubeAgentConfig, msd string, metricSampleDir *os.File, nodeSource NodeSource) (err error) {
+func retrieveNodeSummaries(ctx context.Context, config KubeAgentConfig, msd string, metricSampleDir *os.File,
+	nodeSource NodeSource) (err error) {
 
 	config.failedNodeList = map[string]error{}
 
 	// get node stats data
-	config.failedNodeList, err = downloadNodeData("stats", config, metricSampleDir, nodeSource)
+	config.failedNodeList, err = downloadNodeData(ctx, "stats", config, metricSampleDir, nodeSource)
 	if err != nil {
 		return fmt.Errorf("error downloading node metrics: %s", err)
 	}

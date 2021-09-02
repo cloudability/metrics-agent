@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -175,7 +176,7 @@ func TestEnsureNodeSource(t *testing.T) {
 
 	t.Run("Ensure successful direct node source test", func(t *testing.T) {
 
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -203,7 +204,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			NodeMetrics:          EndpointMask{},
 		}
 
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -241,7 +242,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			NodeMetrics:    EndpointMask{},
 		}
 
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -282,7 +283,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			NodeMetrics:    EndpointMask{},
 		}
 
-		_, err := ensureNodeSource(ka)
+		_, err := ensureNodeSource(context.TODO(), ka)
 		if err == nil {
 			t.Errorf("should fail when neither cadvisor or container metrics is accessible")
 		}
@@ -308,7 +309,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			NodeMetrics:    EndpointMask{},
 		}
 
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -357,7 +358,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			NodeClient:      raw.NewClient(http.Client{}, true, "token", 0),
 		}
 
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -404,7 +405,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			NodeMetrics:    EndpointMask{},
 		}
 
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 
 		if !ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Expected stats/summary to allow proxy method but got %v: %v",
@@ -414,7 +415,7 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure unsuccessful node source test", func(t *testing.T) {
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 
 		if !ka.NodeMetrics.Unreachable(NodeStatsSummaryEndpoint) {
 			t.Errorf("Expected Unreachable but got %v: %v",
@@ -436,7 +437,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			GetAllConStats: true,
 			NodeMetrics:    EndpointMask{},
 		}
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 
 		if ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Direct connection should not be enabled with fargate nodes present")
@@ -464,7 +465,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			ForceKubeProxy: true,
 			NodeMetrics:    EndpointMask{},
 		}
-		ka, err := ensureNodeSource(ka)
+		ka, err := ensureNodeSource(context.TODO(), ka)
 		if ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Direct connection should not be enabled with force proxy flag set")
 		}
@@ -530,6 +531,7 @@ func TestDownloadNodeData(t *testing.T) {
 	t.Run("Ensure node added to fail list when providerID doesn't exist", func(t *testing.T) {
 		ed, ns, ka := setupTestNodeDownloaderClients(ts, cs, 1)
 		failedNodeList, _ := downloadNodeData(
+			context.TODO(),
 			"baseline",
 			ka,
 			ed,
@@ -552,6 +554,7 @@ func TestDownloadNodeData(t *testing.T) {
 		ns := testNodeSource{}
 
 		_, err := downloadNodeData(
+			context.TODO(),
 			"baseline",
 			ka,
 			ed,
@@ -588,6 +591,7 @@ func TestDownloadNodeDataRetries(t *testing.T) {
 		var maxRetry uint = 1
 		ed, ns, ka := setupTestNodeDownloaderClients(ts, cs, maxRetry)
 		failedNodeList, err := downloadNodeData(
+			context.TODO(),
 			"baseline",
 			ka,
 			ed,
@@ -607,7 +611,7 @@ type testNodeSource struct {
 	Nodes []v1.Node
 }
 
-func (tns testNodeSource) GetReadyNodes() ([]v1.Node, error) {
+func (tns testNodeSource) GetReadyNodes(ctx context.Context) ([]v1.Node, error) {
 	returnCodes := []int{200, 200, 200, 400, 400, 400, 200, 200, 200, 400}
 
 	ts := launchTLSTestServer(returnCodes)
