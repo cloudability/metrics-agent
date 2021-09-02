@@ -91,7 +91,6 @@ fmt:
 # golangci-lint is installed here instead of in the go.mod so that go mod tidy can be run on the go.mod
 # without erroneously removing the golangci-lint dependency.
 lint:
-	go get github.com/golangci/golangci-lint/cmd/golangci-lint
 	golangci-lint run
 
 install:
