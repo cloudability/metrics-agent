@@ -11,7 +11,7 @@ import (
 
 	cadvisor "github.com/google/cadvisor/info/v1"
 	v1 "k8s.io/api/core/v1"
-	statsapi "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
+	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 
 func TestMetricSample(t *testing.T) {
@@ -132,5 +132,3 @@ func TestMetricSample(t *testing.T) {
 	})
 
 }
-
-

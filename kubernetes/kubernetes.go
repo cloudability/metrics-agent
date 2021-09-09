@@ -2,6 +2,7 @@
 package kubernetes
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
@@ -9,17 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cloudability/metrics-agent/client"
-	"github.com/cloudability/metrics-agent/measurement"
-	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"
-	"github.com/cloudability/metrics-agent/util"
-	cldyVersion "github.com/cloudability/metrics-agent/version"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,10 +22,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudability/metrics-agent/client"
+	"github.com/cloudability/metrics-agent/measurement"
+	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"
 	"github.com/cloudability/metrics-agent/retrieval/raw"
+	"github.com/cloudability/metrics-agent/util"
+	cldyVersion "github.com/cloudability/metrics-agent/version"
+	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 //ClusterVersion contains a concatenated version number as well as the k8s version discovery info
@@ -100,6 +101,7 @@ const uploadURIError string = "Error retrieving upload URI"
 //nolint lll
 const transportError string = `Network transport issues are potentially blocking the agent from contacting the metrics collection API.
 	Please confirm that the metrics-agent is able to establish a connection to: %s`
+
 //nolint lll
 const apiKeyError string = `Current Cloudability API Key is expired and access needs to be re-enabled before re-provisioning the metrics-agent as detailed here: %s.
 	Please contact support to re-activate the API keys.
@@ -119,8 +121,10 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 	validateMetricCollectionConfig(config)
 
+	ctx := context.Background()
+
 	// Create k8s agent
-	kubeAgent := newKubeAgent(config)
+	kubeAgent := newKubeAgent(ctx, config)
 
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
@@ -134,7 +138,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 	pollChan := time.NewTicker(time.Duration(config.PollInterval) * time.Second)
 
-	err := fetchDiagnostics(kubeAgent.Clientset, config.Namespace, kubeAgent.msExportDirectory)
+	err := fetchDiagnostics(ctx, kubeAgent.Clientset, config.Namespace, kubeAgent.msExportDirectory)
 
 	if err != nil {
 		log.Warnf(rbacError)
@@ -142,7 +146,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("For more information see: %v", kbTroubleShootingURL)
 	}
 
-	err = downloadBaselineMetricExport(kubeAgent, clientSetNodeSource)
+	err = downloadBaselineMetricExport(ctx, kubeAgent, clientSetNodeSource)
 
 	if err != nil {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
@@ -172,12 +176,13 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 			go kubeAgent.sendMetrics(metricSample)
 
 		case <-pollChan.C:
-			err := kubeAgent.collectMetrics(kubeAgent, kubeAgent.Clientset, clientSetNodeSource)
+			err := kubeAgent.collectMetrics(ctx, kubeAgent, kubeAgent.Clientset, clientSetNodeSource)
 			if err != nil {
 				log.Fatalf("Error retrieving metrics %v", err)
 			}
 
 		case <-doneChan:
+			ctx.Done()
 			return
 		}
 	}
@@ -203,20 +208,19 @@ func validateMetricCollectionConfig(config KubeAgentConfig) {
 	}
 }
 
-func newKubeAgent(config KubeAgentConfig) KubeAgentConfig {
-
+func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
 	config, err := createClusterConfig(config)
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable to initialize cluster configuration: %v", err)
 	}
 
-	config, err = updateConfig(config)
+	config, err = updateConfig(ctx, config)
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable update cluster configuration options: %v", err)
 	}
 
 	// launch local services if we can't connect to them
-	config, err = ensureMetricServicesAvailable(config)
+	config, err = ensureMetricServicesAvailable(ctx, config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -236,8 +240,8 @@ func newKubeAgent(config KubeAgentConfig) KubeAgentConfig {
 	return config
 }
 
-func (ka KubeAgentConfig) collectMetrics(
-	config KubeAgentConfig, clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
+func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentConfig,
+	clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
 
 	sampleStartTime := time.Now().UTC()
 
@@ -248,7 +252,7 @@ func (ka KubeAgentConfig) collectMetrics(
 	}
 
 	if config.RetrieveNodeSummaries {
-		err = retrieveNodeSummaries(config, msd, metricSampleDir, nodeSource)
+		err = retrieveNodeSummaries(ctx, config, msd, metricSampleDir, nodeSource)
 		if err != nil {
 			log.Warnf("Warning: %s", err)
 		}
@@ -465,8 +469,8 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 }
 
-func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
-	updatedConfig, err := updateConfigurationForServices(config)
+func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {
+	updatedConfig, err := updateConfigurationForServices(ctx, config)
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable set internal configuration options: %v", err)
 	}
@@ -481,7 +485,7 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
 		config.BearerToken, config.CollectionRetryLimit)
 
-	updatedConfig.clusterUID, err = getNamespaceUID(updatedConfig.Clientset, "default")
+	updatedConfig.clusterUID, err = getNamespaceUID(ctx, updatedConfig.Clientset, "default")
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable to find the default namespace: %v", err)
 	}
@@ -496,7 +500,7 @@ func updateConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	return updatedConfig, err
 }
 
-func updateConfigurationForServices(config KubeAgentConfig) (
+func updateConfigurationForServices(ctx context.Context, config KubeAgentConfig) (
 	KubeAgentConfig, error) {
 
 	var err error
@@ -508,7 +512,7 @@ func updateConfigurationForServices(config KubeAgentConfig) (
 	config.OutboundProxyURL = proxyRef
 
 	if config.CollectHeapsterExport {
-		config.HeapsterProxyURL, err = getHeapsterURL(config.Clientset, config.ClusterHostURL)
+		config.HeapsterProxyURL, err = getHeapsterURL(ctx, config.Clientset, config.ClusterHostURL)
 		if err != nil {
 			log.Debugf("cloudability metric agent encountered an error while looking for heapster: %v", err)
 		}
@@ -530,9 +534,9 @@ func setProxyURL(op string) (u url.URL, err error) {
 }
 
 // returns the UID of a given Namespace
-func getNamespaceUID(clientset kubernetes.Interface, namespace string) (
+func getNamespaceUID(ctx context.Context, clientset kubernetes.Interface, namespace string) (
 	string, error) {
-	defaultNamespace, err := clientset.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+	defaultNamespace, err := clientset.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable to get the cluster UID: %v", err)
 	}
@@ -571,7 +575,7 @@ func getProvisioningID(s string) (string, error) {
 	return sha1Hash, err
 }
 
-func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource) (rerr error) {
+func downloadBaselineMetricExport(ctx context.Context, config KubeAgentConfig, nodeSource NodeSource) (rerr error) {
 	ed, err := os.Open(path.Dir(config.msExportDirectory.Name()))
 	if err != nil {
 		log.Fatalln("Unable to open metric sample export directory")
@@ -581,7 +585,7 @@ func downloadBaselineMetricExport(config KubeAgentConfig, nodeSource NodeSource)
 
 	// get baseline metric sample
 	if config.RetrieveNodeSummaries {
-		config.failedNodeList, err = downloadNodeData("baseline", config, ed, nodeSource)
+		config.failedNodeList, err = downloadNodeData(ctx, "baseline", config, ed, nodeSource)
 		if len(config.failedNodeList) > 0 {
 			log.Warnf("Warning failed to retrieve metric data from %v nodes. Metric samples may be incomplete: %+v %v",
 				len(config.failedNodeList), config.failedNodeList, err)
@@ -611,11 +615,11 @@ func updateConfigWithOverrideURLs(config KubeAgentConfig) KubeAgentConfig {
 	return config
 }
 
-func ensureMetricServicesAvailable(config KubeAgentConfig) (KubeAgentConfig, error) {
+func ensureMetricServicesAvailable(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {
 	var err error
 
 	if config.RetrieveNodeSummaries {
-		config, err = ensureNodeSource(config)
+		config, err = ensureNodeSource(ctx, config)
 		if err != nil {
 			log.Warnf(handleNodeSourceError(err))
 		} else {
@@ -791,7 +795,7 @@ func extractNodeNameAndExtension(prefix, fileName string) (string, string) {
 	return "", extension
 }
 
-func getPodLogs(clientset kubernetes.Interface,
+func getPodLogs(ctx context.Context, clientset kubernetes.Interface,
 	namespace, podName, containerName string, previous bool, dst io.Writer) (err error) {
 
 	req := clientset.CoreV1().Pods(namespace).GetLogs(podName,
@@ -800,7 +804,7 @@ func getPodLogs(clientset kubernetes.Interface,
 			Previous:  previous,
 		})
 
-	readCloser, err := req.Stream()
+	readCloser, err := req.Stream(ctx)
 	if err != nil {
 		return err
 	}
@@ -811,9 +815,10 @@ func getPodLogs(clientset kubernetes.Interface,
 	return err
 }
 
-func fetchDiagnostics(clientset kubernetes.Interface, namespace string, msExportDirectory *os.File) (err error) {
+func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, namespace string,
+	msExportDirectory *os.File) (err error) {
 
-	pods, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Unable to retrieve Pod list: %v", err)
 	}
@@ -837,7 +842,7 @@ func fetchDiagnostics(clientset kubernetes.Interface, namespace string, msExport
 					return err
 				}
 
-				err = getPodLogs(clientset, namespace, pod.Name, c.Name, false, f)
+				err = getPodLogs(ctx, clientset, namespace, pod.Name, c.Name, false, f)
 				if err != nil {
 					return err
 				}

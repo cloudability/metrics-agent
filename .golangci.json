@@ -7,7 +7,7 @@
     "enable": [
       "deadcode",
       "gocyclo",
-      "golint",
+      "revive",
       "goconst",
       "misspell",
       "ineffassign",

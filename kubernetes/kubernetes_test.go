@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -65,7 +66,7 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 			},
 		})
 
-		_, err := updateConfigurationForServices(config)
+		_, err := updateConfigurationForServices(context.TODO(), config)
 		if err != nil {
 			t.Errorf("Error getting services %v ", err)
 		}
@@ -85,7 +86,7 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 				},
 			})
 
-			_, err := updateConfigurationForServices(config)
+			_, err := updateConfigurationForServices(context.TODO(), config)
 			if err != nil {
 				t.Errorf("Error getting services %v ", err)
 			}
@@ -114,7 +115,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			Clientset:             cs,
 			NodeMetrics:           EndpointMask{},
 		}
-		config, err := ensureMetricServicesAvailable(config)
+		config, err := ensureMetricServicesAvailable(context.TODO(), config)
 		if err == nil {
 			t.Errorf("expected an error for ensureMetricServicesAvailable")
 			return
@@ -144,7 +145,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 		}
 
 		var err error
-		_, err = ensureMetricServicesAvailable(config)
+		_, err = ensureMetricServicesAvailable(context.TODO(), config)
 		if err != nil {
 			t.Errorf("Unexpected error fetching node summaries: %s", err)
 		}
@@ -294,11 +295,11 @@ func TestCollectMetrics(t *testing.T) {
 
 	t.Run("Ensure that a collection occurs", func(t *testing.T) {
 		// download the initial baseline...like a typical CollectKubeMetrics would
-		err := downloadBaselineMetricExport(ka, fns)
+		err := downloadBaselineMetricExport(context.TODO(), ka, fns)
 		if err != nil {
 			t.Error(err)
 		}
-		err = ka.collectMetrics(ka, cs, fns)
+		err = ka.collectMetrics(context.TODO(), ka, cs, fns)
 		if err != nil {
 			t.Error(err)
 		}

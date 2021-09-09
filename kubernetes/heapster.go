@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -71,14 +72,15 @@ type heapsterMetricExport []struct {
 }
 
 // returns the proxy url of heapster in the cluster (returns last found based on match)
-func getHeapsterURL(clientset kubernetes.Interface, clusterHostURL string) (URL url.URL, err error) {
-	pods, err := clientset.CoreV1().Pods("").List(metav1.ListOptions{})
+func getHeapsterURL(ctx context.Context, clientset kubernetes.Interface, clusterHostURL string) (
+	URL url.URL, err error) {
+	pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable to get a list of pods: %v", err)
 	}
 
-	services, err := clientset.CoreV1().Services("").List(metav1.ListOptions{})
+	services, err := clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable to get a list of services: %v", err)
 	}
