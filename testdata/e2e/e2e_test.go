@@ -122,9 +122,18 @@ func TestMetricSample(t *testing.T) {
 	t.Run("ensure that a metrics sample has expected cadvisor prometheus data", func(t *testing.T) {
 		for _, containerInfos := range parsedK8sLists.CadvisorPrometheus {
 			for _, containerInfo := range containerInfos {
-				if strings.HasPrefix(containerInfo.Name, "/kubepods/besteffort/pod") && containerInfo.Namespace == "stress" && strings.HasPrefix(
-					containerInfo.Spec.Labels["io.kubernetes.pod.name"], "stress") {
-					return
+				if minorVersion >= 21 {
+					if strings.HasPrefix(containerInfo.Name, "/kubelet/kubepods/besteffort/pod") &&
+						containerInfo.Namespace == "stress" &&
+						strings.HasPrefix(containerInfo.Spec.Labels["io.kubernetes.pod.name"], "stress") {
+						return
+					}
+				} else {
+					if strings.HasPrefix(containerInfo.Name, "/kubepods/besteffort/pod") &&
+						containerInfo.Namespace == "stress" &&
+						strings.HasPrefix(containerInfo.Spec.Labels["io.kubernetes.pod.name"], "stress") {
+						return
+					}
 				}
 			}
 		}
