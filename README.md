@@ -14,19 +14,9 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 ### Supported Versions
 
-#### 1.20 and below
+#### 1.21 and below
 
-Kubernetes versions 1.20 and below are supported by the metrics agent.
-
-#### 1.18 
-
-Metrics agent versions >= `1.5.0` support Kubernetes 1.18. It is fully backwards compatible with all previous supported versions as well.
-Metrics agent versions < `1.5.0` require some manual tweaks on every node in the cluster in order to run on Kubernetes 1.18. 
-
-##### Background
-
-Kubernetes 1.18 [disabled by default the cadvisor endpoints](https://github.com/kubernetes/kubernetes/issues/68522) that the original metrics agent used to collect rich utilization data from the cluster. In order to run metrics agent versions < `1.5.0` on 1.18, you need to [manually enable the cadvisor endpoints on the kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) via the `--enable-cadvisor-json-endpoints` flag for every node in the cluster.
-
+Kubernetes versions 1.21 and below are supported by the metrics agent.
 
 ### Configuration Options
 
