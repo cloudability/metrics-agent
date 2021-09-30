@@ -105,6 +105,9 @@ version:
 release-version:
 	@echo $(RELEASE-VERSION)
 
+test-e2e-1.21.1: container-build install-tools
+	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION))
+
 test-e2e-1.20: container-build install-tools
 	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION))
 
@@ -117,6 +120,6 @@ test-e2e-1.18: container-build install-tools
 test-e2e-1.17: container-build install-tools
 	$(call TEST_KUBERNETES,v1.17.0,$(PREFIX),$(VERSION))
 
-test-e2e-all: test-e2e-1.20 test-e2e-1.19 test-e2e-1.18 test-e2e-1.17
+test-e2e-all: test-e2e-1.21.1 test-e2e-1.20 test-e2e-1.19 test-e2e-1.18 test-e2e-1.17
 
 .PHONY: test version

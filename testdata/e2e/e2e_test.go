@@ -15,7 +15,7 @@ import (
 )
 
 func TestMetricSample(t *testing.T) {
-
+	const stress = "stress"
 	wd := os.Getenv("WORKING_DIR")
 	kv := os.Getenv("KUBERNETES_VERSION")
 	versionParts := strings.Split(kv, ".")
@@ -83,7 +83,7 @@ func TestMetricSample(t *testing.T) {
 
 	t.Run("ensure that a metrics sample has expected pod data", func(t *testing.T) {
 		for _, po := range parsedK8sLists.Pods.Items {
-			if strings.HasPrefix(po.Name, "stress") && po.Status.QOSClass == v1.PodQOSBestEffort {
+			if strings.HasPrefix(po.Name, stress) && po.Status.QOSClass == v1.PodQOSBestEffort {
 				return
 			}
 
@@ -92,10 +92,9 @@ func TestMetricSample(t *testing.T) {
 	})
 
 	t.Run("ensure that a metrics sample has expected containers summary data", func(t *testing.T) {
-
 		for _, ns := range parsedK8sLists.NodeSummaries {
 			for _, pf := range ns.Pods {
-				if strings.HasPrefix(pf.PodRef.Name, "stress") && pf.PodRef.Namespace == "stress" && pf.CPU.UsageNanoCores != nil {
+				if strings.HasPrefix(pf.PodRef.Name, stress) && pf.PodRef.Namespace == stress && pf.CPU.UsageNanoCores != nil {
 					return
 				}
 			}
@@ -103,13 +102,14 @@ func TestMetricSample(t *testing.T) {
 		t.Error("pod summary data not found in metric sample")
 	})
 
+	// 2020.9.10 - TODO: Remove this test once we stop supporting minor versions below 18
 	t.Run("ensure that a metrics sample has expected containers stat data", func(t *testing.T) {
 		if minorVersion < 18 {
 			for _, nc := range parsedK8sLists.NodeContainers {
 
 				for _, s := range nc {
 					if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(
-						s.Spec.Labels["io.kubernetes.pod.name"], "stress") {
+						s.Spec.Labels["io.kubernetes.pod.name"], stress) {
 						return
 					}
 				}
@@ -122,9 +122,18 @@ func TestMetricSample(t *testing.T) {
 	t.Run("ensure that a metrics sample has expected cadvisor prometheus data", func(t *testing.T) {
 		for _, containerInfos := range parsedK8sLists.CadvisorPrometheus {
 			for _, containerInfo := range containerInfos {
-				if strings.HasPrefix(containerInfo.Name, "/kubepods/besteffort/pod") && containerInfo.Namespace == "stress" && strings.HasPrefix(
-					containerInfo.Spec.Labels["io.kubernetes.pod.name"], "stress") {
-					return
+				if minorVersion >= 21 {
+					if strings.HasPrefix(containerInfo.Name, "/kubelet/kubepods/besteffort/pod") &&
+						containerInfo.Namespace == stress &&
+						strings.HasPrefix(containerInfo.Spec.Labels["io.kubernetes.pod.name"], stress) {
+						return
+					}
+				} else {
+					if strings.HasPrefix(containerInfo.Name, "/kubepods/besteffort/pod") &&
+						containerInfo.Namespace == stress &&
+						strings.HasPrefix(containerInfo.Spec.Labels["io.kubernetes.pod.name"], stress) {
+						return
+					}
 				}
 			}
 		}
