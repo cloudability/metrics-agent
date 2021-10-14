@@ -26,6 +26,9 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          securityContext: 
+            runAsUser: {{ .Values.securityContext.runAsUser }}
+            allowPrivilegeEscalation: {{ .Values.allowPrivilegeEscalation }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
           - 'kubernetes'
