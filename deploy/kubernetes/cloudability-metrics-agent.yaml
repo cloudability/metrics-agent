@@ -123,16 +123,13 @@ spec:
           livenessProbe:
             exec:
               command:
-                - cat
-                - healthy
-            initialDelaySeconds: 5
-            periodSeconds: 5
+                - touch
+                - tmp/healthy
+            initialDelaySeconds: 120
+            periodSeconds: 600
           name: "metrics-agent"
           args:
             - 'kubernetes'
-            - /bin/sh
-            - -c
-            - touch healthy;
           env:
             - name: CLOUDABILITY_API_KEY
               value: "XXXXXXXXX"
