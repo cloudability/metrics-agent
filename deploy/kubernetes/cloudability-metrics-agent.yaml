@@ -120,6 +120,13 @@ spec:
             limits:
               memory: "1Gi"
               cpu: ".5"
+          livenessProbe:
+            exec:
+              command:
+                - touch
+                - tmp/healthy
+            initialDelaySeconds: 120
+            periodSeconds: 600
           name: "metrics-agent"
           args:
             - 'kubernetes'

@@ -86,7 +86,7 @@ install-tools: download-deps
 	@cat ./tools/tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
 
 fmt:
-	goreturns -w .
+	gofmt -w .
 
 lint:
 	golangci-lint run
