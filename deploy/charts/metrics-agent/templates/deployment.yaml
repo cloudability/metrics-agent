@@ -29,6 +29,9 @@ spec:
           securityContext: 
             runAsUser: {{ .Values.securityContext.runAsUser }}
             allowPrivilegeEscalation: {{ .Values.allowPrivilegeEscalation }}
+            capabilities:
+              drop:
+                {{ .Values.drop }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
           - 'kubernetes'
