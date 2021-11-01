@@ -53,3 +53,5 @@ tolerations: []
 affinity: {}
 
 allowPrivilegeEscalation: false
+
+drop: - all
