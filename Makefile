@@ -56,7 +56,7 @@ helm-package:
 	helm package deploy/charts/metrics-agent
 
 deploy-local: container-build
-	kubectl config use-context docker-for-desktop
+	kubectl config use-context docker-desktop
 	cat ./deploy/kubernetes/cloudability-metrics-agent.yaml | \
 	sed "s/latest/$(VERSION)/g; s/XXXXXXXXX/$(CLDY_API_KEY)/g; s/Always/Never/g; s/NNNNNNNNN/local-dev-$(shell hostname)/g" \
 	./deploy/kubernetes/cloudability-metrics-agent.yaml |kubectl apply -f -
@@ -86,7 +86,7 @@ install-tools: download-deps
 	@cat ./tools/tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
 
 fmt:
-	goreturns -w .
+	gofmt -w .
 
 lint:
 	golangci-lint run

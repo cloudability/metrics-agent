@@ -20,7 +20,7 @@ pollInterval: 180
 image:
   name: cloudability/metrics-agent
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 imagePullSecrets: []
 
@@ -31,6 +31,14 @@ resources:
   limits:
     cpu: ".5"
     memory: "1Gi"
+
+livenessProbe:
+  exec:
+    command:
+      - touch
+      - tmp/healthy
+  initialDelaySeconds: 120
+  periodSeconds: 600
 
 # serviceAccount.create: true is required
 serviceAccount:
@@ -51,3 +59,7 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+allowPrivilegeEscalation: false
+
+drop: - all
