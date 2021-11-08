@@ -62,4 +62,5 @@ affinity: {}
 
 allowPrivilegeEscalation: false
 
-drop: - all
+drop: 
+- all
