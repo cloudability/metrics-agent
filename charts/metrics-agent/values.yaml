@@ -6,11 +6,16 @@
 nameOverride: ""
 fullnameOverride: ""
 
-# apiKey is REQUIRED.
+# apiKey or secretName is REQUIRED.
 # You must generate a template to get your apiKey.
 # In the Cloudability app, go to Insights -> Containers, then click
-# the provisioning cluster button that will take you through our provisioning workflow.
+# the orange plus sign to provision a cluster.
+# you can than put it into code using apiKey
+# or store it as a secret in k8s with your preferred tool
 apiKey: ""
+# name of the secret already stored in k8s conaining CLOUDABILITY_API_KEY
+secretName: ""
+
 # clusterName is REQUIRED.
 # The cluster name to be used for the cluster the agent runs in.
 clusterName: ""
