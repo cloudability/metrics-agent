@@ -33,7 +33,8 @@ setup_kind() {
   fi
 
   sleep 2
-  
+  kubectl version
+
     i=0
     until [ $i -ge 5 ]
     do
