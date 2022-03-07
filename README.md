@@ -16,7 +16,15 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 #### 1.22 and below
 
-Kubernetes versions 1.22 and below are supported by the metrics agent.
+Kubernetes versions 1.22 and below are supported by the metrics agent on AWS, GCP and Azure cloud services.
+
+#### Architectures
+
+On AWS, both AMD64 and ARM architectures are supported.
+
+### Unsupported Configurations
+
+Cloudability Metrics Agent currently does not support OpenShift, Rancher or On Prem clusters.
 
 ### Configuration Options
 

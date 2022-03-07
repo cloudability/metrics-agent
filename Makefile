@@ -7,6 +7,9 @@ GOLANG_VERSION?=1.16
 REPO_DIR:=$(shell pwd)
 PREFIX=cloudability
 CLDY_API_KEY=${CLOUDABILITY_API_KEY}
+PLATFORM?=linux/amd64
+PLATFORM_TAG?=amd64
+
 
 # $(call TEST_KUBERNETES, image_tag, prefix, git_commit)
 define TEST_KUBERNETES
@@ -46,36 +49,49 @@ default:
 build:
 	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
 
-container-build:
-	docker build --build-arg golang_version=$(GOLANG_VERSION) \
+# Build a container image and push to DockerHub master with correct version tags
+container-build-master:
+	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
+	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION) \
+	-t $(PREFIX)/metrics-agent:latest -f deploy/docker/Dockerfile . --push
+
+# Build a container image and push to DockerHub beta with correct version tags
+container-build-beta:
+	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION)-beta \
+	-t $(PREFIX)/metrics-agent:beta-latest -f deploy/docker/Dockerfile . --push
+
+# Build a local container image with the linux AMD architecture
+container-build-single-platform:
+	docker build --platform $(PLATFORM) \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $(PREFIX)/metrics-agent:$(VERSION)-$(PLATFORM_TAG) -f deploy/docker/Dockerfile .
+
+# Specify the repository you would like to send the multi-architectural image to after building.
+container-build-repository:
+	@read -p "Enter the repository name you want to send this image to: " REPOSITORY; \
+	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
+    --build-arg golang_version=$(GOLANG_VERSION) \
+    --build-arg package=$(PKG) \
+    --build-arg application=$(APPLICATION) \
+    -t $$REPOSITORY/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --push
 
 helm-package:
 	helm package deploy/charts/metrics-agent
 
-deploy-local: container-build
+deploy-local: container-build-single-platform
 	kubectl config use-context docker-desktop
 	cat ./deploy/kubernetes/cloudability-metrics-agent.yaml | \
 	sed "s/latest/$(VERSION)/g; s/XXXXXXXXX/$(CLDY_API_KEY)/g; s/Always/Never/g; s/NNNNNNNNN/local-dev-$(shell hostname)/g" \
 	./deploy/kubernetes/cloudability-metrics-agent.yaml |kubectl apply -f -
-
-dockerhub-push:
-	docker push cloudability/metrics-agent:latest
-	docker push cloudability/metrics-agent:$(RELEASE-VERSION)
-
-dockerhub-push-beta:
-	docker push cloudability/metrics-agent:beta-latest
-	docker push cloudability/metrics-agent:$(RELEASE-VERSION)-beta
-
-docker-tag:
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:latest
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)
-
-docker-tag-beta:
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:beta-latest
-	docker tag $(PREFIX)/metrics-agent:$(VERSION) cloudability/metrics-agent:$(RELEASE-VERSION)-beta
 
 download-deps:
 	@echo Download go.mod dependencies
@@ -105,20 +121,20 @@ version:
 release-version:
 	@echo $(RELEASE-VERSION)
 
-test-e2e-1.22: container-build install-tools
-	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION))
+test-e2e-1.22: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-1.21.1: container-build install-tools
-	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION))
+test-e2e-1.21.1: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-1.20: container-build install-tools
-	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION))
+test-e2e-1.20: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-1.19: container-build install-tools
-	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION))
+test-e2e-1.19: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-1.18: container-build install-tools
-	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION))
+test-e2e-1.18: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
 test-e2e-all: test-e2e-1.22 test-e2e-1.21.1 test-e2e-1.20 test-e2e-1.19 test-e2e-1.18
 

@@ -38,7 +38,7 @@ jobs:
         run: make test
 
   test_e2e:
-    name: Test E2E
+    name: Test E2E AMD
     needs: build
     runs-on: ubuntu-18.04
     steps:
@@ -46,8 +46,9 @@ jobs:
         with:
           go-version: '1.16'
       - uses: actions/checkout@v2
-      - name: run e2e tests
+      - name: run e2e AMD tests
         run: make test-e2e-all
+
 
   slackFinish:
     name: Notify Finish
