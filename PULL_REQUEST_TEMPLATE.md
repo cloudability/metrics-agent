@@ -12,7 +12,6 @@
 
 #### Developer Done List
 
-- [ ] Incremented verison.go
 - [ ] Tests Added/Updated
 - [ ] Updated README.md
 - [ ] Verified backward compatible
