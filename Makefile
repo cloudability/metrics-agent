@@ -47,7 +47,8 @@ build:
 	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
 
 container-build:
-	docker build --build-arg golang_version=$(GOLANG_VERSION) \
+	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
+	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
 	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
