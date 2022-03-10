@@ -55,14 +55,29 @@ container-build:
 	--build-arg application=$(APPLICATION) \
 	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
 
-# Build a local container image with the specified architecture (can only build a single architecture image)
-container-build-single-arch:
-	@read -p "Input build architecture (e.g. linux/amd64, linux/arm64/v8): " PLATFORM; \
-	docker build --platform $$PLATFORM \
+# Build a local container image with the linux AMD architecture
+container-build-amd:
+	docker build --platform linux/amd64 \
 	--build-arg golang_version=$(GOLANG_VERSION) \
-    --build-arg package=$(PKG) \
-    --build-arg application=$(APPLICATION) \
-    -t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+
+# Build a local container image with the specified architecture (can only build a single architecture image)
+container-build-arm64:
+	docker build --platform linux/arm64/v8 \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+
+# Build a local container image with the specified architecture (can only build a single architecture image)
+container-build-arm:
+	docker build --platform linux/arm/v7 \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
 
 # Specify the repository you would like to send the multi-architectural image to after building.
 container-build-repository:
@@ -126,21 +141,55 @@ version:
 release-version:
 	@echo $(RELEASE-VERSION)
 
-test-e2e-1.22: container-build install-tools
+test-e2e-1.22-amd: container-build-amd install-tools
 	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION))
 
-test-e2e-1.21.1: container-build install-tools
+test-e2e-1.21.1-amd: container-build-amd install-tools
 	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION))
 
-test-e2e-1.20: container-build install-tools
+test-e2e-1.20-amd: container-build-amd install-tools
 	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION))
 
-test-e2e-1.19: container-build install-tools
+test-e2e-1.19-amd: container-build-amd install-tools
 	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION))
 
-test-e2e-1.18: container-build install-tools
+test-e2e-1.18-amd: container-build-amd install-tools
 	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION))
 
-test-e2e-all: test-e2e-1.22 test-e2e-1.21.1 test-e2e-1.20 test-e2e-1.19 test-e2e-1.18
+test-e2e-all-amd: test-e2e-1.22-amd test-e2e-1.21.1-amd test-e2e-1.20-amd test-e2e-1.19-amd test-e2e-1.18-amd
+
+test-e2e-1.22-arm64: container-build-arm64 install-tools
+	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION))
+
+test-e2e-1.21.1-arm64: container-build-arm64 install-tools
+	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION))
+
+test-e2e-1.20-arm64: container-build-arm64 install-tools
+	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION))
+
+test-e2e-1.19-arm64: container-build-arm64 install-tools
+	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION))
+
+test-e2e-1.18-arm64: container-build-arm64 install-tools
+	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION))
+
+test-e2e-all-arm64: test-e2e-1.22-arm64 test-e2e-1.21.1-arm64 test-e2e-1.20-arm64 test-e2e-1.19-arm64 test-e2e-1.18-arm64
+
+test-e2e-1.22-arm: container-build-arm install-tools
+	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION))
+
+test-e2e-1.21.1-arm: container-build-arm install-tools
+	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION))
+
+test-e2e-1.20-arm: container-build-arm install-tools
+	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION))
+
+test-e2e-1.19-arm: container-build-arm install-tools
+	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION))
+
+test-e2e-1.18-arm: container-build-arm install-tools
+	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION))
+
+test-e2e-all-arm: test-e2e-1.22-arm test-e2e-1.21.1-arm test-e2e-1.20-arm test-e2e-1.19-arm test-e2e-1.18-arm
 
 .PHONY: test version
