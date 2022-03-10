@@ -8,6 +8,7 @@ REPO_DIR:=$(shell pwd)
 PREFIX=cloudability
 CLDY_API_KEY=${CLOUDABILITY_API_KEY}
 
+
 # $(call TEST_KUBERNETES, image_tag, prefix, git_commit)
 define TEST_KUBERNETES
 	KUBERNETES_VERSION=$(1) IMAGE=$(2)/metrics-agent:$(3) TEMP_DIR=$(TEMP_DIR) $(REPO_DIR)/testdata/e2e/e2e.sh; \
@@ -46,12 +47,31 @@ default:
 build:
 	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
 
+# Build a container image and push to DockerHub
 container-build:
 	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
 	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+
+# Build a local container image with the specified architecture (can only build a single architecture image)
+container-build-single-arch:
+	@read -p "Input build architecture (e.g. linux/amd64, linux/arm64/v8): " PLATFORM; \
+	docker build --platform $$PLATFORM \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+    --build-arg package=$(PKG) \
+    --build-arg application=$(APPLICATION) \
+    -t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+
+# Specify the repository you would like to send the multi-architectural image to after building.
+container-build-repository:
+	@read -p "Enter the repository name you want to send this image to: " REPOSITORY; \
+	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
+    --build-arg golang_version=$(GOLANG_VERSION) \
+    --build-arg package=$(PKG) \
+    --build-arg application=$(APPLICATION) \
+    -t $$REPOSITORY/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --push
 
 helm-package:
 	helm package deploy/charts/metrics-agent
