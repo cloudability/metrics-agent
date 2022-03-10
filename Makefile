@@ -142,53 +142,53 @@ release-version:
 	@echo $(RELEASE-VERSION)
 
 test-e2e-1.22-amd: container-build-amd install-tools
-	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION)-amd64)
 
 test-e2e-1.21.1-amd: container-build-amd install-tools
-	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION)-amd64)
 
 test-e2e-1.20-amd: container-build-amd install-tools
-	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION)-amd64)
 
 test-e2e-1.19-amd: container-build-amd install-tools
-	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION)-amd64)
 
 test-e2e-1.18-amd: container-build-amd install-tools
-	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION)-amd64)
 
 test-e2e-all-amd: test-e2e-1.22-amd test-e2e-1.21.1-amd test-e2e-1.20-amd test-e2e-1.19-amd test-e2e-1.18-amd
 
 test-e2e-1.22-arm64: container-build-arm64 install-tools
-	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION)-arm64)
 
 test-e2e-1.21.1-arm64: container-build-arm64 install-tools
-	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION)-arm64)
 
 test-e2e-1.20-arm64: container-build-arm64 install-tools
-	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION)-arm64)
 
 test-e2e-1.19-arm64: container-build-arm64 install-tools
-	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION)-arm64)
 
 test-e2e-1.18-arm64: container-build-arm64 install-tools
-	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION)-arm64)
 
 test-e2e-all-arm64: test-e2e-1.22-arm64 test-e2e-1.21.1-arm64 test-e2e-1.20-arm64 test-e2e-1.19-arm64 test-e2e-1.18-arm64
 
 test-e2e-1.22-arm: container-build-arm install-tools
-	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION)-arm)
 
 test-e2e-1.21.1-arm: container-build-arm install-tools
-	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION)-arm)
 
 test-e2e-1.20-arm: container-build-arm install-tools
-	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION)-arm)
 
 test-e2e-1.19-arm: container-build-arm install-tools
-	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.19.0,$(PREFIX),$(VERSION)-arm)
 
 test-e2e-1.18-arm: container-build-arm install-tools
-	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION))
+	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION)-arm)
 
 test-e2e-all-arm: test-e2e-1.22-arm test-e2e-1.21.1-arm test-e2e-1.20-arm test-e2e-1.19-arm test-e2e-1.18-arm
 
