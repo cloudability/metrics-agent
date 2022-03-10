@@ -47,11 +47,11 @@ jobs:
           go-version: '1.16'
       - uses: actions/checkout@v2
       - name: run e2e AMD tests
-        run: make test-e2e-all-amd
+        run: make test-e2e-all
       - name: run e2e ARM64 tests
-        run: make test-e2e-all-arm64
+        run: make test-e2e-all PLATFORM=linux/arm64/v8 PLATFORM_TAG=arm64
       - name: run e2e ARM64 tests
-        run: make test-e2e-all-arm
+        run: make test-e2e-all PLATFORM=linux/arm/v7 PLATFORM=arm64
 
   slackFinish:
     name: Notify Finish
