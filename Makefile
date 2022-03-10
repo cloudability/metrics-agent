@@ -61,7 +61,7 @@ container-build-amd:
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+	-t $(PREFIX)/metrics-agent:$(VERSION)-amd64 -f deploy/docker/Dockerfile .
 
 # Build a local container image with the specified architecture (can only build a single architecture image)
 container-build-arm64:
@@ -69,7 +69,7 @@ container-build-arm64:
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+	-t $(PREFIX)/metrics-agent:$(VERSION)-arm64 -f deploy/docker/Dockerfile .
 
 # Build a local container image with the specified architecture (can only build a single architecture image)
 container-build-arm:
@@ -77,7 +77,7 @@ container-build-arm:
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+	-t $(PREFIX)/metrics-agent:$(VERSION)-arm -f deploy/docker/Dockerfile .
 
 # Specify the repository you would like to send the multi-architectural image to after building.
 container-build-repository:
