@@ -55,7 +55,6 @@ container-build-master:
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(VERSION) \
 	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION) \
 	-t $(PREFIX)/metrics-agent:latest -f deploy/docker/Dockerfile . --push
 
@@ -65,7 +64,6 @@ container-build-beta:
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(VERSION) \
 	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION)-beta \
 	-t $(PREFIX)/metrics-agent:beta-latest -f deploy/docker/Dockerfile . --push
 
