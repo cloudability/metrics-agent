@@ -75,7 +75,7 @@ jobs:
 
   slackFinish:
     name: Notify Finish
-    needs: test_e2e
+    needs: [test_e2e_amd, test_e2e_arm64, test_e2e_arm]
     runs-on: ubuntu-18.04
     if: always()
     steps:
