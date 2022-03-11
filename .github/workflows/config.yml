@@ -58,6 +58,10 @@ jobs:
         with:
           go-version: '1.16'
       - uses: actions/checkout@v2
+      - name: setup QEMU
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: arm64
       - name: run e2e ARM64 tests
         run: make test-e2e-all PLATFORM=linux/arm64/v8 PLATFORM_TAG=arm64
 
@@ -70,6 +74,10 @@ jobs:
         with:
           go-version: '1.16'
       - uses: actions/checkout@v2
+      - name: setup QEMU
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: arm
       - name: run e2e ARM64 tests
         run: make test-e2e-all PLATFORM=linux/arm/v7 PLATFORM=arm
 
