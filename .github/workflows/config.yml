@@ -37,7 +37,7 @@ jobs:
       - name: Run Tests
         run: make test
 
-  test_e2e_amd:
+  test_e2e:
     name: Test E2E AMD
     needs: build
     runs-on: ubuntu-18.04
@@ -49,41 +49,10 @@ jobs:
       - name: run e2e AMD tests
         run: make test-e2e-all
 
-  test_e2e_arm64:
-    name: Test E2E ARM64
-    needs: build
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.16'
-      - uses: actions/checkout@v2
-      - name: setup QEMU
-        uses: docker/setup-qemu-action@v1
-        with:
-          platforms: arm64
-      - name: run e2e ARM64 tests
-        run: make test-e2e-all PLATFORM=linux/arm64/v8 PLATFORM_TAG=arm64
-
-  test_e2e_arm:
-    name: Test E2E ARM
-    needs: build
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.16'
-      - uses: actions/checkout@v2
-      - name: setup QEMU
-        uses: docker/setup-qemu-action@v1
-        with:
-          platforms: arm
-      - name: run e2e ARM64 tests
-        run: make test-e2e-all PLATFORM=linux/arm/v7 PLATFORM=arm
 
   slackFinish:
     name: Notify Finish
-    needs: [test_e2e_amd, test_e2e_arm64, test_e2e_arm]
+    needs: test_e2e
     runs-on: ubuntu-18.04
     if: always()
     steps:
