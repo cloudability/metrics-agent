@@ -74,9 +74,6 @@ container-build-repository:
     --build-arg application=$(APPLICATION) \
     -t $$REPOSITORY/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --push
 
-remove-container-image:
-	docker image rm $(PREFIX)/metrics-agent:$(VERSION)-$(PLATFORM_TAG)
-
 helm-package:
 	helm package deploy/charts/metrics-agent
 
@@ -145,6 +142,6 @@ test-e2e-1.19: container-build-single-platform install-tools
 test-e2e-1.18: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.18.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-all: test-e2e-1.22 test-e2e-1.21.1 test-e2e-1.20 test-e2e-1.19 test-e2e-1.18 remove-container-image
+test-e2e-all: test-e2e-1.22 test-e2e-1.21.1 test-e2e-1.20 test-e2e-1.19 test-e2e-1.18
 
 .PHONY: test version
