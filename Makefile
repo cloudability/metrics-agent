@@ -55,7 +55,7 @@ container-build:
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .
+	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --load
 
 # Build a local container image with the linux AMD architecture
 container-build-single-platform:
