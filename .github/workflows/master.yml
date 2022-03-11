@@ -1,6 +1,11 @@
 name: Master
 
 on:
+  # This will make sure that we don't deploy before running tests successfully
+  workflow_run:
+    workflows: [Metrics-Agent]
+    types:
+      - completed
   push:
     branches:
       - master
@@ -8,33 +13,33 @@ on:
 
 jobs:
   deploy:
+    name: Build and Deploy
+    needs: test_e2e
     runs-on: ubuntu-18.04
+    if: ${{ github.event.workflow_run.conclusion == 'success'}}
     steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       - uses: actions/setup-go@v2
         with:
           go-version: '1.16'
       - uses: actions/checkout@v2
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
-      - name: Build Docker Container
-        run: make -e container-build
-      - name: Docker Tag
+      - name: Docker Build Master and Push
         if: github.ref == 'refs/heads/master'
-        run: make docker-tag
-      - name: Docker Beta Tag
+        run: make container-build-master
+      - name: Docker Build Beta and Push
         if: github.ref == 'refs/heads/beta'
-        run: make docker-tag-beta
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Push To Dockerhub
-        if: github.ref == 'refs/heads/master'
-        run: make dockerhub-push
-      - name: Push to Beta Dockerhub
-        if: github.ref == 'refs/heads/beta'
-        run: make dockerhub-push-beta
+        run: make container-build-beta
+  throwerror:
+    runs-on: ubuntu-18.04
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - run: echo 'Tests Failed, Will Not Deploy'
 
   slackFinish:
     name: Notify Finish

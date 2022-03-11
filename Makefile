@@ -49,13 +49,25 @@ default:
 build:
 	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
 
-# Build a container image and push to DockerHub
-container-build:
+# Build a container image and push to DockerHub master
+container-build-master:
 	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --load
+	-t $(PREFIX)/metrics-agent:$(VERSION) \
+	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION) \
+	-t $(PREFIX)/metrics-agent:latest -f deploy/docker/Dockerfile . --push
+
+# Build a container image and push to DockerHub beta
+container-build-beta:
+	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $(PREFIX)/metrics-agent:$(VERSION) \
+	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION)-beta \
+	-t $(PREFIX)/metrics-agent:beta-latest -f deploy/docker/Dockerfile . --push
 
 # Build a local container image with the linux AMD architecture
 container-build-single-platform:
