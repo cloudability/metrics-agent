@@ -1,4 +1,5 @@
 ARCH?=amd64
+DOCKER_PLATFORMS := linux/amd64,linux/arm64
 EXECUTABLES = go
 EXEC_CHECK := $(foreach exec,$(EXECUTABLES), \
 	$(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH.")))
@@ -47,7 +48,8 @@ build:
 	GOARCH=$(ARCH) CGO_ENABLED=0 go build -o metrics-agent main.go
 
 container-build:
-	docker build --build-arg golang_version=$(GOLANG_VERSION) \
+	docker buildx build --build-arg golang_version=$(GOLANG_VERSION) \
+	--platform ${DOCKER_PLATFORMS} --pull --push \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
 	-t $(PREFIX)/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .

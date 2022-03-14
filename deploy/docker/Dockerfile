@@ -8,10 +8,16 @@ ARG application
 WORKDIR /go/src/${package}/
 
 # Build source code
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
 ENV CGO_ENABLED=0
-ENV GOOS=linux
+ENV GOOS=${TARGETOS} \
+    GOARCH=${TARGETARCH} \
+    GOARM=${TARGETVARIANT}
 COPY . /go/src/${package}
-RUN go build
+RUN export GOARM=$(echo "${GOARM}" | cut -c2-) && \
+    go build
 
 FROM alpine:3.13
 ARG package
