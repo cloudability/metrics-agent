@@ -54,8 +54,7 @@ jobs:
     name: Notify Finish
     needs: deploy
     runs-on: ubuntu-18.04
-    if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped' ||
-    needs.deploy.result == 'failure')
+    if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped' || needs.deploy.result == 'failure')
     steps:
       - uses: technote-space/workflow-conclusion-action@v2
       - uses: 8398a7/action-slack@v3
