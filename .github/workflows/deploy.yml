@@ -1,4 +1,4 @@
-name: Master
+name: Deploy
 
 on:
   # This will make sure that we don't deploy before running tests
