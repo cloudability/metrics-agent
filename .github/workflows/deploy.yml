@@ -4,12 +4,8 @@ on:
   # This will make sure that we don't deploy before running tests
   workflow_run:
     workflows: [Metrics-Agent]
-    types:
-      - completed
-  push:
-    branches:
-      - master
-      - beta
+    types: [completed]
+    branches: [beta, master]
 
 jobs:
   deploy:
@@ -56,7 +52,6 @@ jobs:
     runs-on: ubuntu-18.04
     if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped' || needs.deploy.result == 'failure')
     steps:
-      - uses: technote-space/workflow-conclusion-action@v2
       - uses: 8398a7/action-slack@v3
         with:
           fields: repo,message,commit,author,action,eventName,ref,workflow
@@ -64,4 +59,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
 
