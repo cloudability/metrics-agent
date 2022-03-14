@@ -1,7 +1,7 @@
 name: Master
 
 on:
-  # This will make sure that we don't deploy before running tests successfully
+  # This will make sure that we don't deploy before running tests
   workflow_run:
     workflows: [Metrics-Agent]
     types:
@@ -16,6 +16,7 @@ jobs:
     name: Build and Deploy
     needs: test_e2e
     runs-on: ubuntu-18.04
+    # If Metrics-Agent workflow is successful, deploy to DockerHub
     if: ${{ github.event.workflow_run.conclusion == 'success'}}
     steps:
       - name: Login to DockerHub
@@ -30,13 +31,19 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Docker Build Master and Push
+        # If pushing to the master branch, we want to correctly tag the builds
+        # in docker-hub with the new master makefile command
         if: github.ref == 'refs/heads/master'
         run: make container-build-master
       - name: Docker Build Beta and Push
+        # If pushing to the beta branch, we want to correctly tag the builds
+        # in docker-hub with the new beta makefile command
         if: github.ref == 'refs/heads/beta'
         run: make container-build-beta
   throwerror:
     runs-on: ubuntu-18.04
+    # If the Metrics-Agent workflow fails, we do not want to deploy
+    # Throw an error instead
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
       - uses: actions/github-script@v3
