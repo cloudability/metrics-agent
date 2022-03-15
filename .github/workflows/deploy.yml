@@ -1,18 +1,15 @@
 name: Deploy
 
 on:
-  # This will make sure that we don't deploy before running tests
-  workflow_run:
-    workflows: [Metrics-Agent]
-    types: [completed]
-    branches: [beta, master]
+  push:
+    branches:
+      - master
+      - beta
 
 jobs:
   deploy:
     name: Build and Deploy
     runs-on: ubuntu-18.04
-    # If Metrics-Agent workflow is successful, deploy to DockerHub
-    if: ${{ github.event.workflow_run.conclusion == 'success'}}
     steps:
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -35,27 +32,18 @@ jobs:
         # in docker-hub with the new beta makefile command
         if: github.ref == 'refs/heads/beta'
         run: make container-build-beta
-  throwerror:
-    runs-on: ubuntu-18.04
-    # If the Metrics-Agent workflow fails, we do not want to deploy
-    # Throw an error instead
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-    steps:
-      - uses: actions/github-script@v3
-        with:
-          script: |
-            core.setFailed('Tests Failed, Will Not Deploy to DockerHub')
 
   slackFinish:
     name: Notify Finish
     needs: deploy
     runs-on: ubuntu-18.04
-    if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped' || needs.deploy.result == 'failure')
+    if: always()
     steps:
+      - uses: technote-space/workflow-conclusion-action@v2
       - uses: 8398a7/action-slack@v3
         with:
           fields: repo,message,commit,author,action,eventName,ref,workflow
-          status: ${{ job.status }}
+          status: ${{ env.WORKFLOW_CONCLUSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
