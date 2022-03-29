@@ -1,4 +1,4 @@
-name: Master
+name: Deploy
 
 on:
   push:
@@ -8,31 +8,30 @@ on:
 
 jobs:
   deploy:
+    name: Build and Deploy
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.16'
-      - uses: actions/checkout@v2
-      - name: build docker container
-        run: make -e container-build
-      - name: docker tag
-        if: github.ref == 'refs/heads/master'
-        run: make docker-tag
-      - name: docker beta tag
-        if: github.ref == 'refs/heads/beta'
-        run: make docker-tag-beta
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: push to dockerhub
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+      - uses: actions/checkout@v2
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Docker Build Master and Push
+        # If pushing to the master branch, we want to correctly tag the builds
+        # in docker-hub with the new master makefile command
         if: github.ref == 'refs/heads/master'
-        run: make dockerhub-push
-      - name: push to beta dockerhub
+        run: make container-build-master
+      - name: Docker Build Beta and Push
+        # If pushing to the beta branch, we want to correctly tag the builds
+        # in docker-hub with the new beta makefile command
         if: github.ref == 'refs/heads/beta'
-        run: make dockerhub-push-beta
+        run: make container-build-beta
 
   slackFinish:
     name: Notify Finish
@@ -48,4 +47,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
 
