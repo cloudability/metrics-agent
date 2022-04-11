@@ -13,8 +13,8 @@ metrics-agent` to see the charts.
 
 To install the metrics-agent chart:
 
-    helm install my-metrics-agent metrics-agent/metrics-agent
+    helm install metrics-agent --set apiKey=<yourApiKey> --set clusterName=<yourClusterName> metrics-agent/metrics-agent
 
 To uninstall the chart:
 
-    helm delete my-metrics-agent
+    helm delete metrics-agent
