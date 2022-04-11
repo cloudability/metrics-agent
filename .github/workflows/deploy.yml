@@ -37,6 +37,8 @@ jobs:
     name: Cut Helm Release when Updated
     needs: deploy
     runs-on: ubuntu-latest
+    # Only cut release if pushing to master
+    if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
         uses: actions/checkout@v2
