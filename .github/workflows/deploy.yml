@@ -33,28 +33,6 @@ jobs:
         if: github.ref == 'refs/heads/beta'
         run: make container-build-beta
 
-  helmRelease:
-    name: Cut Helm Release when Updated
-    needs: deploy
-    runs-on: ubuntu-latest
-    # Only cut release if pushing to master
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.1.0
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
   slackFinish:
     name: Notify Finish
     needs: deploy

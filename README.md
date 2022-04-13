@@ -94,6 +94,11 @@ You'll find information and help on how to contribute code in
 [the CONTRIBUTING document](CONTRIBUTING.md) in this repo.
 
 
+### Deploying Using Helm
+
+Instructions for Helm deployment can be found [here](https://cloudability.github.io/metrics-agent/).
+
+
 ### To Run Locally
 
 You must obtain a valid API Key and export it locally as an environment variable.
