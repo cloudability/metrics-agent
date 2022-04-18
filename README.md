@@ -22,6 +22,10 @@ Kubernetes versions 1.22 and below are supported by the metrics agent on AWS, GC
 
 On AWS, both AMD64 and ARM architectures are supported.
 
+### Deploying with Helm
+
+Instructions for deploying the metrics-agent using Helm can be found [here](https://cloudability.github.io/metrics-agent/).
+
 ### Unsupported Configurations
 
 Cloudability Metrics Agent currently does not support OpenShift, Rancher or On Prem clusters.
