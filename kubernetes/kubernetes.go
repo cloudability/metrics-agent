@@ -82,7 +82,6 @@ type KubeAgentConfig struct {
 	NodeMetrics           EndpointMask
 }
 
-const uploadInterval time.Duration = 10
 const retryCount uint = 10
 const DefaultCollectionRetry = 1
 
@@ -134,7 +133,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	// run , sleep etc..
 	doneChan := make(chan bool)
 
-	sendChan := time.NewTicker(uploadInterval * time.Minute)
+	// set send frequency to be less than that of poll frequency
+	sendChan := time.NewTicker(time.Duration(config.PollInterval/2) * time.Second)
 
 	pollChan := time.NewTicker(time.Duration(config.PollInterval) * time.Second)
 
