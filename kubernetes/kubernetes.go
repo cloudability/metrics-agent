@@ -133,8 +133,12 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	// run , sleep etc..
 	doneChan := make(chan bool)
 
-	// set send frequency to be less than that of poll frequency
-	sendChan := time.NewTicker(time.Duration(config.PollInterval/2) * time.Second)
+	// set send frequency to be less than that of poll frequency, floor of once a minute
+	sendFrequency := time.Duration(config.PollInterval/2) * time.Second
+	if sendFrequency < time.Minute {
+		sendFrequency = time.Minute
+	}
+	sendChan := time.NewTicker(sendFrequency)
 
 	pollChan := time.NewTicker(time.Duration(config.PollInterval) * time.Second)
 
