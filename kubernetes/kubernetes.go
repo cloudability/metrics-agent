@@ -47,6 +47,7 @@ type ClusterVersion struct {
 type KubeAgentConfig struct {
 	APIKey                string
 	BearerToken           string
+	BearerTokenPath       string
 	Cert                  string
 	ClusterName           string
 	ClusterHostURL        string
@@ -244,6 +245,17 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
 
 	sampleStartTime := time.Now().UTC()
+
+	// refresh client token before each collection?
+	token, err := getBearerToken(config.BearerTokenPath)
+	if err != nil {
+		log.Warnf("Couldn't read auth token defined in %q: %v", config.BearerTokenPath, err)
+	} else {
+		// update token for kubeAgent and InClusterClient
+		config.BearerToken = token
+		config.InClusterClient.BearerToken = token
+		config.NodeClient.BearerToken = token
+	}
 
 	//create metric sample directory
 	msd, metricSampleDir, err := createMSD(config.msExportDirectory.Name(), sampleStartTime)
@@ -451,6 +463,7 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 		config.Key = thisConfig.KeyFile
 		config.TLSClientConfig = thisConfig.TLSClientConfig
 		config.Clientset, err = kubernetes.NewForConfig(thisConfig)
+		config.BearerTokenPath = thisConfig.BearerTokenFile
 		return config, err
 
 	}
@@ -852,4 +865,13 @@ func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, names
 
 	return nil
 
+}
+
+// getBearerToken reads the serviceaccount token
+func getBearerToken(authTokenPath string) (string, error) {
+	token, err := ioutil.ReadFile(authTokenPath)
+	if err != nil {
+		return "", fmt.Errorf("could not read token from %s: %s", authTokenPath, err)
+	}
+	return string(token), nil
 }
