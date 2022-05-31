@@ -241,6 +241,7 @@ func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
 	return config
 }
 
+//nolint gocyclo
 func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentConfig,
 	clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
 
@@ -496,7 +497,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 		return updatedConfig, err
 	}
 	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
-		config.BearerToken, config.CollectionRetryLimit)
+		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit)
 
 	updatedConfig.clusterUID, err = getNamespaceUID(ctx, updatedConfig.Clientset, "default")
 	if err != nil {

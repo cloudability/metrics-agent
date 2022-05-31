@@ -354,8 +354,8 @@ func TestEnsureNodeSource(t *testing.T) {
 			GetAllConStats: true,
 			NodeMetrics:    EndpointMask{},
 			// just populate some dummy fields here to ensure neither client gets unset
-			InClusterClient: raw.NewClient(http.Client{}, true, "token", 0),
-			NodeClient:      raw.NewClient(http.Client{}, true, "token", 0),
+			InClusterClient: raw.NewClient(http.Client{}, true, "token", "", 0),
+			NodeClient:      raw.NewClient(http.Client{}, true, "token", "", 0),
 		}
 
 		ka, err := ensureNodeSource(context.TODO(), ka)
@@ -657,6 +657,7 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 	rc := raw.NewClient(
 		c,
 		true,
+		"",
 		"",
 		retries,
 	)

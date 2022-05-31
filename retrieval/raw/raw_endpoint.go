@@ -18,21 +18,21 @@ import (
 
 //Client defines an HTTP Client
 type Client struct {
-	HTTPClient   *http.Client
-	insecure     bool
-	BearerToken  string
-	kubeletToken string
-	kubeletPath  string
-	retries      uint
+	HTTPClient      *http.Client
+	insecure        bool
+	BearerToken     string
+	BearerTokenPath string
+	retries         uint
 }
 
 //NewClient creates a new raw.Client
-func NewClient(HTTPClient http.Client, insecure bool, bearerToken string, retries uint) Client {
+func NewClient(HTTPClient http.Client, insecure bool, bearerToken, bearerTokenPath string, retries uint) Client {
 	return Client{
-		HTTPClient:  &HTTPClient,
-		insecure:    insecure,
-		BearerToken: bearerToken,
-		retries:     retries,
+		HTTPClient:      &HTTPClient,
+		insecure:        insecure,
+		BearerToken:     bearerToken,
+		BearerTokenPath: bearerTokenPath,
+		retries:         retries,
 	}
 }
 
