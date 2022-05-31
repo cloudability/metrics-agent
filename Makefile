@@ -78,7 +78,7 @@ container-build-single-platform:
 # Specify the repository you would like to send the single-architecture image to after building
 container-build-single-repository:
 	@read -p "Enter the repository name you want to send this image to: " REPOSITORY; \
-	docker build --platform $(PLATFORM) \
+	docker buildx build --platform $(PLATFORM) \
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
