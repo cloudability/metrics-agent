@@ -448,6 +448,9 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 			config.Key = thisConfig.KeyFile
 			config.TLSClientConfig = thisConfig.TLSClientConfig
 			config.Clientset, err = kubernetes.NewForConfig(thisConfig)
+			// this should be validated again
+			config.BearerToken = thisConfig.BearerToken
+			config.BearerTokenPath = thisConfig.BearerTokenFile
 			return config, err
 		}
 		log.Warn(
@@ -474,6 +477,7 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	config.Key = thisConfig.KeyFile
 	config.TLSClientConfig.CAFile = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	config.BearerToken = thisConfig.BearerToken
+	config.BearerTokenPath = thisConfig.BearerTokenFile
 	if config.Namespace == "" {
 		config.Namespace = "cloudability"
 	}
