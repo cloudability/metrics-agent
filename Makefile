@@ -75,6 +75,15 @@ container-build-single-platform:
 	--build-arg application=$(APPLICATION) \
 	-t $(PREFIX)/metrics-agent:$(VERSION)-$(PLATFORM_TAG) -f deploy/docker/Dockerfile .
 
+# Specify the repository you would like to send the single-architecture image to after building
+container-build-single-repository:
+	@read -p "Enter the repository name you want to send this image to: " REPOSITORY; \
+	docker build --platform $(PLATFORM) \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $$REPOSITORY/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --push
+
 # Specify the repository you would like to send the multi-architectural image to after building.
 container-build-repository:
 	@read -p "Enter the repository name you want to send this image to: " REPOSITORY; \
