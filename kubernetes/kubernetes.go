@@ -253,11 +253,9 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 		log.Warnf("Couldn't read auth token defined in %q: %v", config.BearerTokenPath, err)
 	} else {
 		// update token for kubeAgent and InClusterClient
-		log.Warnf("Token found! Old token %q", config.BearerToken)
 		config.BearerToken = token
 		config.InClusterClient.BearerToken = token
 		config.NodeClient.BearerToken = token
-		log.Warnf("Updated token %q", config.BearerToken)
 	}
 
 	//create metric sample directory
