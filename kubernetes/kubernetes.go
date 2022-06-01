@@ -247,18 +247,18 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 
 	sampleStartTime := time.Now().UTC()
 
-	// refresh client token before each collection?
+	// refresh client token before each collection
 	token, err := getBearerToken(config.BearerTokenPath)
 	if err != nil {
 		log.Warnf("Couldn't read auth token defined in %q: %v", config.BearerTokenPath, err)
 	} else {
-		// update token for kubeAgent and InClusterClient
+		// update tokens
 		config.BearerToken = token
 		config.InClusterClient.BearerToken = token
 		config.NodeClient.BearerToken = token
 	}
 
-	//create metric sample directory
+	// create metric sample directory
 	msd, metricSampleDir, err := createMSD(config.msExportDirectory.Name(), sampleStartTime)
 	if err != nil {
 		return err
@@ -448,7 +448,6 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 			config.Key = thisConfig.KeyFile
 			config.TLSClientConfig = thisConfig.TLSClientConfig
 			config.Clientset, err = kubernetes.NewForConfig(thisConfig)
-			// this should be validated again
 			config.BearerToken = thisConfig.BearerToken
 			config.BearerTokenPath = thisConfig.BearerTokenFile
 			return config, err
