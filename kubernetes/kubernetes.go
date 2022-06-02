@@ -241,7 +241,6 @@ func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
 	return config
 }
 
-//nolint gocyclo
 func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentConfig,
 	clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
 
@@ -250,13 +249,12 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	// refresh client token before each collection
 	token, err := getBearerToken(config.BearerTokenPath)
 	if err != nil {
-		log.Warnf("Couldn't read auth token defined in %q: %v", config.BearerTokenPath, err)
-	} else {
-		// update tokens
-		config.BearerToken = token
-		config.InClusterClient.BearerToken = token
-		config.NodeClient.BearerToken = token
+		return err
 	}
+
+	config.BearerToken = token
+	config.InClusterClient.BearerToken = token
+	config.NodeClient.BearerToken = token
 
 	// create metric sample directory
 	msd, metricSampleDir, err := createMSD(config.msExportDirectory.Name(), sampleStartTime)
@@ -272,24 +270,9 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	}
 
 	if config.CollectHeapsterExport {
-		verbose := !config.RetrieveNodeSummaries
-		// get raw Heapster metric sample
-		filename, err := config.InClusterClient.GetRawEndPoint(
-			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, verbose)
+		err = collectHeapsterExportMetrics(config, msd, metricSampleDir)
 		if err != nil {
-			if config.RetrieveNodeSummaries {
-				return nil
-			}
-			return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
-		}
-
-		baselineMetricSample, err := util.MatchOneFile(
-			path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
-		if err == nil || err.Error() == "No matches found" {
-			if err = handleBaselineHeapsterMetrics(
-				config.msExportDirectory.Name(), msd, baselineMetricSample, filename); err != nil {
-				log.Debugf("Warning: updating Heapster Baseline failed: %v", err)
-			}
+			return err
 		}
 	}
 
@@ -307,6 +290,29 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	}
 
 	return err
+}
+
+func collectHeapsterExportMetrics(config KubeAgentConfig, msd string, metricSampleDir *os.File) error {
+	verbose := !config.RetrieveNodeSummaries
+	// get raw Heapster metric sample
+	filename, err := config.InClusterClient.GetRawEndPoint(
+		http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, verbose)
+	if err != nil {
+		if config.RetrieveNodeSummaries {
+			return nil
+		}
+		return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
+	}
+
+	baselineMetricSample, err := util.MatchOneFile(
+		path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
+	if err == nil || err.Error() == "No matches found" {
+		if err = handleBaselineHeapsterMetrics(
+			config.msExportDirectory.Name(), msd, baselineMetricSample, filename); err != nil {
+			log.Debugf("Warning: updating Heapster Baseline failed: %v", err)
+		}
+	}
+	return nil
 }
 
 func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, error) {
@@ -871,11 +877,11 @@ func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, names
 
 }
 
-// getBearerToken reads the serviceaccount token
+// getBearerToken reads the service account token
 func getBearerToken(authTokenPath string) (string, error) {
 	token, err := ioutil.ReadFile(authTokenPath)
 	if err != nil {
-		return "", fmt.Errorf("could not read token from %s: %s", authTokenPath, err)
+		return "", errors.New("could not read bearer token from file")
 	}
 	return string(token), nil
 }
