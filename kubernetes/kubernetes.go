@@ -249,7 +249,7 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	// refresh client token before each collection
 	token, err := getBearerToken(config.BearerTokenPath)
 	if err != nil {
-		return err
+		log.Warnf("Warning: %s. If cluster version >=1.21 this token must be updated", err)
 	}
 
 	config.BearerToken = token
