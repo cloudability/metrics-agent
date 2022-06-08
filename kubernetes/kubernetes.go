@@ -249,7 +249,9 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	// refresh client token before each collection
 	token, err := getBearerToken(config.BearerTokenPath)
 	if err != nil {
-		log.Warnf("Warning: %s. If cluster version >=1.21 this token must be updated", err)
+		log.Warnf("Warning: Unable to update service account token for cloudability-metrics-agent. If this"+
+			" token is not refreshed in clusters >=1.21, the metrics-agent won't be able to collect data once"+
+			" token is expired. %s", err)
 	}
 
 	config.BearerToken = token
