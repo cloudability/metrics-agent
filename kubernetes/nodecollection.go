@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
@@ -105,27 +106,40 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
-	for _, n := range nodes {
-		if n.Spec.ProviderID == "" {
-			errMessage := "Node ProviderID is not set which may be because the node is running in a " +
-				"self managed environment, and this may cause inconsistent gathering of metrics data."
-			log.Warnf(errMessage)
-			failedNodeList[n.Name] = errors.New("provider ID for node does not exist. " +
-				"If this condition persists it will cause inconsistent cluster allocation")
-		}
+	var wg sync.WaitGroup
+	var counter = 0
 
-		nd := nodeFetchData{
-			nodeName:          n.Name,
-			prefix:            prefix,
-			workDir:           workDir,
-			ClusterHostURL:    config.ClusterHostURL,
-			containersRequest: containersRequest,
-		}
-		err := retrieveNodeData(nd, config, nodeSource, n)
-		if err != nil {
-			failedNodeList[n.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
-		}
+	for _, n := range nodes {
+		go func() {
+			wg.Add(1)
+			counter++
+			if n.Spec.ProviderID == "" {
+				errMessage := "Node ProviderID is not set which may be because the node is running in a " +
+					"self managed environment, and this may cause inconsistent gathering of metrics data."
+				log.Warnf(errMessage)
+				failedNodeList[n.Name] = errors.New("provider ID for node does not exist. " +
+					"If this condition persists it will cause inconsistent cluster allocation")
+			}
+
+			nd := nodeFetchData{
+				nodeName:          n.Name,
+				prefix:            prefix,
+				workDir:           workDir,
+				ClusterHostURL:    config.ClusterHostURL,
+				containersRequest: containersRequest,
+			}
+			log.Infof("RetrieveNodeData for node: %s Which is node number: %d", nd, counter)
+			err := retrieveNodeData(nd, config, nodeSource, n)
+			if err != nil {
+				failedNodeList[n.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
+			}
+			wg.Done()
+		}()
 	}
+
+	log.Infoln("Currently Waiting for all node data to be gathered")
+	wg.Wait()
+	log.Infof("All nodes data has been gathered, no longer waiting")
 
 	return failedNodeList, nil
 }
