@@ -110,31 +110,31 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 	var counter = 0
 
 	for _, n := range nodes {
-		go func() {
-			wg.Add(1)
+		wg.Add(1)
+		go func(currentNode v1.Node) {
 			counter++
-			if n.Spec.ProviderID == "" {
+			if currentNode.Spec.ProviderID == "" {
 				errMessage := "Node ProviderID is not set which may be because the node is running in a " +
 					"self managed environment, and this may cause inconsistent gathering of metrics data."
 				log.Warnf(errMessage)
-				failedNodeList[n.Name] = errors.New("provider ID for node does not exist. " +
+				failedNodeList[currentNode.Name] = errors.New("provider ID for node does not exist. " +
 					"If this condition persists it will cause inconsistent cluster allocation")
 			}
 
 			nd := nodeFetchData{
-				nodeName:          n.Name,
+				nodeName:          currentNode.Name,
 				prefix:            prefix,
 				workDir:           workDir,
 				ClusterHostURL:    config.ClusterHostURL,
 				containersRequest: containersRequest,
 			}
-			log.Infof("RetrieveNodeData for node: %s Which is node number: %d", nd, counter)
-			err := retrieveNodeData(nd, config, nodeSource, n)
+			log.Infof("RetrieveNodeData for nodeFetchData: %+v Which is node number: %d", nd, counter)
+			err := retrieveNodeData(nd, config, nodeSource, currentNode)
 			if err != nil {
-				failedNodeList[n.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
+				failedNodeList[currentNode.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
 			}
 			wg.Done()
-		}()
+		}(n)
 	}
 
 	log.Infoln("Currently Waiting for all node data to be gathered")
