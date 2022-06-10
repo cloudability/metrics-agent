@@ -880,8 +880,8 @@ func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, names
 }
 
 // getBearerToken reads the service account token
-func getBearerToken(authTokenPath string) (string, error) {
-	token, err := ioutil.ReadFile(authTokenPath)
+func getBearerToken(bearerTokenPath string) (string, error) {
+	token, err := ioutil.ReadFile(bearerTokenPath)
 	if err != nil {
 		return "", errors.New("could not read bearer token from file")
 	}
