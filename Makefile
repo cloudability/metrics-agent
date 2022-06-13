@@ -147,4 +147,13 @@ test-e2e-1.18: container-build-single-platform install-tools
 
 test-e2e-all: test-e2e-1.22 test-e2e-1.21.1 test-e2e-1.20 test-e2e-1.19 test-e2e-1.18
 
+container-build-single-repository:
+	@read -p "Enter the repository name you want to send this image to: " REPOSITORY; \
+	docker buildx build --platform $(PLATFORM) \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $$REPOSITORY/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --push
+
+
 .PHONY: test version

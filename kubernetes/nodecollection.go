@@ -106,10 +106,18 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
+	log.Infoln("Starting node collection for loop")
+
 	var wg sync.WaitGroup
 	var counter = 0
 
+	// creates a max number of concurrent goroutines that are allowed
+	limiter := make(chan struct{}, config.ConcurrentPollers)
+
 	for _, n := range nodes {
+		// block if channel is full (limiting number of goroutines)
+		limiter <- struct{}{}
+
 		wg.Add(1)
 		go func(currentNode v1.Node) {
 			counter++
@@ -133,6 +141,7 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 			if err != nil {
 				failedNodeList[currentNode.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
 			}
+			<-limiter
 			wg.Done()
 		}(n)
 	}
