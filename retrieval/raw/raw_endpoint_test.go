@@ -21,6 +21,7 @@ func TestGetRawEndPoint(t *testing.T) {
 			*httpClient,
 			true,
 			"",
+			"",
 			2,
 		)
 
@@ -61,6 +62,7 @@ func TestGetRawEndPoint(t *testing.T) {
 			*httpClient,
 			true,
 			"",
+			"",
 			2,
 		)
 
@@ -86,6 +88,7 @@ func TestGetRawEndPoint(t *testing.T) {
 		client := NewClient(
 			*httpClient,
 			true,
+			"",
 			"",
 			2,
 		)

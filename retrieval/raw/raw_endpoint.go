@@ -18,19 +18,21 @@ import (
 
 //Client defines an HTTP Client
 type Client struct {
-	HTTPClient  *http.Client
-	insecure    bool
-	bearerToken string
-	retries     uint
+	HTTPClient      *http.Client
+	insecure        bool
+	BearerToken     string
+	BearerTokenPath string
+	retries         uint
 }
 
 //NewClient creates a new raw.Client
-func NewClient(HTTPClient http.Client, insecure bool, bearerToken string, retries uint) Client {
+func NewClient(HTTPClient http.Client, insecure bool, bearerToken, bearerTokenPath string, retries uint) Client {
 	return Client{
-		HTTPClient:  &HTTPClient,
-		insecure:    insecure,
-		bearerToken: bearerToken,
-		retries:     retries,
+		HTTPClient:      &HTTPClient,
+		insecure:        insecure,
+		BearerToken:     bearerToken,
+		BearerTokenPath: bearerTokenPath,
+		retries:         retries,
 	}
 }
 
@@ -42,8 +44,8 @@ func (c *Client) createRequest(method, url string, body io.Reader) (*http.Reques
 		return nil, err
 	}
 
-	if c.bearerToken != "" {
-		request.Header.Add("Authorization", "bearer "+c.bearerToken)
+	if c.BearerToken != "" {
+		request.Header.Add("Authorization", "bearer "+c.BearerToken)
 	}
 
 	return request, err

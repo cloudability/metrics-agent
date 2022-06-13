@@ -47,6 +47,7 @@ type ClusterVersion struct {
 type KubeAgentConfig struct {
 	APIKey                string
 	BearerToken           string
+	BearerTokenPath       string
 	Cert                  string
 	ClusterName           string
 	ClusterHostURL        string
@@ -245,7 +246,19 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 
 	sampleStartTime := time.Now().UTC()
 
-	//create metric sample directory
+	// refresh client token before each collection
+	token, err := getBearerToken(config.BearerTokenPath)
+	if err != nil {
+		log.Warnf("Warning: Unable to update service account token for cloudability-metrics-agent. If this"+
+			" token is not refreshed in clusters >=1.21, the metrics-agent won't be able to collect data once"+
+			" token is expired. %s", err)
+	}
+
+	config.BearerToken = token
+	config.InClusterClient.BearerToken = token
+	config.NodeClient.BearerToken = token
+
+	// create metric sample directory
 	msd, metricSampleDir, err := createMSD(config.msExportDirectory.Name(), sampleStartTime)
 	if err != nil {
 		return err
@@ -259,24 +272,9 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	}
 
 	if config.CollectHeapsterExport {
-		verbose := !config.RetrieveNodeSummaries
-		// get raw Heapster metric sample
-		filename, err := config.InClusterClient.GetRawEndPoint(
-			http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, verbose)
+		err = collectHeapsterExportMetrics(config, msd, metricSampleDir)
 		if err != nil {
-			if config.RetrieveNodeSummaries {
-				return nil
-			}
-			return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
-		}
-
-		baselineMetricSample, err := util.MatchOneFile(
-			path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
-		if err == nil || err.Error() == "No matches found" {
-			if err = handleBaselineHeapsterMetrics(
-				config.msExportDirectory.Name(), msd, baselineMetricSample, filename); err != nil {
-				log.Debugf("Warning: updating Heapster Baseline failed: %v", err)
-			}
+			return err
 		}
 	}
 
@@ -294,6 +292,29 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	}
 
 	return err
+}
+
+func collectHeapsterExportMetrics(config KubeAgentConfig, msd string, metricSampleDir *os.File) error {
+	verbose := !config.RetrieveNodeSummaries
+	// get raw Heapster metric sample
+	filename, err := config.InClusterClient.GetRawEndPoint(
+		http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, verbose)
+	if err != nil {
+		if config.RetrieveNodeSummaries {
+			return nil
+		}
+		return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
+	}
+
+	baselineMetricSample, err := util.MatchOneFile(
+		path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
+	if err == nil || err.Error() == "No matches found" {
+		if err = handleBaselineHeapsterMetrics(
+			config.msExportDirectory.Name(), msd, baselineMetricSample, filename); err != nil {
+			log.Debugf("Warning: updating Heapster Baseline failed: %v", err)
+		}
+	}
+	return nil
 }
 
 func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, error) {
@@ -435,6 +456,8 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 			config.Key = thisConfig.KeyFile
 			config.TLSClientConfig = thisConfig.TLSClientConfig
 			config.Clientset, err = kubernetes.NewForConfig(thisConfig)
+			config.BearerToken = thisConfig.BearerToken
+			config.BearerTokenPath = thisConfig.BearerTokenFile
 			return config, err
 		}
 		log.Warn(
@@ -451,6 +474,7 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 		config.Key = thisConfig.KeyFile
 		config.TLSClientConfig = thisConfig.TLSClientConfig
 		config.Clientset, err = kubernetes.NewForConfig(thisConfig)
+		config.BearerTokenPath = thisConfig.BearerTokenFile
 		return config, err
 
 	}
@@ -460,6 +484,7 @@ func createClusterConfig(config KubeAgentConfig) (KubeAgentConfig, error) {
 	config.Key = thisConfig.KeyFile
 	config.TLSClientConfig.CAFile = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	config.BearerToken = thisConfig.BearerToken
+	config.BearerTokenPath = thisConfig.BearerTokenFile
 	if config.Namespace == "" {
 		config.Namespace = "cloudability"
 	}
@@ -483,7 +508,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 		return updatedConfig, err
 	}
 	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
-		config.BearerToken, config.CollectionRetryLimit)
+		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit)
 
 	updatedConfig.clusterUID, err = getNamespaceUID(ctx, updatedConfig.Clientset, "default")
 	if err != nil {
@@ -852,4 +877,13 @@ func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, names
 
 	return nil
 
+}
+
+// getBearerToken reads the service account token
+func getBearerToken(bearerTokenPath string) (string, error) {
+	token, err := ioutil.ReadFile(bearerTokenPath)
+	if err != nil {
+		return "", errors.New("could not read bearer token from file")
+	}
+	return string(token), nil
 }
