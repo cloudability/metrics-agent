@@ -135,8 +135,8 @@ func init() {
 	kubernetesCmd.PersistentFlags().IntVar(
 		&config.ConcurrentPollers,
 		"number_of_concurrent_node_pollers",
-		10,
-		"Number of concurrent goroutines created when polling node data. Default 10",
+		100,
+		"Number of concurrent goroutines created when polling node data. Default 100",
 	)
 
 	//nolint gas

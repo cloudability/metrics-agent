@@ -51,7 +51,7 @@ Cloudability Metrics Agent currently does not support OpenShift, Rancher or On P
 | CLOUDABILITY_LOG_FORMAT                        |                                                                               Optional: Format for log output (JSON,PLAIN) Default: PLAIN                                                                                |
 | CLOUDABILITY_LOG_LEVEL                         |                                                                     Optional: Log level to run the agent at (INFO,WARN,DEBUG,TRACE). Default: `INFO`                                                                     |
 | CLOUDABILITY_SCRATCH_DIR                       |            Optional: Temporary directory that metrics will be written to. If set, must assure that the directory exists and that the user agent UID 1000 has read/write access to the folder. Default: `/tmp`            |
-| CLOUDABILITY_NUMBER_OF_CONCURRENT_NODE_POLLERS |                                                             Optional: Number of goroutines that are created to poll node metrics in parallel. Default: `10`                                                              |
+| CLOUDABILITY_NUMBER_OF_CONCURRENT_NODE_POLLERS |                                                             Optional: Number of goroutines that are created to poll node metrics in parallel. Default: `100`                                                             |
 
 ```sh
 
