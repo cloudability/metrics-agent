@@ -106,10 +106,9 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
-	log.Infoln("Starting node collection for loop")
+	log.Debugln("Starting node collection loop")
 
 	var wg sync.WaitGroup
-	var counter = 0
 
 	// creates a max number of concurrent goroutines that are allowed
 	limiter := make(chan struct{}, config.ConcurrentPollers)
@@ -120,7 +119,6 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 
 		wg.Add(1)
 		go func(currentNode v1.Node) {
-			counter++
 			if currentNode.Spec.ProviderID == "" {
 				errMessage := "Node ProviderID is not set which may be because the node is running in a " +
 					"self managed environment, and this may cause inconsistent gathering of metrics data."
@@ -136,7 +134,6 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 				ClusterHostURL:    config.ClusterHostURL,
 				containersRequest: containersRequest,
 			}
-			log.Infof("RetrieveNodeData for nodeFetchData: %+v Which is node number: %d", nd, counter)
 			err := retrieveNodeData(nd, config, nodeSource, currentNode)
 			if err != nil {
 				failedNodeList[currentNode.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
@@ -146,9 +143,9 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 		}(n)
 	}
 
-	log.Infoln("Currently Waiting for all node data to be gathered")
+	log.Debugln("Currently Waiting for all node data to be gathered")
 	wg.Wait()
-	log.Infof("All nodes data has been gathered, no longer waiting")
+	log.Debugln("All nodes data has been gathered, no longer waiting")
 
 	return failedNodeList, nil
 }
