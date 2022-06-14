@@ -66,6 +66,7 @@ type KubeAgentConfig struct {
 	UseInClusterConfig    bool
 	CollectHeapsterExport bool
 	PollInterval          int
+	ConcurrentPollers     int
 	CollectionRetryLimit  uint
 	failedNodeList        map[string]error
 	AgentStartTime        time.Time

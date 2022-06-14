@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
@@ -105,27 +106,46 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 		return nil, fmt.Errorf("error occurred requesting container statistics: %v", err)
 	}
 
-	for _, n := range nodes {
-		if n.Spec.ProviderID == "" {
-			errMessage := "Node ProviderID is not set which may be because the node is running in a " +
-				"self managed environment, and this may cause inconsistent gathering of metrics data."
-			log.Warnf(errMessage)
-			failedNodeList[n.Name] = errors.New("provider ID for node does not exist. " +
-				"If this condition persists it will cause inconsistent cluster allocation")
-		}
+	log.Debugln("Starting node collection loop")
 
-		nd := nodeFetchData{
-			nodeName:          n.Name,
-			prefix:            prefix,
-			workDir:           workDir,
-			ClusterHostURL:    config.ClusterHostURL,
-			containersRequest: containersRequest,
-		}
-		err := retrieveNodeData(nd, config, nodeSource, n)
-		if err != nil {
-			failedNodeList[n.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
-		}
+	var wg sync.WaitGroup
+
+	// creates a max number of concurrent goroutines that are allowed
+	limiter := make(chan struct{}, config.ConcurrentPollers)
+
+	for _, n := range nodes {
+		// block if channel is full (limiting number of goroutines)
+		limiter <- struct{}{}
+
+		wg.Add(1)
+		go func(currentNode v1.Node) {
+			if currentNode.Spec.ProviderID == "" {
+				errMessage := "Node ProviderID is not set which may be because the node is running in a " +
+					"self managed environment, and this may cause inconsistent gathering of metrics data."
+				log.Warnf(errMessage)
+				failedNodeList[currentNode.Name] = errors.New("provider ID for node does not exist. " +
+					"If this condition persists it will cause inconsistent cluster allocation")
+			}
+
+			nd := nodeFetchData{
+				nodeName:          currentNode.Name,
+				prefix:            prefix,
+				workDir:           workDir,
+				ClusterHostURL:    config.ClusterHostURL,
+				containersRequest: containersRequest,
+			}
+			err := retrieveNodeData(nd, config, nodeSource, currentNode)
+			if err != nil {
+				failedNodeList[currentNode.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
+			}
+			<-limiter
+			wg.Done()
+		}(n)
 	}
+
+	log.Debugln("Currently Waiting for all node data to be gathered")
+	wg.Wait()
+	log.Debugln("All nodes data has been gathered, no longer waiting")
 
 	return failedNodeList, nil
 }

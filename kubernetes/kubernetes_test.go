@@ -114,6 +114,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			CollectHeapsterExport: false,
 			Clientset:             cs,
 			NodeMetrics:           EndpointMask{},
+			ConcurrentPollers:     10,
 		}
 		config, err := ensureMetricServicesAvailable(context.TODO(), config)
 		if err == nil {
@@ -142,6 +143,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			HeapsterURL:           ts.URL,
 			HTTPClient:            client,
 			InClusterClient:       raw.NewClient(client, true, "", "", 0),
+			ConcurrentPollers:     10,
 		}
 
 		var err error
@@ -281,6 +283,7 @@ func TestCollectMetrics(t *testing.T) {
 		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
 		GetAllConStats:        true,
+		ConcurrentPollers:     10,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
