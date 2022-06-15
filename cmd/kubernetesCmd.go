@@ -132,6 +132,12 @@ func init() {
 		"/tmp",
 		"Directory metrics will be written to",
 	)
+	kubernetesCmd.PersistentFlags().BoolVar(
+		&config.ParseMetricData,
+		"parse_metric_data",
+		false,
+		"Whether or not data should be parsed and sanitized of env vars prior to upload. Default: False",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -151,6 +157,7 @@ func init() {
 	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
 	_ = viper.BindPFlag("collect_heapster_export", kubernetesCmd.PersistentFlags().Lookup("collect_heapster_export"))
 	_ = viper.BindPFlag("scratch_dir", kubernetesCmd.PersistentFlags().Lookup("scratch_dir"))
+	_ = viper.BindPFlag("parse_metric_data", kubernetesCmd.PersistentFlags().Lookup("parse_metric_data"))
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
@@ -175,6 +182,7 @@ func init() {
 		ForceKubeProxy:        viper.GetBool("force_kube_proxy"),
 		Namespace:             viper.GetString("namespace"),
 		ScratchDir:            viper.GetString("scratch_dir"),
+		ParseMetricData:       viper.GetBool("parse_metric_data"),
 	}
 
 }

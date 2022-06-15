@@ -29,16 +29,19 @@ type Client struct {
 	BearerToken     string
 	BearerTokenPath string
 	retries         uint
+	parseMetricData bool
 }
 
 //NewClient creates a new raw.Client
-func NewClient(HTTPClient http.Client, insecure bool, bearerToken, bearerTokenPath string, retries uint) Client {
+func NewClient(HTTPClient http.Client, insecure bool, bearerToken, bearerTokenPath string, retries uint,
+	parseMetricData bool) Client {
 	return Client{
 		HTTPClient:      &HTTPClient,
 		insecure:        insecure,
 		BearerToken:     bearerToken,
 		BearerTokenPath: bearerTokenPath,
 		retries:         retries,
+		parseMetricData: parseMetricData,
 	}
 }
 
@@ -122,7 +125,7 @@ func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL 
 	defer util.SafeClose(rawRespFile.Close, &rerr)
 	filename = rawRespFile.Name()
 
-	if _, ok := FileSet[sourceName]; ok {
+	if _, ok := ParsableFileSet[sourceName]; c.parseMetricData && ok {
 		err = parseAndWriteData(sourceName, resp.Body, rawRespFile)
 		return filename, err
 	}
@@ -144,7 +147,7 @@ func parseAndWriteData(filename string, reader io.Reader, writer io.Writer) erro
 	if err != nil {
 		return err
 	}
-	to = sanitizeEnv(out.Elem().Interface())
+	to = sanitizeData(out.Elem().Interface())
 
 	data, err := json.Marshal(to)
 	if err != nil {
@@ -177,7 +180,7 @@ func getType(filename string) interface{} {
 	return to
 }
 
-func sanitizeEnv(to interface{}) interface{} {
+func sanitizeData(to interface{}) interface{} {
 	switch to.(type) {
 	case LabelSelectorMatchedResourceList:
 		return sanitizeSelectorMatchedResourceList(to)
@@ -192,6 +195,8 @@ func sanitizeEnv(to interface{}) interface{} {
 func sanitizeSelectorMatchedResourceList(to interface{}) interface{} {
 	cast := to.(LabelSelectorMatchedResourceList)
 	for i, item := range cast.Items {
+
+		// stripping env var and related data from the object
 		item.ObjectMeta.ManagedFields = nil
 		if _, ok := item.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
 			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
@@ -204,6 +209,8 @@ func sanitizeSelectorMatchedResourceList(to interface{}) interface{} {
 func sanitizePodList(to interface{}) interface{} {
 	cast := to.(PodList)
 	for i, item := range cast.Items {
+
+		// stripping env var and related data from the object
 		item.ObjectMeta.ManagedFields = nil
 		if _, ok := item.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
 			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
@@ -216,6 +223,8 @@ func sanitizePodList(to interface{}) interface{} {
 func sanitizeMapMatchedResourceList(to interface{}) interface{} {
 	cast := to.(LabelMapMatchedResourceList)
 	for i, item := range cast.Items {
+
+		// stripping env var and related data from the object
 		item.ObjectMeta.ManagedFields = nil
 		if _, ok := item.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
 			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
