@@ -2,18 +2,24 @@ package raw
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cloudability/metrics-agent/util"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
 //Client defines an HTTP Client
@@ -114,8 +120,12 @@ func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL 
 		return filename, errors.New("Unable to create raw metric file")
 	}
 	defer util.SafeClose(rawRespFile.Close, &rerr)
-
 	filename = rawRespFile.Name()
+
+	if _, ok := FileSet[sourceName]; ok {
+		err = parseAndWriteData(sourceName, resp.Body, rawRespFile)
+		return filename, err
+	}
 
 	_, err = io.Copy(rawRespFile, resp.Body)
 	if err != nil {
@@ -124,3 +134,114 @@ func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL 
 
 	return filename, rerr
 }
+
+// TODO: investigate streamed json reading / writing
+func parseAndWriteData(filename string, reader io.Reader, writer io.Writer) error {
+	var to = getType(filename)
+	out := reflect.New(reflect.TypeOf(to))
+	err := json.NewDecoder(reader).Decode(out.Interface())
+
+	if err != nil {
+		return err
+	}
+	to = sanitizeEnv(out.Elem().Interface())
+
+	data, err := json.Marshal(to)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(writer, bytes.NewReader(data))
+	return err
+}
+
+func getType(filename string) interface{} {
+	var to interface{}
+	switch filename {
+	case Nodes:
+		to = NodeList{}
+	case Namespaces:
+		to = NamespaceList{}
+	case Pods:
+		to = PodList{}
+	case PersistentVolumes:
+		to = PersistentVolumeList{}
+	case PersistentVolumeClaims:
+		to = PersistentVolumeClaimList{}
+	case AgentMeasurement:
+		to = CldyAgent{}
+	case Services, ReplicationControllers:
+		to = LabelMapMatchedResourceList{}
+	case Deployments, ReplicaSets, Jobs, DaemonSets:
+		to = LabelSelectorMatchedResourceList{}
+	}
+	return to
+}
+
+func sanitizeEnv(to interface{}) interface{} {
+	switch to.(type) {
+	case LabelSelectorMatchedResourceList:
+		return sanitizeSelectorMatchedResourceList(to)
+	case PodList:
+		return sanitizePodList(to)
+	case LabelMapMatchedResourceList:
+		return sanitizeMapMatchedResourceList(to)
+	}
+	return to
+}
+
+func sanitizeSelectorMatchedResourceList(to interface{}) interface{} {
+	cast := to.(LabelSelectorMatchedResourceList)
+	for i, item := range cast.Items {
+		item.ObjectMeta.ManagedFields = nil
+		if _, ok := item.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
+			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+		}
+		cast.Items[i] = item
+	}
+	return cast
+}
+
+func sanitizePodList(to interface{}) interface{} {
+	cast := to.(PodList)
+	for i, item := range cast.Items {
+		item.ObjectMeta.ManagedFields = nil
+		if _, ok := item.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
+			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+		}
+		cast.Items[i] = item
+	}
+	return cast
+}
+
+func sanitizeMapMatchedResourceList(to interface{}) interface{} {
+	cast := to.(LabelMapMatchedResourceList)
+	for i, item := range cast.Items {
+		item.ObjectMeta.ManagedFields = nil
+		if _, ok := item.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
+			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+		}
+		cast.Items[i] = item
+	}
+	return cast
+}
+
+// Within the items[].metadata object there are two fields that can commonly contain environment variables.
+// We delete these entries as they are unneeded for processing and could potentially contain sensitive data
+//func sanitizeResources(to interface{}) interface{} {
+//	cast := to.(map[string]interface{})
+//	if items, ok := cast["items"]; ok {
+//		resources := items.([]interface{})
+//		for i, resource := range resources {
+//			item := resource.(map[string]interface{})
+//			if meta, ok := item["metadata"]; ok {
+//				metadata := meta.(map[string]interface{})
+//				delete(metadata, "managedFields")
+//				delete(metadata, "annotations")
+//				item["metadata"] = metadata
+//			}
+//			resources[i] = item
+//		}
+//		cast["items"] = resources
+//	}
+//	return cast
+//}
