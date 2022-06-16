@@ -241,24 +241,3 @@ func sanitizeMapMatchedResourceList(to interface{}) interface{} {
 	}
 	return cast
 }
-
-// Within the items[].metadata object there are two fields that can commonly contain environment variables.
-// We delete these entries as they are unneeded for processing and could potentially contain sensitive data
-//func sanitizeResources(to interface{}) interface{} {
-//	cast := to.(map[string]interface{})
-//	if items, ok := cast["items"]; ok {
-//		resources := items.([]interface{})
-//		for i, resource := range resources {
-//			item := resource.(map[string]interface{})
-//			if meta, ok := item["metadata"]; ok {
-//				metadata := meta.(map[string]interface{})
-//				delete(metadata, "managedFields")
-//				delete(metadata, "annotations")
-//				item["metadata"] = metadata
-//			}
-//			resources[i] = item
-//		}
-//		cast["items"] = resources
-//	}
-//	return cast
-//}

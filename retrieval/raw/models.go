@@ -20,7 +20,7 @@ const (
 	PersistentVolumeClaims = "persistentvolumeclaims"
 )
 
-// ParsableFileSet contains that can be minimized via de/re serialization
+// ParsableFileSet contains file names that can be minimized via de/re serialization
 var ParsableFileSet = map[string]struct{}{
 	AgentMeasurement:       {},
 	Namespaces:             {},
