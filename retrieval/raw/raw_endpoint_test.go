@@ -14,6 +14,8 @@ func rawEndpointTests(t testing.TB) {
 		ensureThatFileCreatedForHeapsterData,
 		ensureThatErrorsAreHandled,
 		ensureNetworkErrorsAreHandled,
+		ensureThatFileParsedAndCreatedForPodsData,
+		ensureThatFileCreatedForPodsData,
 	}
 	for _, v := range scenarios {
 		v(t)
@@ -114,7 +116,7 @@ func ensureThatFileCreated(t testing.TB, testData string, source string, parseDa
 	tF, _ := testFile.Stat()
 
 	if checkForSecrets {
-		in, _ := os.ReadFile(source)
+		in, _ := os.ReadFile(testData)
 		if !strings.Contains(string(in), "superSecret") {
 			t.Error("Source file should have contained secret, but did not")
 		}
