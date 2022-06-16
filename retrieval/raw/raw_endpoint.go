@@ -215,6 +215,14 @@ func sanitizePodList(to interface{}) interface{} {
 		if _, ok := item.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
 			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
 		}
+		for j, container := range item.Spec.Containers {
+			container.Env = nil
+			item.Spec.Containers[j] = container
+		}
+		for j, container := range item.Spec.InitContainers {
+			container.Env = nil
+			item.Spec.InitContainers[j] = container
+		}
 		cast.Items[i] = item
 	}
 	return cast

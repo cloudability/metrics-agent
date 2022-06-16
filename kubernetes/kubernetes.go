@@ -782,6 +782,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["cadvisor_metrics_retrieval_method"] = config.NodeMetrics.Options(NodeCadvisorEndpoint)
 	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
+	m.Values["parse_metric_data"] = strconv.FormatBool(config.ParseMetricData)
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {

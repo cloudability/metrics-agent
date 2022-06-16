@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -67,18 +68,18 @@ func ensureThatErrorsAreHandled(t testing.TB) {
 }
 
 func ensureThatFileCreatedForHeapsterData(t testing.TB) {
-	ensureThatFileCreated(t, "../../testdata/heapster-metric-export.json", "heapster", true)
+	ensureThatFileCreated(t, "../../testdata/heapster-metric-export.json", "heapster", true, false)
 }
 
 func ensureThatFileParsedAndCreatedForPodsData(t testing.TB) {
-	ensureThatFileCreated(t, "../../testdata/pods.json", "pods", true)
+	ensureThatFileCreated(t, "../../testdata/pods.json", "pods", true, true)
 }
 
 func ensureThatFileCreatedForPodsData(t testing.TB) {
-	ensureThatFileCreated(t, "../../testdata/pods.json", "pods", false)
+	ensureThatFileCreated(t, "../../testdata/pods.json", "pods", false, false)
 }
 
-func ensureThatFileCreated(t testing.TB, testData string, source string, parseData bool) {
+func ensureThatFileCreated(t testing.TB, testData string, source string, parseData bool, checkForSecrets bool) {
 	httpClient := http.DefaultClient
 	client := NewClient(
 		*httpClient,
@@ -111,6 +112,18 @@ func ensureThatFileCreated(t testing.TB, testData string, source string, parseDa
 
 	sF, _ := sourceFile.Stat()
 	tF, _ := testFile.Stat()
+
+	if checkForSecrets {
+		in, _ := os.ReadFile(source)
+		if !strings.Contains(string(in), "superSecret") {
+			t.Error("Source file should have contained secret, but did not")
+		}
+
+		out, _ := os.ReadFile(testFileName)
+		if strings.Contains(string(out), "superSecret") {
+			t.Error("Dest file should not have contained secret, but did")
+		}
+	}
 
 	_, fileShouldBeParsed := ParsableFileSet[source]
 	if fileShouldBeParsed && parseData {
