@@ -63,6 +63,8 @@ func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sourc
 		"services",
 		"nodes",
 		"pods",
+		"persistentvolumes",
+		"persistentvolumeclaims",
 	}
 
 	v1beta1Sources = []string{}
