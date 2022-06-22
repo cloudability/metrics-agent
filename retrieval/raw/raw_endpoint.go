@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	v1 "k8s.io/api/core/v1"
 	"math"
 	"net/http"
 	"os"
@@ -188,8 +189,19 @@ func sanitizeData(to interface{}) interface{} {
 		return sanitizePodList(to)
 	case LabelMapMatchedResourceList:
 		return sanitizeMapMatchedResourceList(to)
+	case NamespaceList:
+		return sanitizeNamespaceData(to)
 	}
 	return to
+}
+
+func sanitizeNamespaceData(to interface{}) interface{} {
+	cast := to.(NamespaceList)
+	for i, item := range cast.Items {
+		item.ObjectMeta.ManagedFields = nil
+		cast.Items[i] = item
+	}
+	return cast
 }
 
 func sanitizeSelectorMatchedResourceList(to interface{}) interface{} {
@@ -216,16 +228,28 @@ func sanitizePodList(to interface{}) interface{} {
 			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
 		}
 		for j, container := range item.Spec.Containers {
-			container.Env = nil
-			item.Spec.Containers[j] = container
+			item.Spec.Containers[j] = sanitizeContainer(container)
 		}
 		for j, container := range item.Spec.InitContainers {
-			container.Env = nil
-			item.Spec.InitContainers[j] = container
+			item.Spec.InitContainers[j] = sanitizeContainer(container)
 		}
 		cast.Items[i] = item
 	}
 	return cast
+}
+
+func sanitizeContainer(container v1.Container) v1.Container {
+	container.Env = nil
+	container.Command = nil
+	container.Args = nil
+	container.ImagePullPolicy = ""
+	container.LivenessProbe = nil
+	container.StartupProbe = nil
+	container.ReadinessProbe = nil
+	container.TerminationMessagePath = ""
+	container.TerminationMessagePolicy = ""
+	container.SecurityContext = nil
+	return container
 }
 
 func sanitizeMapMatchedResourceList(to interface{}) interface{} {
@@ -237,6 +261,7 @@ func sanitizeMapMatchedResourceList(to interface{}) interface{} {
 		if _, ok := item.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
 			delete(item.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
 		}
+		item.Finalizers = nil
 		cast.Items[i] = item
 	}
 	return cast
