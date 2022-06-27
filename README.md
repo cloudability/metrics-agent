@@ -78,7 +78,7 @@ Flags:
       --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
-      --parse_metric_data bool                   When true, metrics will be parsed and env variables sanitized prior to upload. (default `false`)
+      --parse_metric_data bool                   When true, core files will be parsed and non-relevant data will be removed prior to upload. (default `false`)
 Global Flags:
       --log_format string   Format for log output (JSON,PLAIN) (default "PLAIN")
       --log_level string    Log level to run the agent at (INFO,WARN,DEBUG) (default "INFO")

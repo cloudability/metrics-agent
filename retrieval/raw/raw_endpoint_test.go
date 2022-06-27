@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -129,8 +130,14 @@ func ensureThatFileCreated(t testing.TB, testData string, source string, parseDa
 
 	_, fileShouldBeParsed := ParsableFileSet[source]
 	if fileShouldBeParsed && parseData {
-		if sF.Size() == tF.Size() {
+		tFs := tF.Size()
+		sFs := sF.Size()
+		if sFs == tFs {
 			t.Error("Source file matches output, but should have been parsed")
+		}
+		percent := ((sFs - tFs) * 100) / sFs
+		if percent > 51 || percent < 49 {
+			t.Error("Output file should be roughly 50% the size of the input file but was " + strconv.Itoa(int(percent)))
 		}
 	} else {
 		if sF.Size() != tF.Size() {
