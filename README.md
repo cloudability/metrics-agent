@@ -51,7 +51,7 @@ Cloudability Metrics Agent currently does not support OpenShift, Rancher or On P
 | CLOUDABILITY_LOG_FORMAT              |                                                                               Optional: Format for log output (JSON,PLAIN) Default: PLAIN                                                                                |
 | CLOUDABILITY_LOG_LEVEL               |                                                                     Optional: Log level to run the agent at (INFO,WARN,DEBUG,TRACE). Default: `INFO`                                                                     |
 | CLOUDABILITY_SCRATCH_DIR             |            Optional: Temporary directory that metrics will be written to. If set, must assure that the directory exists and that the user agent UID 1000 has read/write access to the folder. Default: `/tmp`            |
-| CLOUDABILITY_PARSE_METRIC_DATA       |                 Optional: Determines if metric files should be parsed and sanitized of env variables prior to upload. If set, may cause a significant increase in resource consumption. Default: `false`                 |
+| CLOUDABILITY_PARSE_METRIC_DATA       |                                                  Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                                  |
 
 ```sh
 

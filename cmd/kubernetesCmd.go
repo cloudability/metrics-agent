@@ -136,7 +136,7 @@ func init() {
 		&config.ParseMetricData,
 		"parse_metric_data",
 		false,
-		"Whether or not data should be parsed and sanitized of env vars prior to upload. Default: False",
+		"When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: False",
 	)
 
 	//nolint gas
