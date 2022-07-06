@@ -1,11 +1,14 @@
 package k8s
 
 import (
-	"net/http"
-	"os"
-
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
+	"net/http"
+	"os"
+	"time"
 )
 
 //GetK8sMetrics returns cloudabilty measurements retrieved from a given K8S Clientset
@@ -78,5 +81,58 @@ func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sourc
 	}
 
 	return v1Sources, v1beta1Sources, v1AppSources
+}
 
+type ClusterInformers struct {
+	ReplicationController  cache.SharedIndexInformer
+	Services               cache.SharedIndexInformer
+	Nodes                  cache.SharedIndexInformer
+	Pods                   cache.SharedIndexInformer
+	PersistentVolumes      cache.SharedIndexInformer
+	PersistentVolumeClaims cache.SharedIndexInformer
+	Replicasets            cache.SharedIndexInformer
+	Daemonsets             cache.SharedIndexInformer
+	Deployments            cache.SharedIndexInformer
+}
+
+func StartUpInformers(clientset kubernetes.Interface) (ClusterInformers, error) {
+	factory := informers.NewSharedInformerFactory(clientset, 10*time.Minute)
+
+	// v1Sources
+	replicationControllerInformer := factory.Core().V1().ReplicationControllers().Informer()
+	servicesInformer := factory.Core().V1().Services().Informer()
+	nodesInformer := factory.Core().V1().Nodes().Informer()
+	podsInformer := factory.Core().V1().Pods().Informer()
+	persistentVolumesInformer := factory.Core().V1().PersistentVolumes().Informer()
+	persistentVolumeClaimsInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
+	// AppSources
+	replicasetsInformer := factory.Apps().V1().ReplicaSets().Informer()
+	daemonsetsInformer := factory.Apps().V1().DaemonSets().Informer()
+	deploymentsInformer := factory.Apps().V1().Deployments().Informer()
+
+	// closing this will kill all informers
+	stopCh := make(chan struct{})
+	// runs in background, starts all informers that are a part of the factory
+	factory.Start(stopCh)
+	// wait until all informers have successfully synced
+	factory.WaitForCacheSync(stopCh)
+
+	clusterInformers := ClusterInformers{
+		ReplicationController:  replicationControllerInformer,
+		Services:               servicesInformer,
+		Nodes:                  nodesInformer,
+		Pods:                   podsInformer,
+		PersistentVolumes:      persistentVolumesInformer,
+		PersistentVolumeClaims: persistentVolumeClaimsInformer,
+		Replicasets:            replicasetsInformer,
+		Daemonsets:             daemonsetsInformer,
+		Deployments:            deploymentsInformer,
+	}
+
+	return clusterInformers, nil
+}
+
+func GetK8sMetricsFromInformer(clusterHostURL string, clusterVersion float64, workDir *os.File) error {
+
+	return nil
 }

@@ -83,6 +83,7 @@ type KubeAgentConfig struct {
 	ScratchDir            string
 	NodeMetrics           EndpointMask
 	ParseMetricData       bool
+	informers             k8s_stats.ClusterInformers
 }
 
 const uploadInterval time.Duration = 10
@@ -148,6 +149,13 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning non-fatal error: Agent error occurred retrieving runtime diagnostics: %s ", err)
 		log.Warnf("For more information see: %v", kbTroubleShootingURL)
 	}
+
+	// ESTABLISH INFORMERS HERE
+	config.informers, err = k8s_stats.StartUpInformers(config.Clientset)
+	if err != nil {
+		log.Warnf("Warning: Informers failed to start up: %s", err)
+	}
+	// END
 
 	err = downloadBaselineMetricExport(ctx, kubeAgent, clientSetNodeSource)
 
@@ -286,6 +294,9 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	if err != nil {
 		return fmt.Errorf("unable to export k8s metrics: %s", err)
 	}
+
+	// START
+	// TODO some sort of getting all informers data and printing it to working directory
 
 	// create agent measurement and add it to measurements
 	err = createAgentStatusMetric(metricSampleDir, config, sampleStartTime)
