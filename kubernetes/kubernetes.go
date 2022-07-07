@@ -78,8 +78,8 @@ type KubeAgentConfig struct {
 	Namespace             string
 	ScratchDir            string
 	NodeMetrics           EndpointMask
+	Informers             k8s_stats.ClusterInformers
 	ParseMetricData       bool
-	informers             k8s_stats.ClusterInformers
 }
 
 const uploadInterval time.Duration = 10
@@ -145,7 +145,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	}
 
 	// ESTABLISH INFORMERS HERE
-	config.informers, err = k8s_stats.StartUpInformers(config.Clientset)
+	config.Informers, err = k8s_stats.StartUpInformers(config.Clientset)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
@@ -254,15 +254,20 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 		log.Warnf("Warning: %s", err)
 	}
 
-	// export additional metrics from the k8s api to the metric sample directory
-	err = k8s_stats.GetK8sMetrics(
-		config.ClusterHostURL, config.ClusterVersion.version, metricSampleDir, config.InClusterClient)
-	if err != nil {
-		return fmt.Errorf("unable to export k8s metrics: %s", err)
-	}
+	//// export additional metrics from the k8s api to the metric sample directory
+	// err = k8s_stats.GetK8sMetrics(
+	//	config.ClusterHostURL, config.ClusterVersion.version, metricSampleDir, config.InClusterClient)
+	// if err != nil {
+	//	return fmt.Errorf("unable to export k8s metrics: %s", err)
+	//}
 
 	// START
 	// TODO some sort of getting all informers data and printing it to working directory
+	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir)
+	if err != nil {
+		return fmt.Errorf("unable to export k8s metrics: %s", err)
+	}
+	// END
 
 	// create agent measurement and add it to measurements
 	err = createAgentStatusMetric(metricSampleDir, config, sampleStartTime)
