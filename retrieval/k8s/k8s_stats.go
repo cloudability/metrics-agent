@@ -1,8 +1,11 @@
 package k8s
 
 import (
+	"encoding/json"
+	"errors"
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -132,7 +135,101 @@ func StartUpInformers(clientset kubernetes.Interface) (ClusterInformers, error) 
 	return clusterInformers, nil
 }
 
-func GetK8sMetricsFromInformer(clusterHostURL string, clusterVersion float64, workDir *os.File) error {
+// nolint
+func GetK8sMetricsFromInformer(informers ClusterInformers, workDir *os.File) error {
+	// TODO ignoring errors for easier testing
 
+	replicationControllers := informers.ReplicationController.GetIndexer().List()
+	replicationcontrollersData, err := json.Marshal(replicationControllers)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "replicationcontrollers", replicationcontrollersData)
+	if err != nil {
+		return err
+	}
+	services := informers.Services.GetIndexer().List()
+	servicesData, err := json.Marshal(services)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "services", servicesData)
+	if err != nil {
+		return err
+	}
+	nodes := informers.Nodes.GetIndexer().List()
+	nodesData, err := json.Marshal(nodes)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "nodes", nodesData)
+	if err != nil {
+		return err
+	}
+	pods := informers.Pods.GetIndexer().List()
+	podsData, err := json.Marshal(pods)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "pods", podsData)
+	if err != nil {
+		return err
+	}
+	persistentVolumes := informers.PersistentVolumes.GetIndexer().List()
+	persistentVolumesData, err := json.Marshal(persistentVolumes)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "persistentvolumes", persistentVolumesData)
+	if err != nil {
+		return err
+	}
+	persistentVolumeClaims := informers.PersistentVolumeClaims.GetIndexer().List()
+	persistentVolumeClaimsData, err := json.Marshal(persistentVolumeClaims)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "persistentvolumeclaims", persistentVolumeClaimsData)
+	if err != nil {
+		return err
+	}
+	replicasets := informers.Replicasets.GetIndexer().List()
+	replicasetData, err := json.Marshal(replicasets)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "replicasets", replicasetData)
+	if err != nil {
+		return err
+	}
+	daemonsets := informers.Daemonsets.GetIndexer().List()
+	daemonsetsData, err := json.Marshal(daemonsets)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "daemonsets", daemonsetsData)
+	if err != nil {
+		return err
+	}
+	deployments := informers.Deployments.GetIndexer().List()
+	deploymentsData, err := json.Marshal(deployments)
+	if err != nil {
+		return err
+	}
+	err = writeK8sResourceFile(workDir, "deployments", deploymentsData)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func writeK8sResourceFile(workDir *os.File, resourceName string, data []byte) error {
+
+	err := ioutil.WriteFile(workDir.Name()+"/"+resourceName+".json", data, 0600)
+
+	if err != nil {
+		return errors.New("failed to write k8sResource file")
+	}
+
+	return err
 }
