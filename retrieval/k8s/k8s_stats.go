@@ -101,7 +101,7 @@ type ClusterInformers struct {
 }
 
 func StartUpInformers(clientset kubernetes.Interface) (ClusterInformers, error) {
-	factory := informers.NewSharedInformerFactory(clientset, 10*time.Minute)
+	factory := informers.NewSharedInformerFactory(clientset, 3*time.Minute)
 
 	// v1Sources
 	replicationControllerInformer := factory.Core().V1().ReplicationControllers().Informer()
