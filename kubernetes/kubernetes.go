@@ -144,12 +144,11 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("For more information see: %v", kbTroubleShootingURL)
 	}
 
-	// ESTABLISH INFORMERS HERE
-	config.Informers, err = k8s_stats.StartUpInformers(config.Clientset)
+	// start up informers for each of the k8s resources that metrics are being collected on
+	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
-	// END
 
 	err = downloadBaselineMetricExport(ctx, kubeAgent, clientSetNodeSource)
 
@@ -261,13 +260,11 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	//	return fmt.Errorf("unable to export k8s metrics: %s", err)
 	//}
 
-	// START
-	// TODO some sort of getting all informers data and printing it to working directory
+	// export k8s resource metrics (ex: pods.json) using informers to the metric sample directory
 	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir)
 	if err != nil {
 		return fmt.Errorf("unable to export k8s metrics: %s", err)
 	}
-	// END
 
 	// create agent measurement and add it to measurements
 	err = createAgentStatusMetric(metricSampleDir, config, sampleStartTime)
