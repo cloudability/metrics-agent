@@ -1,13 +1,13 @@
 package k8s
 
 import (
-	"bytes"
+	"bufio"
 	"encoding/json"
 	"errors"
 	"github.com/cloudability/metrics-agent/retrieval/raw"
-	"github.com/cloudability/metrics-agent/util"
 	log "github.com/sirupsen/logrus"
-	"io"
+	v1apps "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -144,83 +144,47 @@ func GetK8sMetricsFromInformer(informers ClusterInformers, workDir *os.File) err
 	}
 
 	replicationControllers := (*informers.ReplicationController).GetIndexer().List()
-	replicationcontrollersData, err := json.Marshal(replicationControllers)
-	if err != nil {
-		return err
-	}
-	err = writeK8sResourceFile(workDir, "replicationcontrollers", replicationcontrollersData)
+	err := writeK8sResourceFile(workDir, "replicationcontrollers", replicationControllers)
 	if err != nil {
 		return err
 	}
 	services := (*informers.Services).GetIndexer().List()
-	servicesData, err := json.Marshal(services)
-	if err != nil {
-		return err
-	}
-	err = writeK8sResourceFile(workDir, "services", servicesData)
+	err = writeK8sResourceFile(workDir, "services", services)
 	if err != nil {
 		return err
 	}
 	nodes := (*informers.Nodes).GetIndexer().List()
-	nodesData, err := json.Marshal(nodes)
-	if err != nil {
-		return err
-	}
-	err = writeK8sResourceFile(workDir, "nodes", nodesData)
+	err = writeK8sResourceFile(workDir, "nodes", nodes)
 	if err != nil {
 		return err
 	}
 	pods := (*informers.Pods).GetIndexer().List()
-	podsData, err := json.Marshal(pods)
-	if err != nil {
-		return err
-	}
-	err = writeK8sResourceFile(workDir, "pods", podsData)
+	err = writeK8sResourceFile(workDir, "pods", pods)
 	if err != nil {
 		return err
 	}
 	persistentVolumes := (*informers.PersistentVolumes).GetIndexer().List()
-	persistentVolumesData, err := json.Marshal(persistentVolumes)
-	if err != nil {
-		return err
-	}
-	err = writeK8sResourceFile(workDir, "persistentvolumes", persistentVolumesData)
+	err = writeK8sResourceFile(workDir, "persistentvolumes", persistentVolumes)
 	if err != nil {
 		return err
 	}
 	persistentVolumeClaims := (*informers.PersistentVolumeClaims).GetIndexer().List()
-	persistentVolumeClaimsData, err := json.Marshal(persistentVolumeClaims)
+	err = writeK8sResourceFile(workDir, "persistentvolumeclaims", persistentVolumeClaims)
 	if err != nil {
 		return err
 	}
-	err = writeK8sResourceFile(workDir, "persistentvolumeclaims", persistentVolumeClaimsData)
+	replicaSets := (*informers.Replicasets).GetIndexer().List()
+	err = writeK8sResourceFile(workDir, "replicasets", replicaSets)
 	if err != nil {
 		return err
 	}
-	replicasets := (*informers.Replicasets).GetIndexer().List()
-	replicasetData, err := json.Marshal(replicasets)
-	if err != nil {
-		return err
-	}
-	err = writeK8sResourceFile(workDir, "replicasets", replicasetData)
-	if err != nil {
-		return err
-	}
-	daemonsets := (*informers.Daemonsets).GetIndexer().List()
-	daemonsetsData, err := json.Marshal(daemonsets)
-	if err != nil {
-		return err
-	}
-	err = writeK8sResourceFile(workDir, "daemonsets", daemonsetsData)
+	daemonSets := (*informers.Daemonsets).GetIndexer().List()
+	err = writeK8sResourceFile(workDir, "daemonsets", daemonSets)
 	if err != nil {
 		return err
 	}
 	deployments := (*informers.Deployments).GetIndexer().List()
-	deploymentsData, err := json.Marshal(deployments)
-	if err != nil {
-		return err
-	}
-	err = writeK8sResourceFile(workDir, "deployments", deploymentsData)
+	err = writeK8sResourceFile(workDir, "deployments", deployments)
 	if err != nil {
 		return err
 	}
@@ -228,20 +192,104 @@ func GetK8sMetricsFromInformer(informers ClusterInformers, workDir *os.File) err
 }
 
 //writeK8sResourceFile creates a new file in the upload sample directory for the resource name passed in
-func writeK8sResourceFile(workDir *os.File, resourceName string, data []byte) (rerr error) {
+//nolint gocyclo
+func writeK8sResourceFile(workDir *os.File, resourceName string, resourceList []interface{}) (rerr error) {
 
-	rawRespFile, err := os.Create(workDir.Name() + "/" + resourceName + ".json")
-
+	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl",
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return errors.New("unable to create kubernetes metric file")
+		return errors.New("error: unable to create kubernetes metric file")
 	}
-	defer util.SafeClose(rawRespFile.Close, &rerr)
+	datawriter := bufio.NewWriter(file)
 
-	reader := bytes.NewReader(data)
-	_, err = io.Copy(rawRespFile, reader)
-	if err != nil {
-		return errors.New("Error writing file: " + rawRespFile.Name())
+	switch resourceName {
+	default:
+		return errors.New("error: resource " + resourceName + " not supported")
+	case "replicationcontrollers":
+		for _, object := range resourceList {
+			rc := object.(*v1.ReplicationController)
+			data, err := json.Marshal(rc)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			_, err = datawriter.WriteString(string(data) + "\n")
+		}
+	case "services":
+		for _, object := range resourceList {
+			s := object.(*v1.Service)
+			data, err := json.Marshal(s)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			datawriter.WriteString(string(data) + "\n")
+		}
+	case "nodes":
+		for _, object := range resourceList {
+			n := object.(*v1.Node)
+			data, err := json.Marshal(n)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			datawriter.WriteString(string(data) + "\n")
+		}
+	case "pods":
+		for _, object := range resourceList {
+			p := object.(*v1.Pod)
+			data, err := json.Marshal(p)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			datawriter.WriteString(string(data) + "\n")
+		}
+	case "persistentvolumes":
+		for _, object := range resourceList {
+			pv := object.(*v1.PersistentVolume)
+			data, err := json.Marshal(pv)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			datawriter.WriteString(string(data) + "\n")
+		}
+	case "persistentvolumeclaims":
+		for _, object := range resourceList {
+			pvc := object.(*v1.PersistentVolumeClaim)
+			data, err := json.Marshal(pvc)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			datawriter.WriteString(string(data) + "\n")
+		}
+	case "replicasets":
+		for _, object := range resourceList {
+			rs := object.(*v1apps.ReplicaSet)
+			data, err := json.Marshal(rs)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			datawriter.WriteString(string(data) + "\n")
+		}
+	case "daemonsets":
+		for _, object := range resourceList {
+			ds := object.(*v1apps.DaemonSet)
+			data, err := json.Marshal(ds)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			datawriter.WriteString(string(data) + "\n")
+		}
+	case "deployments":
+		for _, object := range resourceList {
+			d := object.(*v1apps.Deployment)
+			data, err := json.Marshal(d)
+			if err != nil {
+				return errors.New("error: unable to create marshal resource")
+			}
+			datawriter.WriteString(string(data) + "\n")
+		}
 	}
+
+	datawriter.Flush()
+	file.Close()
 
 	return err
 }
