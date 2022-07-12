@@ -51,6 +51,7 @@ Cloudability Metrics Agent currently does not support OpenShift, Rancher or On P
 | CLOUDABILITY_LOG_FORMAT              |                                                                               Optional: Format for log output (JSON,PLAIN) Default: PLAIN                                                                                |
 | CLOUDABILITY_LOG_LEVEL               |                                                                     Optional: Log level to run the agent at (INFO,WARN,DEBUG,TRACE). Default: `INFO`                                                                     |
 | CLOUDABILITY_SCRATCH_DIR             |            Optional: Temporary directory that metrics will be written to. If set, must assure that the directory exists and that the user agent UID 1000 has read/write access to the folder. Default: `/tmp`            |
+| CLOUDABILITY_INFORMER_RESYNC_INTERVAL |                                Optional: Period of time (in hours) that the informers will fully resync the list of running resources. Default: 24 hours. Can be set to 0 to never resync                                |
 | CLOUDABILITY_NUMBER_OF_CONCURRENT_NODE_POLLERS |                                                             Optional: Number of goroutines that are created to poll node metrics in parallel. Default: `100`                                                             |
 | CLOUDABILITY_PARSE_METRIC_DATA       |                                                  Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                                  |
 
@@ -77,6 +78,7 @@ Flags:
       --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
+      --informer_resync_interval int             The amount of time, in hours, between informer resyncs. (default 24)
       --number_of_concurrent_node_pollers int    The number of goroutines that are created to poll node metrics in parallel. (default: `100`)
       --parse_metric_data bool                   When true, core files will be parsed and non-relevant data will be removed prior to upload. (default `false`)
 Global Flags:
