@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"k8s.io/client-go/tools/cache"
 	"net/http"
 	"net/url"
 	"os"
@@ -45,50 +46,52 @@ type ClusterVersion struct {
 
 //KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                string
-	BearerToken           string
-	BearerTokenPath       string
-	Cert                  string
-	ClusterName           string
-	ClusterHostURL        string
-	clusterUID            string
-	HeapsterOverrideURL   string
-	HeapsterURL           string
-	Key                   string
-	OutboundProxyAuth     string
-	OutboundProxy         string
-	provisioningID        string
-	RetrieveNodeSummaries bool
-	GetAllConStats        bool
-	ForceKubeProxy        bool
-	Insecure              bool
-	OutboundProxyInsecure bool
-	UseInClusterConfig    bool
-	CollectHeapsterExport bool
-	PollInterval          int
+	APIKey                 string
+	BearerToken            string
+	BearerTokenPath        string
+	Cert                   string
+	ClusterName            string
+	ClusterHostURL         string
+	clusterUID             string
+	HeapsterOverrideURL    string
+	HeapsterURL            string
+	Key                    string
+	OutboundProxyAuth      string
+	OutboundProxy          string
+	provisioningID         string
+	RetrieveNodeSummaries  bool
+	GetAllConStats         bool
+	ForceKubeProxy         bool
+	Insecure               bool
+	OutboundProxyInsecure  bool
+	UseInClusterConfig     bool
+	CollectHeapsterExport  bool
+	PollInterval           int
+	CollectionRetryLimit   uint
+	failedNodeList         map[string]error
+	AgentStartTime         time.Time
+	Clientset              kubernetes.Interface
+	ClusterVersion         ClusterVersion
+	HeapsterProxyURL       url.URL
+	OutboundProxyURL       url.URL
+	HTTPClient             http.Client
+	NodeClient             raw.Client
+	InClusterClient        raw.Client
+	msExportDirectory      *os.File
+	TLSClientConfig        rest.TLSClientConfig
+	Namespace              string
+	ScratchDir             string
+	NodeMetrics            EndpointMask
+	Informers              map[string]*cache.SharedIndexInformer
+	InformerResyncInterval int
 	ConcurrentPollers     int
-	CollectionRetryLimit  uint
-	failedNodeList        map[string]error
-	AgentStartTime        time.Time
-	Clientset             kubernetes.Interface
-	ClusterVersion        ClusterVersion
-	HeapsterProxyURL      url.URL
-	OutboundProxyURL      url.URL
-	HTTPClient            http.Client
-	NodeClient            raw.Client
-	InClusterClient       raw.Client
-	msExportDirectory     *os.File
-	TLSClientConfig       rest.TLSClientConfig
-	Namespace             string
-	ScratchDir            string
-	NodeMetrics           EndpointMask
-	Informers             k8s_stats.ClusterInformers
 	ParseMetricData       bool
 }
 
 const uploadInterval time.Duration = 10
 const retryCount uint = 10
 const DefaultCollectionRetry = 1
+const DefaultInformerResync = 24
 
 // node connection methods
 const proxy = "proxy"
@@ -122,6 +125,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
 	log.Infof("Metric collection retry limit set to %d (default is %d)",
 		config.CollectionRetryLimit, DefaultCollectionRetry)
+	log.Debugf("Informer resync interval is set to %d (default is %d)",
+		config.InformerResyncInterval, DefaultInformerResync)
 
 	validateMetricCollectionConfig(config)
 
@@ -151,7 +156,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	}
 
 	// start up informers for each of the k8s resources that metrics are being collected on
-	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset)
+	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset, config.InformerResyncInterval)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
@@ -286,13 +291,6 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 			return err
 		}
 	}
-
-	//// export additional metrics from the k8s api to the metric sample directory
-	// err = k8s_stats.GetK8sMetrics(
-	//	config.ClusterHostURL, config.ClusterVersion.version, metricSampleDir, config.InClusterClient)
-	// if err != nil {
-	//	return fmt.Errorf("unable to export k8s metrics: %s", err)
-	//}
 
 	// export k8s resource metrics (ex: pods.json) using informers to the metric sample directory
 	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir)
@@ -795,6 +793,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["stats_container_retrieval_method"] = config.NodeMetrics.Options(NodeContainerEndpoint)
 	m.Values["cadvisor_metrics_retrieval_method"] = config.NodeMetrics.Options(NodeCadvisorEndpoint)
 	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
+	m.Values["informer_resync_interval"] = strconv.Itoa(config.InformerResyncInterval)
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	m.Values["number_of_concurrent_node_pollers"] = strconv.Itoa(config.ConcurrentPollers)
 	m.Values["parse_metric_data"] = strconv.FormatBool(config.ParseMetricData)
