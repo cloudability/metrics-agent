@@ -78,12 +78,14 @@ type KubeAgentConfig struct {
 	ScratchDir            string
 	NodeMetrics           EndpointMask
 	Informers             k8s_stats.ClusterInformers
+	InformerResyncInterval int
 	ParseMetricData       bool
 }
 
 const uploadInterval time.Duration = 10
 const retryCount uint = 10
 const DefaultCollectionRetry = 1
+const DefaultInformerResync = 24
 
 // node connection methods
 const proxy = "proxy"
@@ -117,6 +119,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
 	log.Infof("Metric collection retry limit set to %d (default is %d)",
 		config.CollectionRetryLimit, DefaultCollectionRetry)
+	log.Debugf("Informer resync interval is set to %d (default is %d)",
+		config.InformerResyncInterval, DefaultInformerResync)
 
 	ctx := context.Background()
 
@@ -144,7 +148,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	}
 
 	// start up informers for each of the k8s resources that metrics are being collected on
-	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset)
+	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset, config.InformerResyncInterval)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
@@ -292,13 +296,6 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	if err != nil {
 		log.Warnf("Warning: %s", err)
 	}
-
-	//// export additional metrics from the k8s api to the metric sample directory
-	// err = k8s_stats.GetK8sMetrics(
-	//	config.ClusterHostURL, config.ClusterVersion.version, metricSampleDir, config.InClusterClient)
-	// if err != nil {
-	//	return fmt.Errorf("unable to export k8s metrics: %s", err)
-	//}
 
 	// export k8s resource metrics (ex: pods.json) using informers to the metric sample directory
 	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir)
@@ -728,6 +725,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
 	m.Values["stats_summary_retrieval_method"] = config.NodeMetrics.Options(NodeStatsSummaryEndpoint)
 	m.Values["retrieve_node_summaries"] = "true"
+	m.Values["informer_resync_interval"] = strconv.Itoa(config.InformerResyncInterval)
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	m.Values["number_of_concurrent_node_pollers"] = strconv.Itoa(config.ConcurrentPollers)
 	m.Values["parse_metric_data"] = strconv.FormatBool(config.ParseMetricData)

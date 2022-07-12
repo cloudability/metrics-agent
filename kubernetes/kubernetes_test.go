@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
-	"github.com/cloudability/metrics-agent/retrieval/k8s"
 	"k8s.io/client-go/tools/cache"
 	"net/http"
 	"net/http/httptest"
@@ -406,7 +405,7 @@ func NewTestServer() *httptest.Server {
 	return ts
 }
 
-func getMockInformers() k8s.ClusterInformers {
+func getMockInformers() map[string]*cache.SharedIndexInformer {
 	replicationControllers := fcache.NewFakeControllerSource()
 	replicationControllers.Add(&v1.ReplicationController{ObjectMeta: metav1.ObjectMeta{Name: "rc1"}})
 	rcinformer := cache.NewSharedInformer(replicationControllers,
@@ -440,16 +439,16 @@ func getMockInformers() k8s.ClusterInformers {
 	deployments.Add(&v1apps.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1"}})
 	dinformer := cache.NewSharedInformer(deployments, &v1apps.Deployment{}, 1*time.Second).(cache.SharedIndexInformer)
 
-	mockInformers := k8s.ClusterInformers{
-		ReplicationController:  &rcinformer,
-		Services:               &sinformer,
-		Nodes:                  &ninformer,
-		Pods:                   &pinformer,
-		PersistentVolumes:      &pvinformer,
-		PersistentVolumeClaims: &pvcinformer,
-		Replicasets:            &rsinformer,
-		Daemonsets:             &dsinformer,
-		Deployments:            &dinformer,
+	mockInformers := map[string]*cache.SharedIndexInformer{
+		"replicationcontrollers": &rcinformer,
+		"services":               &sinformer,
+		"nodes":                  &ninformer,
+		"pods":                   &pinformer,
+		"persistentvolumes":      &pvinformer,
+		"persistentvolumeclaims": &pvcinformer,
+		"replicasets":            &rsinformer,
+		"daemonsets":             &dsinformer,
+		"deployments":            &dinformer,
 	}
 	return mockInformers
 }
