@@ -3,7 +3,9 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
+	"github.com/cloudability/metrics-agent/retrieval/k8s"
 	"io/ioutil"
+	"k8s.io/client-go/tools/cache"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,7 +16,10 @@ import (
 	"testing"
 	"time"
 
+	fcache "k8s.io/client-go/tools/cache/testing"
+
 	"github.com/cloudability/metrics-agent/retrieval/raw"
+	v1apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -266,6 +271,8 @@ func TestCollectMetrics(t *testing.T) {
 		t.Errorf("Error opening temp dir: %v", err)
 	}
 
+	mockInformers := getMockInformers()
+
 	ka := KubeAgentConfig{
 		ClusterVersion: ClusterVersion{
 			version:     1.1,
@@ -283,6 +290,7 @@ func TestCollectMetrics(t *testing.T) {
 		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
 		GetAllConStats:        true,
+		Informers:             mockInformers,
 		ConcurrentPollers:     10,
 	}
 	ka.NodeMetrics = EndpointMask{}
@@ -452,4 +460,52 @@ func NewTestServer() *httptest.Server {
 
 	}))
 	return ts
+}
+
+func getMockInformers() k8s.ClusterInformers {
+	replicationControllers := fcache.NewFakeControllerSource()
+	replicationControllers.Add(&v1.ReplicationController{ObjectMeta: metav1.ObjectMeta{Name: "rc1"}})
+	rcinformer := cache.NewSharedInformer(replicationControllers,
+		&v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
+	services := fcache.NewFakeControllerSource()
+	services.Add(&v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s1"}})
+	sinformer := cache.NewSharedInformer(services, &v1.Service{}, 1*time.Second).(cache.SharedIndexInformer)
+	nodes := fcache.NewFakeControllerSource()
+	nodes.Add(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1"}})
+	ninformer := cache.NewSharedInformer(nodes, &v1.Node{}, 1*time.Second).(cache.SharedIndexInformer)
+	pods := fcache.NewFakeControllerSource()
+	pods.Add(&v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}})
+	pinformer := cache.NewSharedInformer(pods, &v1.Pod{}, 1*time.Second).(cache.SharedIndexInformer)
+	persistentVolumes := fcache.NewFakeControllerSource()
+	persistentVolumes.Add(&v1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv1"}})
+	pvinformer := cache.NewSharedInformer(persistentVolumes,
+		&v1.PersistentVolume{}, 1*time.Second).(cache.SharedIndexInformer)
+	persistentVolumeClaims := fcache.NewFakeControllerSource()
+	persistentVolumeClaims.Add(&v1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "pvc1"}})
+	pvcinformer := cache.NewSharedInformer(persistentVolumeClaims,
+		&v1.PersistentVolumeClaim{}, 1*time.Second).(cache.SharedIndexInformer)
+	replicaSets := fcache.NewFakeControllerSource()
+	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs1"}})
+	rsinformer := cache.NewSharedInformer(replicaSets, &v1apps.ReplicaSet{},
+		1*time.Second).(cache.SharedIndexInformer)
+	daemonSets := fcache.NewFakeControllerSource()
+	daemonSets.Add(&v1apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "ds1"}})
+	dsinformer := cache.NewSharedInformer(daemonSets,
+		&v1apps.DaemonSet{}, 1*time.Second).(cache.SharedIndexInformer)
+	deployments := fcache.NewFakeControllerSource()
+	deployments.Add(&v1apps.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1"}})
+	dinformer := cache.NewSharedInformer(deployments, &v1apps.Deployment{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	mockInformers := k8s.ClusterInformers{
+		ReplicationController:  &rcinformer,
+		Services:               &sinformer,
+		Nodes:                  &ninformer,
+		Pods:                   &pinformer,
+		PersistentVolumes:      &pvinformer,
+		PersistentVolumeClaims: &pvcinformer,
+		Replicasets:            &rsinformer,
+		Daemonsets:             &dsinformer,
+		Deployments:            &dinformer,
+	}
+	return mockInformers
 }
