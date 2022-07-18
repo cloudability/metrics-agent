@@ -3,12 +3,14 @@ package test
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
+
 	cadvisor "github.com/google/cadvisor/info/v1"
 	"github.com/prometheus/prom2json"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
-	"strings"
 )
 
 type ParsedK8sLists struct {
@@ -137,17 +139,17 @@ type k8sRefFn func(lists *ParsedK8sLists) interface{}
 
 var knownFileTypes = map[string]UnmarshalForK8sListFn{
 	"agent-measurement.json":      ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.CldyAgent }),
-	"namespaces.json":             ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Namespaces }),
-	"pods.json":                   ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Pods }),
-	"deployments.json":            ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Deployments }),
-	"replicasets.json":            ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.ReplicaSets }),
-	"replicationcontrollers.json": ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.ReplicationControllers }),
-	"daemonsets.json":             ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.DaemonSets }),
-	"services.json":               ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Services }),
-	"jobs.json":                   ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Jobs }),
-	"nodes.json":                  ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Nodes }),
-	"persistentvolumes.json":      ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.PersistentVolumes }),
-	"persistentvolumeclaims.json": ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.PersistentVolumeClaims }),
+	"namespaces.jsonl":             ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Namespaces }),
+	"pods.jsonl":                   ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Pods }),
+	"deployments.jsonl":            ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Deployments }),
+	"replicasets.jsonl":            ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.ReplicaSets }),
+	"replicationcontrollers.jsonl": ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.ReplicationControllers }),
+	"daemonsets.jsonl":             ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.DaemonSets }),
+	"services.jsonl":               ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Services }),
+	"jobs.jsonl":                   ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Jobs }),
+	"nodes.jsonl":                  ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.Nodes }),
+	"persistentvolumes.jsonl":      ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.PersistentVolumes }),
+	"persistentvolumeclaims.jsonl": ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.PersistentVolumeClaims }),
 	"stats-summary-":              AsNodeSummary(false),
 	"baseline-summary-":           AsNodeSummary(true),
 }
@@ -174,7 +176,21 @@ func ByRefFn(refFn k8sRefFn) UnmarshalForK8sListFn {
 		if len(fdata) <= 0 {
 			return fmt.Errorf("File: %v appears to be empty", fname)
 		}
-		return json.Unmarshal(fdata, refFn(parsedK8sList))
+		// can't just unmarshal the data... need to decode line by line, json.Decoder?
+		dec := json.NewDecoder(strings.NewReader(string(fdata)))
+		for {
+			// the object passed here needs to dynamically change depending on which file is being decoded (pods, nodes)
+			if err := dec.Decode(refFn(parsedK8sList)); err == io.EOF {
+				break
+			} else if err != nil {
+				return err
+			}
+
+			fmt.Printf("Printing k8slist: %v\n", parsedK8sList)
+		}
+
+		return nil
+		//return json.Unmarshal(fdata, refFn(parsedK8sList))
 	}
 }
 

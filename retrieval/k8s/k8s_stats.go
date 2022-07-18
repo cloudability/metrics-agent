@@ -22,10 +22,14 @@ func StartUpInformers(clientset kubernetes.Interface,
 	podsInformer := factory.Core().V1().Pods().Informer()
 	persistentVolumesInformer := factory.Core().V1().PersistentVolumes().Informer()
 	persistentVolumeClaimsInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
+	namespacesInformer := factory.Core().V1().Namespaces().Informer()
 	// AppSources
 	replicasetsInformer := factory.Apps().V1().ReplicaSets().Informer()
 	daemonsetsInformer := factory.Apps().V1().DaemonSets().Informer()
 	deploymentsInformer := factory.Apps().V1().Deployments().Informer()
+	// Jobs & Cronjobs
+	jobsInformer := factory.Batch().V1().Jobs().Informer()
+	cronJobsInformer := factory.Batch().V1().CronJobs().Informer()
 
 	// closing this will kill all informers
 	stopCh := make(chan struct{})
@@ -44,6 +48,9 @@ func StartUpInformers(clientset kubernetes.Interface,
 		"replicasets":            &replicasetsInformer,
 		"daemonsets":             &daemonsetsInformer,
 		"deployments":            &deploymentsInformer,
+		"namespaces":             &namespacesInformer,
+		"jobs":                   &jobsInformer,
+		"cronjobs":               &cronJobsInformer,
 	}
 	return clusterInformers, nil
 }
