@@ -363,8 +363,8 @@ func TestEnsureNodeSource(t *testing.T) {
 			ConcurrentPollers: 10,
 			NodeMetrics:       EndpointMask{},
 			// just populate some dummy fields here to ensure neither client gets unset
-			InClusterClient: raw.NewClient(http.Client{}, true, "token", "", 0),
-			NodeClient:      raw.NewClient(http.Client{}, true, "token", "", 0),
+			InClusterClient: raw.NewClient(http.Client{}, true, "token", "", 0, false),
+			NodeClient:      raw.NewClient(http.Client{}, true, "token", "", 0, false),
 		}
 
 		ka, err := ensureNodeSource(context.TODO(), ka)
@@ -672,6 +672,7 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 		"",
 		"",
 		retries,
+		false,
 	)
 	ka := KubeAgentConfig{
 		Clientset:             cs,

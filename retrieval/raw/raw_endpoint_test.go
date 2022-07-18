@@ -5,101 +5,164 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 )
 
-func TestGetRawEndPoint(t *testing.T) {
-	t.Parallel()
+func rawEndpointTests(t testing.TB) {
+	var scenarios = []func(t testing.TB){
+		ensureThatFileCreatedForHeapsterData,
+		ensureThatErrorsAreHandled,
+		ensureNetworkErrorsAreHandled,
+		ensureThatFileParsedAndCreatedForPodsData,
+		ensureThatFileCreatedForPodsData,
+	}
+	for _, v := range scenarios {
+		v(t)
+	}
+}
 
-	t.Run("ensure that a file is created from a raw endpoint", func(t *testing.T) {
+func TestRawEndpoint(t *testing.T) {
+	rawEndpointTests(t)
+}
 
-		httpClient := http.DefaultClient
+func BenchmarkMetricFileCreation(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		ensureThatFileCreatedForHeapsterData(b)
+	}
+}
 
-		testData := "../../testdata/heapster-metric-export.json"
+func BenchmarkPodsFile(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		ensureThatFileCreatedForPodsData(b)
+	}
+}
 
-		client := NewClient(
-			*httpClient,
-			true,
-			"",
-			"",
-			2,
-		)
+func BenchmarkParsedPodsFile(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		ensureThatFileParsedAndCreatedForPodsData(b)
+	}
+}
 
-		wd, _ := ioutil.TempDir("", "raw_endpoint_test")
-		workingDir, _ := os.Open(wd)
+func ensureThatErrorsAreHandled(t testing.TB) {
+	httpClient := http.DefaultClient
+	client := NewClient(
+		*httpClient,
+		true,
+		"",
+		"",
+		2,
+		false,
+	)
 
-		body, _ := ioutil.ReadFile(testData)
+	wd, _ := ioutil.TempDir("", "raw_endpoint_test")
+	workingDir, _ := os.Open(wd)
 
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write(body)
-		}))
-		defer ts.Close()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(404)
+	}))
+	defer ts.Close()
 
-		testFileName, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil, true)
-		if err != nil {
-			t.Error(err)
+	_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil, true)
+	if err == nil {
+		t.Error("Server returned invalid response code but function did not raise error")
+	}
+}
+
+func ensureThatFileCreatedForHeapsterData(t testing.TB) {
+	ensureThatFileCreated(t, "../../testdata/heapster-metric-export.json", "heapster", true, false)
+}
+
+func ensureThatFileParsedAndCreatedForPodsData(t testing.TB) {
+	ensureThatFileCreated(t, "../../testdata/pods.json", "pods", true, true)
+}
+
+func ensureThatFileCreatedForPodsData(t testing.TB) {
+	ensureThatFileCreated(t, "../../testdata/pods.json", "pods", false, false)
+}
+
+func ensureThatFileCreated(t testing.TB, testData string, source string, parseData bool, checkForSecrets bool) {
+	httpClient := http.DefaultClient
+	client := NewClient(
+		*httpClient,
+		true,
+		"",
+		"",
+		2,
+		parseData,
+	)
+
+	wd, _ := ioutil.TempDir("", "raw_endpoint_test")
+	workingDir, _ := os.Open(wd)
+
+	body, _ := ioutil.ReadFile(testData)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(body)
+	}))
+	defer ts.Close()
+
+	testFileName, err := client.GetRawEndPoint(http.MethodGet, source, workingDir, ts.URL, nil, true)
+	if err != nil {
+		t.Error(err)
+	}
+	sourceFile, _ := os.Open(testData)
+	testFile, _ := os.Open(testFileName)
+
+	defer sourceFile.Close()
+	defer testFile.Close()
+
+	sF, _ := sourceFile.Stat()
+	tF, _ := testFile.Stat()
+
+	if checkForSecrets {
+		in, _ := os.ReadFile(testData)
+		if !strings.Contains(string(in), "superSecret") {
+			t.Error("Source file should have contained secret, but did not")
 		}
-		sourceFile, _ := os.Open(testData)
-		testFile, _ := os.Open(testFileName)
 
-		defer sourceFile.Close()
-		defer testFile.Close()
+		out, _ := os.ReadFile(testFileName)
+		if strings.Contains(string(out), "superSecret") {
+			t.Error("Dest file should not have contained secret, but did")
+		}
+	}
 
-		sF, _ := sourceFile.Stat()
-		tF, _ := testFile.Stat()
-
+	_, fileShouldBeParsed := ParsableFileSet[source]
+	if fileShouldBeParsed && parseData {
+		tFs := tF.Size()
+		sFs := sF.Size()
+		if sFs == tFs {
+			t.Error("Source file matches output, but should have been parsed")
+		}
+		percent := ((sFs - tFs) * 100) / sFs
+		if percent > 51 || percent < 49 {
+			t.Error("Output file should be roughly 50% the size of the input file but was " + strconv.Itoa(int(percent)))
+		}
+	} else {
 		if sF.Size() != tF.Size() {
-			t.Error("Source file does not match source")
+			t.Error("Source file size does not match output")
 		}
+	}
 
-	})
+}
 
-	t.Run("ensure error when non http 200-299 returned", func(t *testing.T) {
+func ensureNetworkErrorsAreHandled(t testing.TB) {
+	httpClient := http.DefaultClient
+	client := NewClient(
+		*httpClient,
+		true,
+		"",
+		"",
+		2,
+		false,
+	)
 
-		httpClient := http.DefaultClient
+	wd, _ := ioutil.TempDir("", "raw_endpoint_test")
+	workingDir, _ := os.Open(wd)
 
-		client := NewClient(
-			*httpClient,
-			true,
-			"",
-			"",
-			2,
-		)
-
-		wd, _ := ioutil.TempDir("", "raw_endpoint_test")
-		workingDir, _ := os.Open(wd)
-
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(404)
-		}))
-		defer ts.Close()
-
-		_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, ts.URL, nil, true)
-		if err == nil {
-			t.Error("Server returned invalid response code but function did not raise error")
-		}
-
-	})
-
-	t.Run("ensure error when unable to connect", func(t *testing.T) {
-
-		httpClient := http.DefaultClient
-
-		client := NewClient(
-			*httpClient,
-			true,
-			"",
-			"",
-			2,
-		)
-
-		wd, _ := ioutil.TempDir("", "raw_endpoint_test")
-		workingDir, _ := os.Open(wd)
-
-		_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, "http://localhost:1234", nil, true)
-		if err == nil {
-			t.Error("Unable to to connect to server but function did not raise error")
-		}
-
-	})
+	_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, "http://localhost:1234", nil, true)
+	if err == nil {
+		t.Error("Unable to to connect to server but function did not raise error")
+	}
 }
