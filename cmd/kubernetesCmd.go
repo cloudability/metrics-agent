@@ -163,8 +163,8 @@ func init() {
 	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
 	_ = viper.BindPFlag("collect_heapster_export", kubernetesCmd.PersistentFlags().Lookup("collect_heapster_export"))
 	_ = viper.BindPFlag("scratch_dir", kubernetesCmd.PersistentFlags().Lookup("scratch_dir"))
-	//nolint lll
-	_ = viper.BindPFlag("number_of_concurrent_node_pollers", kubernetesCmd.PersistentFlags().Lookup("number_of_concurrent_node_pollers"))
+	_ = viper.BindPFlag("number_of_concurrent_node_pollers",
+		kubernetesCmd.PersistentFlags().Lookup("number_of_concurrent_node_pollers"))
 	_ = viper.BindPFlag("parse_metric_data", kubernetesCmd.PersistentFlags().Lookup("parse_metric_data"))
 
 	viper.SetEnvPrefix("cloudability")

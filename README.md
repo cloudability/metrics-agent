@@ -79,6 +79,7 @@ Flags:
       --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
+      --number_of_concurrent_node_pollers int    The number of goroutines that are created to poll node metrics in parallel. (default: `100`)
       --parse_metric_data bool                   When true, core files will be parsed and non-relevant data will be removed prior to upload. (default `false`)
 Global Flags:
       --log_format string   Format for log output (JSON,PLAIN) (default "PLAIN")
