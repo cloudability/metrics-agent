@@ -19,7 +19,7 @@ pollInterval: 180
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.9
+  tag: 2.10
   pullPolicy: Always
 
 imagePullSecrets: []
