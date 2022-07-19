@@ -114,6 +114,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			CollectHeapsterExport: false,
 			Clientset:             cs,
 			NodeMetrics:           EndpointMask{},
+			ConcurrentPollers:     10,
 		}
 		config, err := ensureMetricServicesAvailable(context.TODO(), config)
 		if err == nil {
@@ -141,7 +142,8 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			ClusterHostURL:        ts.URL,
 			HeapsterURL:           ts.URL,
 			HTTPClient:            client,
-			InClusterClient:       raw.NewClient(client, true, "", "", 0),
+			ConcurrentPollers:     10,
+			InClusterClient:       raw.NewClient(client, true, "", "", 0, false),
 		}
 
 		var err error
@@ -281,6 +283,7 @@ func TestCollectMetrics(t *testing.T) {
 		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
 		GetAllConStats:        true,
+		ConcurrentPollers:     10,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
@@ -297,7 +300,7 @@ func TestCollectMetrics(t *testing.T) {
 	}
 	ka.BearerTokenPath = wd + "/testdata/mockToken"
 
-	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, ka.BearerTokenPath, 0)
+	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, ka.BearerTokenPath, 0, false)
 	fns := NewClientsetNodeSource(cs)
 
 	t.Run("Ensure that a collection occurs", func(t *testing.T) {

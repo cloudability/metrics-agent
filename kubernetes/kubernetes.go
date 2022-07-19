@@ -66,6 +66,7 @@ type KubeAgentConfig struct {
 	UseInClusterConfig    bool
 	CollectHeapsterExport bool
 	PollInterval          int
+	ConcurrentPollers     int
 	CollectionRetryLimit  uint
 	failedNodeList        map[string]error
 	AgentStartTime        time.Time
@@ -81,6 +82,7 @@ type KubeAgentConfig struct {
 	Namespace             string
 	ScratchDir            string
 	NodeMetrics           EndpointMask
+	ParseMetricData       bool
 }
 
 const uploadInterval time.Duration = 10
@@ -297,8 +299,8 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 func collectHeapsterExportMetrics(config KubeAgentConfig, msd string, metricSampleDir *os.File) error {
 	verbose := !config.RetrieveNodeSummaries
 	// get raw Heapster metric sample
-	filename, err := config.InClusterClient.GetRawEndPoint(
-		http.MethodGet, "heapster-metrics-export", metricSampleDir, config.HeapsterURL, nil, verbose)
+	filename, err := config.InClusterClient.GetRawEndPoint(http.MethodGet, "heapster-metrics-export",
+		metricSampleDir, config.HeapsterURL, nil, verbose)
 	if err != nil {
 		if config.RetrieveNodeSummaries {
 			return nil
@@ -508,7 +510,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 		return updatedConfig, err
 	}
 	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
-		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit)
+		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit, config.ParseMetricData)
 
 	updatedConfig.clusterUID, err = getNamespaceUID(ctx, updatedConfig.Clientset, "default")
 	if err != nil {
@@ -781,6 +783,8 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["cadvisor_metrics_retrieval_method"] = config.NodeMetrics.Options(NodeCadvisorEndpoint)
 	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
+	m.Values["number_of_concurrent_node_pollers"] = strconv.Itoa(config.ConcurrentPollers)
+	m.Values["parse_metric_data"] = strconv.FormatBool(config.ParseMetricData)
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {

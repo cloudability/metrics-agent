@@ -28,7 +28,8 @@ func TestFetchEndpoint(t *testing.T) {
 		// Direct method is enabled
 		mask.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 		config := KubeAgentConfig{
-			NodeMetrics: mask,
+			NodeMetrics:       mask,
+			ConcurrentPollers: 10,
 		}
 		// Use Direct method for connection
 		cm := ConnectionMethod{
@@ -58,7 +59,8 @@ func TestFetchEndpoint(t *testing.T) {
 		mask := EndpointMask{}
 		mask.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 		config := KubeAgentConfig{
-			NodeMetrics: mask,
+			NodeMetrics:       mask,
+			ConcurrentPollers: 10,
 		}
 		cm := ConnectionMethod{
 			ConnType: Direct,
@@ -86,7 +88,8 @@ func TestFetchEndpoint(t *testing.T) {
 		// only proxy is available
 		mask.SetAvailability(NodeCadvisorEndpoint, Proxy, true)
 		config := KubeAgentConfig{
-			NodeMetrics: mask,
+			NodeMetrics:       mask,
+			ConcurrentPollers: 10,
 		}
 		// try to fetch via Direct
 		cm := ConnectionMethod{
@@ -169,6 +172,7 @@ func TestEnsureNodeSource(t *testing.T) {
 		HTTPClient:           http.Client{},
 		CollectionRetryLimit: 0,
 		GetAllConStats:       true,
+		ConcurrentPollers:    10,
 		NodeMetrics:          EndpointMask{},
 	}
 
@@ -201,6 +205,7 @@ func TestEnsureNodeSource(t *testing.T) {
 			HTTPClient:           http.Client{},
 			CollectionRetryLimit: 0,
 			GetAllConStats:       false,
+			ConcurrentPollers:    10,
 			NodeMetrics:          EndpointMask{},
 		}
 
@@ -237,9 +242,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
-			GetAllConStats: true,
-			NodeMetrics:    EndpointMask{},
+			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
+			GetAllConStats:    true,
+			ConcurrentPollers: 10,
+			NodeMetrics:       EndpointMask{},
 		}
 
 		ka, err := ensureNodeSource(context.TODO(), ka)
@@ -278,9 +284,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
-			GetAllConStats: true,
-			NodeMetrics:    EndpointMask{},
+			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
+			GetAllConStats:    true,
+			ConcurrentPollers: 10,
+			NodeMetrics:       EndpointMask{},
 		}
 
 		_, err := ensureNodeSource(context.TODO(), ka)
@@ -304,9 +311,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
-			GetAllConStats: true,
-			NodeMetrics:    EndpointMask{},
+			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
+			GetAllConStats:    true,
+			ConcurrentPollers: 10,
+			NodeMetrics:       EndpointMask{},
 		}
 
 		ka, err := ensureNodeSource(context.TODO(), ka)
@@ -350,12 +358,13 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
-			GetAllConStats: true,
-			NodeMetrics:    EndpointMask{},
+			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
+			GetAllConStats:    true,
+			ConcurrentPollers: 10,
+			NodeMetrics:       EndpointMask{},
 			// just populate some dummy fields here to ensure neither client gets unset
-			InClusterClient: raw.NewClient(http.Client{}, true, "token", "", 0),
-			NodeClient:      raw.NewClient(http.Client{}, true, "token", "", 0),
+			InClusterClient: raw.NewClient(http.Client{}, true, "token", "", 0, false),
+			NodeClient:      raw.NewClient(http.Client{}, true, "token", "", 0, false),
 		}
 
 		ka, err := ensureNodeSource(context.TODO(), ka)
@@ -400,9 +409,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
-			GetAllConStats: true,
-			NodeMetrics:    EndpointMask{},
+			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
+			GetAllConStats:    true,
+			ConcurrentPollers: 10,
+			NodeMetrics:       EndpointMask{},
 		}
 
 		ka, err := ensureNodeSource(context.TODO(), ka)
@@ -433,9 +443,10 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
-			GetAllConStats: true,
-			NodeMetrics:    EndpointMask{},
+			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
+			GetAllConStats:    true,
+			ConcurrentPollers: 10,
+			NodeMetrics:       EndpointMask{},
 		}
 		ka, err := ensureNodeSource(context.TODO(), ka)
 
@@ -460,10 +471,11 @@ func TestEnsureNodeSource(t *testing.T) {
 				InsecureSkipVerify: true,
 			},
 			}},
-			ClusterHostURL: "https://" + ts.Listener.Addr().String(),
-			GetAllConStats: true,
-			ForceKubeProxy: true,
-			NodeMetrics:    EndpointMask{},
+			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
+			GetAllConStats:    true,
+			ForceKubeProxy:    true,
+			ConcurrentPollers: 10,
+			NodeMetrics:       EndpointMask{},
 		}
 		ka, err := ensureNodeSource(context.TODO(), ka)
 		if ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
@@ -660,6 +672,7 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 		"",
 		"",
 		retries,
+		false,
 	)
 	ka := KubeAgentConfig{
 		Clientset:             cs,
@@ -668,6 +681,7 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 		ClusterHostURL:        "https://" + ts.Listener.Addr().String(),
 		RetrieveNodeSummaries: true,
 		GetAllConStats:        true,
+		ConcurrentPollers:     10,
 		CollectionRetryLimit:  retries,
 	}
 	ka.NodeMetrics = EndpointMask{}

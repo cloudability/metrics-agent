@@ -132,6 +132,18 @@ func init() {
 		"/tmp",
 		"Directory metrics will be written to",
 	)
+	kubernetesCmd.PersistentFlags().IntVar(
+		&config.ConcurrentPollers,
+		"number_of_concurrent_node_pollers",
+		100,
+		"Number of concurrent goroutines created when polling node data. Default 100",
+	)
+	kubernetesCmd.PersistentFlags().BoolVar(
+		&config.ParseMetricData,
+		"parse_metric_data",
+		false,
+		"When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: False",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -151,6 +163,9 @@ func init() {
 	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
 	_ = viper.BindPFlag("collect_heapster_export", kubernetesCmd.PersistentFlags().Lookup("collect_heapster_export"))
 	_ = viper.BindPFlag("scratch_dir", kubernetesCmd.PersistentFlags().Lookup("scratch_dir"))
+	_ = viper.BindPFlag("number_of_concurrent_node_pollers",
+		kubernetesCmd.PersistentFlags().Lookup("number_of_concurrent_node_pollers"))
+	_ = viper.BindPFlag("parse_metric_data", kubernetesCmd.PersistentFlags().Lookup("parse_metric_data"))
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
@@ -172,9 +187,11 @@ func init() {
 		Key:                   viper.GetString("key_file"),
 		RetrieveNodeSummaries: viper.GetBool("retrieve_node_summaries"),
 		GetAllConStats:        viper.GetBool("get_all_container_stats"),
+		ConcurrentPollers:     viper.GetInt("number_of_concurrent_node_pollers"),
 		ForceKubeProxy:        viper.GetBool("force_kube_proxy"),
 		Namespace:             viper.GetString("namespace"),
 		ScratchDir:            viper.GetString("scratch_dir"),
+		ParseMetricData:       viper.GetBool("parse_metric_data"),
 	}
 
 }
