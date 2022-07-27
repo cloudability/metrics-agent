@@ -2,13 +2,13 @@ name: Deploy
 
 on:
   push:
-    branches:
-      - master
-      - beta
-
+    paths:
+      - 'version/version.go'
 jobs:
   deploy:
     name: Build and Deploy
+    # only build/deploy for beta and master branches
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta'
     runs-on: ubuntu-18.04
     steps:
       - name: Login to DockerHub
