@@ -84,8 +84,8 @@ type KubeAgentConfig struct {
 	NodeMetrics            EndpointMask
 	Informers              map[string]*cache.SharedIndexInformer
 	InformerResyncInterval int
-	ConcurrentPollers     int
-	ParseMetricData       bool
+	ConcurrentPollers      int
+	ParseMetricData        bool
 }
 
 const uploadInterval time.Duration = 10
