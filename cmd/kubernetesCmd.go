@@ -171,7 +171,7 @@ func init() {
 		Namespace:             viper.GetString("namespace"),
 		ScratchDir:            viper.GetString("scratch_dir"),
 		InformerResyncInterval: viper.GetInt("informer_resync_interval"),
-		ParseMetricData:       viper.GetBool("parse_metric_data"),
+		ParseMetricData:        viper.GetBool("parse_metric_data"),
 	}
 
 }
