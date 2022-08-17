@@ -40,7 +40,19 @@ func TestMetricSample(t *testing.T) {
 			if info.Mode().IsRegular() {
 				n := info.Name()
 				ft := toAgentFileType(n)
-				seen[toAgentFileType(ft)] = true
+
+				// for all json/jsonl files mark both as true once we see one
+				if strings.Contains(ft, "json") {
+					if strings.Contains(ft, "jsonl") {
+						// mark json seen
+						seen[strings.TrimSuffix(ft, "l")] = true
+					} else {
+						// mark jsonl seen
+						seen[ft+"l"] = true
+					}
+				}
+				seen[ft] = true
+
 				if unmarshalFn, ok := knownFileTypes[ft]; ok {
 					t.Logf("Processing: %v", n)
 					f, err := os.ReadFile(path)
