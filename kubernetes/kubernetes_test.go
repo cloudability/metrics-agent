@@ -19,6 +19,7 @@ import (
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	v1apps "k8s.io/api/apps/v1"
+	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -494,6 +495,15 @@ func getMockInformers() map[string]*cache.SharedIndexInformer {
 	deployments := fcache.NewFakeControllerSource()
 	deployments.Add(&v1apps.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1"}})
 	dinformer := cache.NewSharedInformer(deployments, &v1apps.Deployment{}, 1*time.Second).(cache.SharedIndexInformer)
+	namespaces := fcache.NewFakeControllerSource()
+	namespaces.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}})
+	nainformer := cache.NewSharedInformer(namespaces, &v1.Namespace{}, 1*time.Second).(cache.SharedIndexInformer)
+	jobs := fcache.NewFakeControllerSource()
+	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job1"}})
+	jinformer := cache.NewSharedInformer(jobs, &v1batch.Job{}, 1*time.Second).(cache.SharedIndexInformer)
+	cronJobs := fcache.NewFakeControllerSource()
+	cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1"}})
+	cjinformer := cache.NewSharedInformer(cronJobs, &v1batch.CronJob{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	mockInformers := map[string]*cache.SharedIndexInformer{
 		"replicationcontrollers": &rcinformer,
@@ -505,6 +515,9 @@ func getMockInformers() map[string]*cache.SharedIndexInformer {
 		"replicasets":            &rsinformer,
 		"daemonsets":             &dsinformer,
 		"deployments":            &dinformer,
+		"namespaces":             &nainformer,
+		"jobs":                   &jinformer,
+		"cronjobs":               &cjinformer,
 	}
 	return mockInformers
 }
