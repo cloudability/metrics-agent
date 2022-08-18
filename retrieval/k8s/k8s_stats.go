@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func StartUpInformers(clientset kubernetes.Interface,
+func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	resyncInterval int) (map[string]*cache.SharedIndexInformer, error) {
 	factory := informers.NewSharedInformerFactory(clientset, time.Duration(resyncInterval)*time.Hour)
 
@@ -27,10 +27,13 @@ func StartUpInformers(clientset kubernetes.Interface,
 	replicasetsInformer := factory.Apps().V1().ReplicaSets().Informer()
 	daemonsetsInformer := factory.Apps().V1().DaemonSets().Informer()
 	deploymentsInformer := factory.Apps().V1().Deployments().Informer()
-	// Jobs & Cronjobs
+	// Jobs
 	jobsInformer := factory.Batch().V1().Jobs().Informer()
-	cronJobsInformer := factory.Batch().V1().CronJobs().Informer()
-
+	// Cronjobs were introduced in k8s 1.21 so for older versions do not attempt to create an informer
+	var cronJobsInformer cache.SharedIndexInformer
+	if clusterVersion > 1.20 {
+		cronJobsInformer = factory.Batch().V1().CronJobs().Informer()
+	}
 	// closing this will kill all informers
 	stopCh := make(chan struct{})
 	// runs in background, starts all informers that are a part of the factory
@@ -58,6 +61,10 @@ func StartUpInformers(clientset kubernetes.Interface,
 //GetK8sMetricsFromInformer loops through all k8s resource informers in kubeAgentConfig writing each to the WSD
 func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer, workDir *os.File) error {
 	for resourceName, informer := range informers {
+		// Cronjob informer will be nil if k8s version is less than 1.21, if so skip getting the list of cronjobs
+		if *informer == nil {
+			continue
+		}
 		resourceList := (*informer).GetIndexer().List()
 		err := writeK8sResourceFile(workDir, resourceName, resourceList)
 		if err != nil {
