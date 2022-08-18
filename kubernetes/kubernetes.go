@@ -259,7 +259,7 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 		log.Warnf("Warning: %s", err)
 	}
 
-	// export k8s resource metrics (ex: pods.json) using informers to the metric sample directory
+	// export k8s resource metrics (ex: pods.jsonl) using informers to the metric sample directory
 	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir)
 	if err != nil {
 		return fmt.Errorf("unable to export k8s metrics: %s", err)
