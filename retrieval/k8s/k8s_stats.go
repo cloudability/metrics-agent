@@ -72,6 +72,7 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 		if *informer == nil {
 			continue
 		}
+		// TODO I think since they are mock informers they do not have the data, the data is under listerwatcher in inf
 		resourceList := (*informer).GetIndexer().List()
 		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData)
 
