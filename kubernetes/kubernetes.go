@@ -298,7 +298,7 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	}
 
 	// export k8s resource metrics (ex: pods.jsonl) using informers to the metric sample directory
-	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir)
+	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir, config.ParseMetricData)
 	if err != nil {
 		return fmt.Errorf("unable to export k8s metrics: %s", err)
 	}
@@ -526,7 +526,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 		return updatedConfig, err
 	}
 	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
-		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit, config.ParseMetricData)
+		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit)
 
 	updatedConfig.clusterUID, err = getNamespaceUID(ctx, updatedConfig.Clientset, "default")
 	if err != nil {

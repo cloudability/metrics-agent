@@ -344,7 +344,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 	clientSetNodeSource := NewClientsetNodeSource(config.Clientset)
 
 	nodeClient := raw.NewClient(nodeHTTPClient, true, config.BearerToken, config.BearerTokenPath,
-		config.CollectionRetryLimit, config.ParseMetricData)
+		config.CollectionRetryLimit)
 
 	config.NodeClient = nodeClient
 
