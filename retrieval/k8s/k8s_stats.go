@@ -4,11 +4,18 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"github.com/cloudability/metrics-agent/retrieval/raw"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"os"
+	"reflect"
 	"time"
+)
+
+const (
+	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
 func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
@@ -58,14 +65,16 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 }
 
 //GetK8sMetricsFromInformer loops through all k8s resource informers in kubeAgentConfig writing each to the WSD
-func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer, workDir *os.File) error {
+func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
+	workDir *os.File, parseMetricData bool) error {
 	for resourceName, informer := range informers {
 		// Cronjob informer will be nil if k8s version is less than 1.21, if so skip getting the list of cronjobs
 		if *informer == nil {
 			continue
 		}
 		resourceList := (*informer).GetIndexer().List()
-		err := writeK8sResourceFile(workDir, resourceName, resourceList)
+		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData)
+
 		if err != nil {
 			return err
 		}
@@ -74,7 +83,8 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer, 
 }
 
 //writeK8sResourceFile creates a new file in the upload sample directory for the resource name passed in and writes data
-func writeK8sResourceFile(workDir *os.File, resourceName string, resourceList []interface{}) (rerr error) {
+func writeK8sResourceFile(workDir *os.File, resourceName string,
+	resourceList []interface{}, parseMetricData bool) (rerr error) {
 
 	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl",
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -84,7 +94,13 @@ func writeK8sResourceFile(workDir *os.File, resourceName string, resourceList []
 	datawriter := bufio.NewWriter(file)
 
 	for _, k8Resource := range resourceList {
+
+		if parseMetricData {
+			k8Resource = getSanitizedK8sResource(resourceName)
+		}
+
 		data, err := json.Marshal(k8Resource)
+
 		if err != nil {
 			return errors.New("error: unable to marshal resource: " + resourceName)
 		}
@@ -104,4 +120,107 @@ func writeK8sResourceFile(workDir *os.File, resourceName string, resourceList []
 	}
 
 	return err
+}
+
+func getSanitizedK8sResource(resourceName string) interface{} {
+	var to = getType(resourceName)
+	out := reflect.New(reflect.TypeOf(to))
+	return sanitizeData(out.Elem().Interface())
+}
+
+func sanitizeData(to interface{}) interface{} {
+	switch to.(type) {
+	case raw.LabelSelectorMatchedResource:
+		return sanitizeSelectorMatchedResource(to)
+	case corev1.Pod:
+		return sanitizePod(to)
+	case raw.LabelMapMatchedResource:
+		return sanitizeMapMatchedResource(to)
+	case corev1.Namespace:
+		return sanitizeNamespace(to)
+	}
+	return to
+}
+
+func sanitizeSelectorMatchedResource(to interface{}) interface{} {
+	cast := to.(raw.LabelSelectorMatchedResource)
+
+	// stripping env var and related data from the object
+	cast.ObjectMeta.ManagedFields = nil
+	if _, ok := cast.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
+		delete(cast.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+	}
+
+	return cast
+}
+
+func sanitizePod(to interface{}) interface{} {
+	cast := to.(corev1.Pod)
+
+	// stripping env var and related data from the object
+	cast.ObjectMeta.ManagedFields = nil
+	if _, ok := cast.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
+		delete(cast.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+	}
+	for j, container := range cast.Spec.Containers {
+		cast.Spec.Containers[j] = sanitizeContainer(container)
+	}
+	for j, container := range cast.Spec.InitContainers {
+		cast.Spec.InitContainers[j] = sanitizeContainer(container)
+	}
+	return cast
+}
+
+func sanitizeContainer(container corev1.Container) corev1.Container {
+	container.Env = nil
+	container.Command = nil
+	container.Args = nil
+	container.ImagePullPolicy = ""
+	container.LivenessProbe = nil
+	container.StartupProbe = nil
+	container.ReadinessProbe = nil
+	container.TerminationMessagePath = ""
+	container.TerminationMessagePolicy = ""
+	container.SecurityContext = nil
+	return container
+}
+
+func sanitizeMapMatchedResource(to interface{}) interface{} {
+	cast := to.(raw.LabelMapMatchedResource)
+	// stripping env var and related data from the object
+	cast.ObjectMeta.ManagedFields = nil
+	if _, ok := cast.ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
+		delete(cast.ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+	}
+	cast.Finalizers = nil
+	return cast
+}
+
+func sanitizeNamespace(to interface{}) interface{} {
+	cast := to.(corev1.Namespace)
+	cast.ObjectMeta.ManagedFields = nil
+	return cast
+}
+
+func getType(filename string) interface{} {
+	var to interface{}
+	switch filename {
+	case raw.Nodes:
+		to = corev1.Node{}
+	case raw.Namespaces:
+		to = corev1.Namespace{}
+	case raw.Pods:
+		to = corev1.Pod{}
+	case raw.PersistentVolumes:
+		to = corev1.PersistentVolume{}
+	case raw.PersistentVolumeClaims:
+		to = corev1.PersistentVolumeClaim{}
+	case raw.AgentMeasurement:
+		to = raw.CldyAgent{}
+	case raw.Services, raw.ReplicationControllers:
+		to = raw.LabelMapMatchedResourceList{}
+	case raw.Deployments, raw.ReplicaSets, raw.Jobs, raw.DaemonSets:
+		to = raw.LabelSelectorMatchedResource{}
+	}
+	return to
 }

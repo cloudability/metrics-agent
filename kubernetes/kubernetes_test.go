@@ -324,6 +324,33 @@ func TestCollectMetrics(t *testing.T) {
 			}
 		}
 	})
+	t.Run("Ensure collection occurs with parseMetrics enabled"+
+		" ensure sensitive data is stripped", func(t *testing.T) {
+		// download the initial baseline...like a typical CollectKubeMetrics would
+		err := downloadBaselineMetricExport(context.TODO(), ka, fns)
+		if err != nil {
+			t.Error(err)
+		}
+		err = ka.collectMetrics(context.TODO(), ka, cs, fns)
+		if err != nil {
+			t.Error(err)
+		}
+
+		// i think delete the original test and walk through looking for k8s files and check before and after for removal.
+		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
+			// if suffix is jsonl check if the data has been parsed
+			if strings.HasSuffix(info.Name(), "jsonl") {
+				if strings.Contains(info.Name(), "pods") {
+					// check if secrets were not stripped from pods if parseMetrics is false
+					in, _ := os.ReadFile(path)
+					if !strings.Contains(string(in), "superSecret") {
+						t.Error("Source file should have contained secret, but did not")
+					}
+				}
+			}
+			return nil
+		})
+	})
 
 }
 
