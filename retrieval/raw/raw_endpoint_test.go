@@ -52,7 +52,6 @@ func ensureThatErrorsAreHandled(t testing.TB) {
 		"",
 		"",
 		2,
-		false,
 	)
 
 	wd, _ := os.MkdirTemp("", "raw_endpoint_test")
@@ -89,7 +88,6 @@ func ensureThatFileCreated(t testing.TB, testData string, source string, parseDa
 		"",
 		"",
 		2,
-		parseData,
 	)
 
 	wd, _ := os.MkdirTemp("", "raw_endpoint_test")
@@ -154,7 +152,6 @@ func ensureNetworkErrorsAreHandled(t testing.TB) {
 		"",
 		"",
 		2,
-		false,
 	)
 
 	wd, _ := os.MkdirTemp("", "raw_endpoint_test")
