@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"k8s.io/client-go/tools/cache"
 	"net/http"
@@ -381,15 +382,6 @@ func TestCollectMetrics(t *testing.T) {
 	})
 	t.Run("Ensure collection occurs with parseMetrics enabled"+
 		" ensure sensitive data is stripped", func(t *testing.T) {
-		// download the initial baseline...like a typical CollectKubeMetrics would
-		err := downloadBaselineMetricExport(context.TODO(), ka, fns)
-		if err != nil {
-			t.Error(err)
-		}
-		err = ka.collectMetrics(context.TODO(), ka, cs, fns)
-		if err != nil {
-			t.Error(err)
-		}
 
 		// i think delete the original test and walk through looking for k8s files and check before and after for removal.
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
@@ -398,7 +390,7 @@ func TestCollectMetrics(t *testing.T) {
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were not stripped from pods if parseMetrics is false
 					in, _ := os.ReadFile(path)
-					if !strings.Contains(string(in), "superSecret") {
+					if !strings.Contains(string(in), "ReallySecretStuff") {
 						t.Error("Source file should have contained secret, but did not")
 					}
 				}
@@ -500,9 +492,19 @@ func getMockInformers() map[string]*cache.SharedIndexInformer {
 	nodes := fcache.NewFakeControllerSource()
 	nodes.Add(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1"}})
 	ninformer := cache.NewSharedInformer(nodes, &v1.Node{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
+	data, _ := ioutil.ReadFile("../testdata/pods.jsonl")
+	var myPod *v1.Pod
+	err := json.Unmarshal(data, &myPod)
+	if err != nil {
+		fmt.Errorf("unmarshal error %v", err)
+	}
+
 	pods := fcache.NewFakeControllerSource()
-	pods.Add(&v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}})
+	pods.Add(myPod)
 	pinformer := cache.NewSharedInformer(pods, &v1.Pod{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	persistentVolumes := fcache.NewFakeControllerSource()
 	persistentVolumes.Add(&v1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv1"}})
 	pvinformer := cache.NewSharedInformer(persistentVolumes,
