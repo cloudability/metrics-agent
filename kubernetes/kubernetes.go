@@ -147,12 +147,16 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("For more information see: %v", kbTroubleShootingURL)
 	}
 
+	// informer channel, closes only if metrics-agent stops executing
+	// closing this will kill all informers
+	informerStopCh := make(chan struct{})
 	// start up informers for each of the k8s resources that metrics are being collected on
 	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset, kubeAgent.ClusterVersion.version,
-		config.InformerResyncInterval)
+		config.InformerResyncInterval, informerStopCh)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
+	defer close(informerStopCh)
 
 	err = downloadBaselineMetricExport(ctx, kubeAgent, clientSetNodeSource)
 
