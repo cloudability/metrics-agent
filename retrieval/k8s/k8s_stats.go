@@ -12,7 +12,7 @@ import (
 )
 
 func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
-	resyncInterval int) (map[string]*cache.SharedIndexInformer, error) {
+	resyncInterval int, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	factory := informers.NewSharedInformerFactory(clientset, time.Duration(resyncInterval)*time.Hour)
 
 	// v1Sources
@@ -34,8 +34,7 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	if clusterVersion > 1.20 {
 		cronJobsInformer = factory.Batch().V1().CronJobs().Informer()
 	}
-	// closing this will kill all informers
-	stopCh := make(chan struct{})
+
 	// runs in background, starts all informers that are a part of the factory
 	factory.Start(stopCh)
 	// wait until all informers have successfully synced
@@ -95,8 +94,14 @@ func writeK8sResourceFile(workDir *os.File, resourceName string, resourceList []
 		}
 	}
 
-	datawriter.Flush()
-	file.Close()
+	err = datawriter.Flush()
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
 
 	return err
 }

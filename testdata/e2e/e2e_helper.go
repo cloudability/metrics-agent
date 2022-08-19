@@ -246,11 +246,14 @@ func ByRefFnInformer(refFn k8sRefFn) UnmarshalForK8sListFn {
 	return func(fname string, fdata []byte, parsedK8sList *ParsedK8sLists) error {
 		reader := bytes.NewReader(fdata)
 		dec := json.NewDecoder(reader)
+
+		// assign storage to the resource list (ex: &p.Pods) that was passed in from the knownFileTypes. And get the
+		// k8s object type from knownFileTypes so the json decoder knows what type of object fields to decode
+		storage, k8sObject := refFn(parsedK8sList)
+
 		// loop reading 1 line at a time until EOF
 		for {
-			// assign storage to the resource list (ex: &p.Pods) that was passed in from the knownFileTypes. And get the
-			// k8s object type from knownFileTypes so the json decoder knows what type of object fields to decode
-			storage, k8sObject := refFn(parsedK8sList)
+
 			if err := dec.Decode(k8sObject); err != nil {
 				if err == io.EOF {
 					break
@@ -304,6 +307,8 @@ func ByRefFnInformer(refFn k8sRefFn) UnmarshalForK8sListFn {
 					return errors.New("cannot cast LabelMapMatchedResourceList")
 				}
 				typeStorage.Items = append(typeStorage.Items, *typedK8sObject)
+			default:
+				return errors.New("unknown type from file: " + fname)
 			}
 		}
 		return nil
