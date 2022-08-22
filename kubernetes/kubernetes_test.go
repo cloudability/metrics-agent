@@ -360,7 +360,7 @@ func TestCollectMetrics(t *testing.T) {
 		" ensure sensitive data is not stripped", func(t *testing.T) {
 
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
-			// if suffix is jsonl check if the data has been parsed for specific k8s resources
+			// if suffix is jsonl check if the data has not been parsed for specific k8s resources
 			if strings.HasSuffix(info.Name(), "jsonl") {
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were not stripped from pods if parseMetrics is false
