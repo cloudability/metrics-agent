@@ -232,6 +232,15 @@ func TestCollectMetrics(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error opening temp dir: %v", err)
 	}
+	// tmp dir for parseMetricsCollectionTest
+	dir2, err := ioutil.TempDir("", "TestCollectMetricsParseMetrics")
+	if err != nil {
+		t.Errorf("error creating temp dir2: %v", err)
+	}
+	tDir2, err := os.Open(dir2)
+	if err != nil {
+		t.Errorf("Error opening temp dir2: %v", err)
+	}
 
 	ka := KubeAgentConfig{
 		ClusterVersion: ClusterVersion{
@@ -250,7 +259,7 @@ func TestCollectMetrics(t *testing.T) {
 		ForceKubeProxy:        false,
 		Informers:             mockInformers,
 		ConcurrentPollers:     10,
-		ParseMetricData:       true,
+		ParseMetricData:       false,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
@@ -259,6 +268,28 @@ func TestCollectMetrics(t *testing.T) {
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 
 	ka.Informers = getMockInformers(t)
+
+	kubeAgentParseMetrics := KubeAgentConfig{
+		ClusterVersion: ClusterVersion{
+			version:     1.1,
+			versionInfo: sv,
+		},
+		Clientset:             cs,
+		HTTPClient:            http.Client{},
+		msExportDirectory:     tDir2,
+		UseInClusterConfig:    false,
+		ClusterHostURL:        ts.URL,
+		HeapsterURL:           ts.URL,
+		Insecure:              true,
+		BearerToken:           "",
+		BearerTokenPath:       "",
+		RetrieveNodeSummaries: true,
+		ForceKubeProxy:        false,
+		GetAllConStats:        true,
+		ConcurrentPollers:     10,
+		ParseMetricData:       true,
+		Informers:             getMockInformers(t),
+	}
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -325,18 +356,37 @@ func TestCollectMetrics(t *testing.T) {
 			}
 		}
 	})
-	t.Run("Ensure collection occurs with parseMetrics enabled"+
-		" ensure sensitive data is stripped", func(t *testing.T) {
+	t.Run("Ensure collection occurs with parseMetrics is disabled"+
+		" ensure sensitive data is not stripped", func(t *testing.T) {
 
-		// i think delete the original test and walk through looking for k8s files and check before and after for removal.
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
-			// if suffix is jsonl check if the data has been parsed
+			// if suffix is jsonl check if the data has been parsed for specific k8s resources
 			if strings.HasSuffix(info.Name(), "jsonl") {
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were not stripped from pods if parseMetrics is false
 					in, _ := os.ReadFile(path)
 					if !strings.Contains(string(in), "ReallySecretStuff") {
-						t.Error("Source file should have contained secret, but did not")
+						t.Error("Original file should have contained secret, but did not")
+					}
+				}
+			}
+			return nil
+		})
+	})
+	t.Run("Ensure collection occurs with parseMetrics enabled"+
+		"ensure sensitive data is stripped", func(t *testing.T) {
+		err = kubeAgentParseMetrics.collectMetrics(context.TODO(), kubeAgentParseMetrics, cs, fns)
+		if err != nil {
+			t.Error(err)
+		}
+		filepath.Walk(kubeAgentParseMetrics.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
+			// if suffix is jsonl check if the data has been parsed for specific k8s resources
+			if strings.HasSuffix(info.Name(), "jsonl") {
+				if strings.Contains(info.Name(), "pods") {
+					// check if secrets were stripped from pods if parseMetrics is true
+					in, _ := os.ReadFile(path)
+					if strings.Contains(string(in), "ReallySecretStuff") {
+						t.Error("Stripped file should not have contained secret, but did")
 					}
 				}
 			}

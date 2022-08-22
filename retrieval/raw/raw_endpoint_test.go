@@ -11,7 +11,6 @@ import (
 
 func rawEndpointTests(t testing.TB) {
 	var scenarios = []func(t testing.TB){
-		ensureThatFileCreatedForHeapsterData,
 		ensureThatErrorsAreHandled,
 		ensureNetworkErrorsAreHandled,
 		ensureThatFileParsedAndCreatedForPodsData,
