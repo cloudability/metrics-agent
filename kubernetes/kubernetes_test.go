@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"k8s.io/client-go/tools/cache"
 	"net/http"
@@ -272,8 +271,6 @@ func TestCollectMetrics(t *testing.T) {
 		t.Errorf("Error opening temp dir: %v", err)
 	}
 
-	mockInformers := getMockInformers()
-
 	ka := KubeAgentConfig{
 		ClusterVersion: ClusterVersion{
 			version:     1.1,
@@ -291,8 +288,8 @@ func TestCollectMetrics(t *testing.T) {
 		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
 		GetAllConStats:        true,
-		Informers:             mockInformers,
 		ConcurrentPollers:     10,
+		ParseMetricData:       true,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
@@ -302,6 +299,8 @@ func TestCollectMetrics(t *testing.T) {
 	// set Direct as option as well
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Direct, true)
+
+	ka.Informers = getMockInformers(t)
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -481,57 +480,43 @@ func NewTestServer() *httptest.Server {
 	return ts
 }
 
-func getMockInformers() map[string]*cache.SharedIndexInformer {
+//nolint: lll
+func getMockInformers(t *testing.T) map[string]*cache.SharedIndexInformer {
+	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
-	replicationControllers.Add(&v1.ReplicationController{ObjectMeta: metav1.ObjectMeta{Name: "rc1"}})
-	rcinformer := cache.NewSharedInformer(replicationControllers,
-		&v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
+	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	services := fcache.NewFakeControllerSource()
-	services.Add(&v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s1"}})
 	sinformer := cache.NewSharedInformer(services, &v1.Service{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	nodes := fcache.NewFakeControllerSource()
-	nodes.Add(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1"}})
 	ninformer := cache.NewSharedInformer(nodes, &v1.Node{}, 1*time.Second).(cache.SharedIndexInformer)
 
-	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
-	data, _ := ioutil.ReadFile("../testdata/pods.jsonl")
-	var myPod *v1.Pod
-	err := json.Unmarshal(data, &myPod)
-	if err != nil {
-		fmt.Errorf("unmarshal error %v", err)
-	}
-
 	pods := fcache.NewFakeControllerSource()
-	pods.Add(myPod)
 	pinformer := cache.NewSharedInformer(pods, &v1.Pod{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	persistentVolumes := fcache.NewFakeControllerSource()
-	persistentVolumes.Add(&v1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv1"}})
-	pvinformer := cache.NewSharedInformer(persistentVolumes,
-		&v1.PersistentVolume{}, 1*time.Second).(cache.SharedIndexInformer)
+	pvinformer := cache.NewSharedInformer(persistentVolumes, &v1.PersistentVolume{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	persistentVolumeClaims := fcache.NewFakeControllerSource()
-	persistentVolumeClaims.Add(&v1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "pvc1"}})
-	pvcinformer := cache.NewSharedInformer(persistentVolumeClaims,
-		&v1.PersistentVolumeClaim{}, 1*time.Second).(cache.SharedIndexInformer)
+	pvcinformer := cache.NewSharedInformer(persistentVolumeClaims, &v1.PersistentVolumeClaim{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	replicaSets := fcache.NewFakeControllerSource()
-	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs1"}})
-	rsinformer := cache.NewSharedInformer(replicaSets, &v1apps.ReplicaSet{},
-		1*time.Second).(cache.SharedIndexInformer)
+	rsinformer := cache.NewSharedInformer(replicaSets, &v1apps.ReplicaSet{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	daemonSets := fcache.NewFakeControllerSource()
-	daemonSets.Add(&v1apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "ds1"}})
-	dsinformer := cache.NewSharedInformer(daemonSets,
-		&v1apps.DaemonSet{}, 1*time.Second).(cache.SharedIndexInformer)
+	dsinformer := cache.NewSharedInformer(daemonSets, &v1apps.DaemonSet{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	deployments := fcache.NewFakeControllerSource()
-	deployments.Add(&v1apps.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1"}})
 	dinformer := cache.NewSharedInformer(deployments, &v1apps.Deployment{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	namespaces := fcache.NewFakeControllerSource()
-	namespaces.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}})
 	nainformer := cache.NewSharedInformer(namespaces, &v1.Namespace{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	jobs := fcache.NewFakeControllerSource()
-	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job1"}})
 	jinformer := cache.NewSharedInformer(jobs, &v1batch.Job{}, 1*time.Second).(cache.SharedIndexInformer)
+
 	cronJobs := fcache.NewFakeControllerSource()
-	cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1"}})
 	cjinformer := cache.NewSharedInformer(cronJobs, &v1batch.CronJob{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	mockInformers := map[string]*cache.SharedIndexInformer{
@@ -548,5 +533,38 @@ func getMockInformers() map[string]*cache.SharedIndexInformer {
 		"jobs":                   &jinformer,
 		"cronjobs":               &cjinformer,
 	}
+	// Call the Run function for each Informer, allowing the informers to listen for Add events
+	startMockInformers(mockInformers)
+
+	// now add items to informers after they are running
+	replicationControllers.Add(&v1.ReplicationController{ObjectMeta: metav1.ObjectMeta{Name: "rc1"}})
+	services.Add(&v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s1"}})
+	nodes.Add(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1"}})
+	persistentVolumes.Add(&v1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv1"}})
+	persistentVolumeClaims.Add(&v1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "pvc1"}})
+	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs1"}})
+	daemonSets.Add(&v1apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "ds1"}})
+	deployments.Add(&v1apps.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1"}})
+	namespaces.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}})
+	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job1"}})
+	cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1"}})
+
+	// pods is unique as we use this pod file for parseMetrics testing
+	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
+	data, _ := ioutil.ReadFile("../testdata/pods.jsonl")
+	var myPod *v1.Pod
+	err := json.Unmarshal(data, &myPod)
+	if err != nil {
+		t.Error(err)
+	}
+	pods.Add(myPod)
+
 	return mockInformers
+}
+
+func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer) {
+	informerStopCh := make(chan struct{})
+	for _, informer := range mockInformers {
+		go (*informer).Run(informerStopCh)
+	}
 }

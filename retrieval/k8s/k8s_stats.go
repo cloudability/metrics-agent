@@ -2,8 +2,10 @@ package k8s
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
@@ -72,7 +74,6 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 		if *informer == nil {
 			continue
 		}
-		// TODO I think since they are mock informers they do not have the data, the data is under listerwatcher in inf
 		resourceList := (*informer).GetIndexer().List()
 		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData)
 
@@ -96,11 +97,12 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 
 	for _, k8Resource := range resourceList {
 
-		if parseMetricData {
-			k8Resource = getSanitizedK8sResource(resourceName)
-		}
-
 		data, err := json.Marshal(k8Resource)
+
+		if parseMetricData {
+			myTEST := getSanitizedK8sResource(data, resourceName)
+			data, _ = json.Marshal(myTEST)
+		}
 
 		if err != nil {
 			return errors.New("error: unable to marshal resource: " + resourceName)
@@ -123,9 +125,17 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	return err
 }
 
-func getSanitizedK8sResource(resourceName string) interface{} {
+func getSanitizedK8sResource(data []byte, resourceName string) interface{} {
 	var to = getType(resourceName)
 	out := reflect.New(reflect.TypeOf(to))
+
+	reader := bytes.NewReader(data)
+
+	err := json.NewDecoder(reader).Decode(out.Interface())
+
+	if err != nil {
+		return fmt.Errorf("unable to decode data for file: %s", resourceName)
+	}
 	return sanitizeData(out.Elem().Interface())
 }
 
