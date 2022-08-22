@@ -309,11 +309,11 @@ func TestCollectMetrics(t *testing.T) {
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Direct, true)
 
-	ka.Informers = getMockInformers(t)
+	ka.Informers = getMockInformers(t, ka.ClusterVersion.version)
 
 	kubeAgentParseMetrics := KubeAgentConfig{
 		ClusterVersion: ClusterVersion{
-			version:     1.1,
+			version:     1.22,
 			versionInfo: sv,
 		},
 		Clientset:             cs,
@@ -330,7 +330,7 @@ func TestCollectMetrics(t *testing.T) {
 		GetAllConStats:        true,
 		ConcurrentPollers:     10,
 		ParseMetricData:       true,
-		Informers:             getMockInformers(t),
+		Informers:             getMockInformers(t, 1.22),
 	}
 
 	wd, err := os.Getwd()
@@ -531,7 +531,7 @@ func NewTestServer() *httptest.Server {
 }
 
 //nolint: lll
-func getMockInformers(t *testing.T) map[string]*cache.SharedIndexInformer {
+func getMockInformers(t *testing.T, clusterVersion float64) map[string]*cache.SharedIndexInformer {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
 	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
@@ -566,8 +566,12 @@ func getMockInformers(t *testing.T) map[string]*cache.SharedIndexInformer {
 	jobs := fcache.NewFakeControllerSource()
 	jinformer := cache.NewSharedInformer(jobs, &v1batch.Job{}, 1*time.Second).(cache.SharedIndexInformer)
 
-	cronJobs := fcache.NewFakeControllerSource()
-	cjinformer := cache.NewSharedInformer(cronJobs, &v1batch.CronJob{}, 1*time.Second).(cache.SharedIndexInformer)
+	var cjinformer cache.SharedIndexInformer
+	var cronJobs *fcache.FakeControllerSource
+	if clusterVersion > 1.20 {
+		cronJobs = fcache.NewFakeControllerSource()
+		cjinformer = cache.NewSharedInformer(cronJobs, &v1batch.CronJob{}, 1*time.Second).(cache.SharedIndexInformer)
+	}
 
 	mockInformers := map[string]*cache.SharedIndexInformer{
 		"replicationcontrollers": &rcinformer,
@@ -597,7 +601,9 @@ func getMockInformers(t *testing.T) map[string]*cache.SharedIndexInformer {
 	deployments.Add(&v1apps.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1"}})
 	namespaces.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}})
 	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job1"}})
-	cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1"}})
+	if clusterVersion > 1.20 {
+		cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1"}})
+	}
 
 	// pods is unique as we use this pod file for parseMetrics testing
 	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
@@ -615,6 +621,9 @@ func getMockInformers(t *testing.T) map[string]*cache.SharedIndexInformer {
 func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer) {
 	informerStopCh := make(chan struct{})
 	for _, informer := range mockInformers {
+		if (*informer) == nil {
+			continue
+		}
 		go (*informer).Run(informerStopCh)
 	}
 }
