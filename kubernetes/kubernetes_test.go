@@ -377,13 +377,13 @@ func TestCollectMetrics(t *testing.T) {
 					// check if sensitive fields were not stripped from deployments if parseMetrics is false
 					in, _ := os.ReadFile(path)
 					if !strings.Contains(string(in), "DangThisIsSecret") {
-						t.Error("Stripped file should have contained sensitive data, but did not")
+						t.Error("Original file should have contained sensitive data, but did not")
 					}
 				} else {
 					// all other jsonl share the same annotation that should not be removed
 					in, _ := os.ReadFile(path)
 					if !strings.Contains(string(in), "IAmSecretEnvVariables") {
-						t.Error("Stripped file should have contained sensitive data, but did not")
+						t.Error("Original file should have contained sensitive data, but did not")
 					}
 				}
 			}
