@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"github.com/cloudability/metrics-agent/retrieval/raw"
+	v1apps "k8s.io/api/apps/v1"
+	v1batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -122,34 +124,111 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 }
 
 func getSanitizedK8sResource(k8Resource interface{}) interface{} {
-
 	return sanitizeData(k8Resource)
 }
 
+//nolint: gocyclo
 func sanitizeData(to interface{}) interface{} {
 	switch to.(type) {
-	case *raw.LabelSelectorMatchedResource:
-		return sanitizeSelectorMatchedResource(to)
 	case *corev1.Pod:
 		return sanitizePod(to)
-	case *raw.LabelMapMatchedResource:
-		return sanitizeMapMatchedResource(to)
+	case *v1apps.DaemonSet:
+		cast := to.(*v1apps.DaemonSet)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Template = corev1.PodTemplateSpec{}
+		cast.Spec.RevisionHistoryLimit = nil
+		cast.Spec.UpdateStrategy = v1apps.DaemonSetUpdateStrategy{}
+		cast.Spec.MinReadySeconds = 0
+		cast.Spec.RevisionHistoryLimit = nil
+		return cast
+	case *v1apps.ReplicaSet:
+		cast := to.(*v1apps.ReplicaSet)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Replicas = nil
+		cast.Spec.Template = corev1.PodTemplateSpec{}
+		cast.Spec.MinReadySeconds = 0
+		return cast
+	case *v1apps.Deployment:
+		cast := to.(*v1apps.Deployment)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Template = corev1.PodTemplateSpec{}
+		cast.Spec.Replicas = nil
+		cast.Spec.Strategy = v1apps.DeploymentStrategy{}
+		cast.Spec.MinReadySeconds = 0
+		cast.Spec.RevisionHistoryLimit = nil
+		cast.Spec.ProgressDeadlineSeconds = nil
+		return cast
+	case *v1batch.Job:
+		cast := to.(*v1batch.Job)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Template = corev1.PodTemplateSpec{}
+		cast.Spec.Parallelism = nil
+		cast.Spec.Completions = nil
+		cast.Spec.ActiveDeadlineSeconds = nil
+		cast.Spec.BackoffLimit = nil
+		cast.Spec.ManualSelector = nil
+		cast.Spec.TTLSecondsAfterFinished = nil
+		cast.Spec.CompletionMode = nil
+		cast.Spec.Suspend = nil
+		return cast
+	case *v1batch.CronJob:
+		cast := to.(*v1batch.CronJob)
+		sanitizeMeta(&cast.ObjectMeta)
+		// cronjobs have no Selector
+		cast.Spec = v1batch.CronJobSpec{}
+		return cast
+	case *corev1.Service:
+		cast := to.(*corev1.Service)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Ports = nil
+		cast.Spec.ClusterIP = ""
+		cast.Spec.ClusterIPs = nil
+		cast.Spec.Type = ""
+		cast.Spec.ExternalIPs = nil
+		cast.Spec.SessionAffinity = ""
+		cast.Spec.LoadBalancerIP = ""
+		cast.Spec.LoadBalancerSourceRanges = nil
+		cast.Spec.ExternalName = ""
+		cast.Spec.ExternalTrafficPolicy = ""
+		cast.Spec.HealthCheckNodePort = 0
+		cast.Spec.SessionAffinityConfig = nil
+		cast.Spec.IPFamilies = nil
+		cast.Spec.IPFamilyPolicy = nil
+		cast.Spec.AllocateLoadBalancerNodePorts = nil
+		cast.Spec.LoadBalancerClass = nil
+		cast.Spec.InternalTrafficPolicy = nil
+		return cast
+	case *corev1.ReplicationController:
+		cast := to.(*corev1.ReplicationController)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Replicas = nil
+		cast.Spec.Template = nil
+		cast.Spec.MinReadySeconds = 0
+		return cast
 	case *corev1.Namespace:
 		return sanitizeNamespace(to)
+	case *corev1.PersistentVolume:
+		cast := to.(*corev1.PersistentVolume)
+		sanitizeMeta(&cast.ObjectMeta)
+		return cast
+	case *corev1.PersistentVolumeClaim:
+		cast := to.(*corev1.PersistentVolumeClaim)
+		sanitizeMeta(&cast.ObjectMeta)
+		return cast
+	case *corev1.Node:
+		cast := to.(*corev1.Node)
+		sanitizeMeta(&cast.ObjectMeta)
+		return cast
 	}
 	return to
 }
 
-func sanitizeSelectorMatchedResource(to interface{}) interface{} {
-	cast := to.(*raw.LabelSelectorMatchedResource)
-
-	// stripping env var and related data from the object
-	(*cast).ObjectMeta.ManagedFields = nil
-	if _, ok := (*cast).ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-		delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+func sanitizeMeta(objectMeta *metav1.ObjectMeta) {
+	objectMeta.ManagedFields = nil
+	if _, ok := objectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
+		delete(objectMeta.Annotations, KubernetesLastAppliedConfig)
 	}
-
-	return cast
+	objectMeta.Finalizers = nil
 }
 
 func sanitizePod(to interface{}) interface{} {
@@ -181,17 +260,6 @@ func sanitizeContainer(container corev1.Container) corev1.Container {
 	container.TerminationMessagePolicy = ""
 	container.SecurityContext = nil
 	return container
-}
-
-func sanitizeMapMatchedResource(to interface{}) interface{} {
-	cast := to.(*raw.LabelMapMatchedResource)
-	// stripping env var and related data from the object
-	(*cast).ObjectMeta.ManagedFields = nil
-	if _, ok := (*cast).ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-		delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-	}
-	(*cast).Finalizers = nil
-	return cast
 }
 
 func sanitizeNamespace(to interface{}) interface{} {

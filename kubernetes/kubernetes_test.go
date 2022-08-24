@@ -414,13 +414,30 @@ func TestCollectMetrics(t *testing.T) {
 		" ensure sensitive data is not stripped", func(t *testing.T) {
 
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
-			// if suffix is jsonl check if the data has not been parsed for specific k8s resources
-			if strings.HasSuffix(info.Name(), "jsonl") {
+			if strings.Contains(info.Name(), "jsonl") {
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were not stripped from pods if parseMetrics is false
 					in, _ := os.ReadFile(path)
 					if !strings.Contains(string(in), "ReallySecretStuff") {
 						t.Error("Original file should have contained secret, but did not")
+					}
+				} else if strings.Contains(info.Name(), "namespaces") {
+					// check if secrets were not stripped from namespaces if parseMetrics is false
+					in, _ := os.ReadFile(path)
+					if !strings.Contains(string(in), "ManageFieldToBeDeleted") {
+						t.Error("Original file should have contained ManagedField data, but did not")
+					}
+				} else if strings.Contains(info.Name(), "deployments") {
+					// check if sensitive fields were not stripped from deployments if parseMetrics is false
+					in, _ := os.ReadFile(path)
+					if !strings.Contains(string(in), "DangThisIsSecret") {
+						t.Error("Stripped file should have contained sensitive data, but did not")
+					}
+				} else {
+					// all other jsonl share the same annotation that should not be removed
+					in, _ := os.ReadFile(path)
+					if !strings.Contains(string(in), "IAmSecretEnvVariables") {
+						t.Error("Stripped file should have contained sensitive data, but did not")
 					}
 				}
 			}
@@ -434,13 +451,30 @@ func TestCollectMetrics(t *testing.T) {
 			t.Error(err)
 		}
 		filepath.Walk(kubeAgentParseMetrics.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
-			// if suffix is jsonl check if the data has been parsed for specific k8s resources
-			if strings.HasSuffix(info.Name(), "jsonl") {
+			if strings.Contains(info.Name(), "jsonl") {
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were stripped from pods if parseMetrics is true
 					in, _ := os.ReadFile(path)
 					if strings.Contains(string(in), "ReallySecretStuff") {
 						t.Error("Stripped file should not have contained secret, but did")
+					}
+				} else if strings.Contains(info.Name(), "namespaces") {
+					// check if sensitive fields were stripped from namespaces if parseMetrics is true
+					in, _ := os.ReadFile(path)
+					if strings.Contains(string(in), "ManageFieldToBeDeleted") {
+						t.Error("Stripped file should not have contained ManagedField data, but did")
+					}
+				} else if strings.Contains(info.Name(), "deployments") {
+					// check if sensitive fields were stripped from deployments if parseMetrics is true
+					in, _ := os.ReadFile(path)
+					if strings.Contains(string(in), "DangThisIsSecret") {
+						t.Error("Stripped file should not have contained sensitive data, but did")
+					}
+				} else {
+					// all other jsonl share the same annotation that should be removed
+					in, _ := os.ReadFile(path)
+					if strings.Contains(string(in), "IAmSecretEnvVariables") {
+						t.Error("Stripped file should not have contained sensitive data, but did")
 					}
 				}
 			}
@@ -590,30 +624,49 @@ func getMockInformers(t *testing.T, clusterVersion float64) map[string]*cache.Sh
 	// Call the Run function for each Informer, allowing the informers to listen for Add events
 	startMockInformers(mockInformers)
 
+	// Private Annotation to be removed if ParseMetrics is enabled
+	annotation := map[string]string{
+		"kubectl.kubernetes.io/last-applied-configuration": "IAmSecretEnvVariables",
+	}
+
 	// now add items to informers after they are running
-	replicationControllers.Add(&v1.ReplicationController{ObjectMeta: metav1.ObjectMeta{Name: "rc1"}})
-	services.Add(&v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s1"}})
-	nodes.Add(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1"}})
-	persistentVolumes.Add(&v1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv1"}})
-	persistentVolumeClaims.Add(&v1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "pvc1"}})
-	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs1"}})
-	daemonSets.Add(&v1apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "ds1"}})
-	deployments.Add(&v1apps.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d1"}})
-	namespaces.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}})
-	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job1"}})
+	replicationControllers.Add(&v1.ReplicationController{ObjectMeta: metav1.ObjectMeta{Name: "rc1", Annotations: annotation}})
+	services.Add(&v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s1", Annotations: annotation}})
+	nodes.Add(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1", Annotations: annotation}})
+	persistentVolumes.Add(&v1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv1", Annotations: annotation}})
+	persistentVolumeClaims.Add(&v1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "pvc1", Annotations: annotation}})
+	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs1", Annotations: annotation}})
+	daemonSets.Add(&v1apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "ds1", Annotations: annotation}})
+	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job1", Annotations: annotation}})
 	if clusterVersion > 1.20 {
-		cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1"}})
+		cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1", Annotations: annotation}})
 	}
 
 	// pods is unique as we use this pod file for parseMetrics testing
 	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
-	data, _ := ioutil.ReadFile("../testdata/pods.jsonl")
+	podData, _ := ioutil.ReadFile("../testdata/pods.jsonl")
 	var myPod *v1.Pod
-	err := json.Unmarshal(data, &myPod)
+	err := json.Unmarshal(podData, &myPod)
 	if err != nil {
 		t.Error(err)
 	}
 	pods.Add(myPod)
+	// namespace also used in testing
+	namespaceData, _ := ioutil.ReadFile("../testdata/namespaces.jsonl")
+	var myNamespace *v1.Namespace
+	err = json.Unmarshal(namespaceData, &myNamespace)
+	if err != nil {
+		t.Error(err)
+	}
+	namespaces.Add(myNamespace)
+	// deployments also used in testing
+	deploymentData, _ := ioutil.ReadFile("../testdata/deployments.jsonl")
+	var myDeployment *v1apps.Deployment
+	err = json.Unmarshal(deploymentData, &myDeployment)
+	if err != nil {
+		t.Error(err)
+	}
+	deployments.Add(myDeployment)
 
 	return mockInformers
 }
