@@ -25,12 +25,10 @@ func TestMetricSample(t *testing.T) {
 	}
 
 	parsedK8sLists := &ParsedK8sLists{
-		NodeSummaries:              make(map[string]statsapi.Summary),
-		BaselineNodeSummaries:      make(map[string]statsapi.Summary),
-		NodeContainers:             make(map[string]map[string]cadvisor.ContainerInfo),
-		BaselineNodeContainers:     make(map[string]map[string]cadvisor.ContainerInfo),
-		CadvisorPrometheus:         make(map[string]map[string]cadvisor.ContainerInfo),
-		BaselineCadvisorPrometheus: make(map[string]map[string]cadvisor.ContainerInfo),
+		NodeSummaries:          make(map[string]statsapi.Summary),
+		BaselineNodeSummaries:  make(map[string]statsapi.Summary),
+		NodeContainers:         make(map[string]map[string]cadvisor.ContainerInfo),
+		BaselineNodeContainers: make(map[string]map[string]cadvisor.ContainerInfo),
 	}
 	t.Parallel()
 
@@ -117,27 +115,6 @@ func TestMetricSample(t *testing.T) {
 			t.Error("pod container stat data not found in metric sample")
 		}
 		return
-	})
-
-	t.Run("ensure that a metrics sample has expected cadvisor prometheus data", func(t *testing.T) {
-		for _, containerInfos := range parsedK8sLists.CadvisorPrometheus {
-			for _, containerInfo := range containerInfos {
-				if minorVersion >= 21 {
-					if strings.HasPrefix(containerInfo.Name, "/kubelet/kubepods/besteffort/pod") &&
-						containerInfo.Namespace == stress &&
-						strings.HasPrefix(containerInfo.Spec.Labels["io.kubernetes.pod.name"], stress) {
-						return
-					}
-				} else {
-					if strings.HasPrefix(containerInfo.Name, "/kubepods/besteffort/pod") &&
-						containerInfo.Namespace == stress &&
-						strings.HasPrefix(containerInfo.Spec.Labels["io.kubernetes.pod.name"], stress) {
-						return
-					}
-				}
-			}
-		}
-		t.Error("pod cadvisor prometheus data not found in metric sample")
 	})
 
 }

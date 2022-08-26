@@ -162,8 +162,6 @@ var knownFileTypes = map[string]UnmarshalForK8sListFn{
 	"baseline-summary-":           AsNodeSummary(true),
 	"stats-container-":            AsContainerNodeSummary(false),
 	"baseline-container-":         AsContainerNodeSummary(true),
-	"stats-cadvisor_metrics-":     AsCadvisorMetrics(false),
-	"baseline-cadvisor_metrics-":  AsCadvisorMetrics(true),
 }
 
 var agentFileTypes = map[string]bool{

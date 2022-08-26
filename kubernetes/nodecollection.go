@@ -356,7 +356,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 		// test node direct connectivity
 		d := directNodeEndpoints(ip, port)
 		success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary(),
-			d.statsContainer(), d.mCAdvisor())
+			d.statsContainer())
 		if err != nil {
 			return config, err
 		}
@@ -368,7 +368,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 	// test node connectivity via kube-proxy
 	p := setupProxyAPI(config.ClusterHostURL, firstNode.Name)
 	success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary(),
-		p.statsContainer(), p.mCAdvisor())
+		p.statsContainer())
 	if err != nil {
 		return config, err
 	}
@@ -381,7 +381,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 }
 
 func checkEndpointConnections(config KubeAgentConfig, client *http.Client, method Connection, nodeStatSum,
-	containerStats, cadvisorMetrics string) (success bool, err error) {
+	containerStats string) (success bool, err error) {
 	ns, _, err := util.TestHTTPConnection(client, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
@@ -396,18 +396,7 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 	log.Infof("/stats/container endpoint available via %s connection? %v", method, cs)
 	config.NodeMetrics.SetAvailability(NodeContainerEndpoint, method, cs)
 
-	con := metricsRequirementsSatisfied(config, cs, method)
-	return ns && con, nil
-}
-
-// metricsRequirementsSatisfied returns whether all of the desired containers metrics endpoints were reached
-func metricsRequirementsSatisfied(config KubeAgentConfig, cs bool, method Connection) bool {
-	// Don't fail if the connection method is proxy and one of the endpoints
-	// is still missing, as this is expected in 1.18+
-	if config.GetAllConStats && method.hasMethod(Direct) {
-		return cs
-	}
-	return cs
+	return ns, nil
 }
 
 // isFargateNode detects whether a node is a Fargate node, which affects

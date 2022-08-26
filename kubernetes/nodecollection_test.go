@@ -214,8 +214,8 @@ func TestEnsureNodeSource(t *testing.T) {
 
 		ka, err := ensureNodeSource(context.TODO(), ka)
 
-		if err == nil {
-			t.Errorf("expected an error")
+		if err != nil {
+			t.Errorf("did not expect an error")
 		}
 		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Expected direct node retrieval method but got %v: %v",
@@ -268,7 +268,7 @@ func TestEnsureNodeSource(t *testing.T) {
 		}
 	})
 
-	t.Run("Ensure failure if minimum container metrics unavailable", func(t *testing.T) {
+	t.Run("do not expect failure if container metrics unavailable", func(t *testing.T) {
 		// stats/summary will succeed, but cadvisor and containers will fail both times
 		// Metrics collection is incomplete without at least one
 		directConnectionAttempts := []int{200, 400, 404}
@@ -292,8 +292,8 @@ func TestEnsureNodeSource(t *testing.T) {
 		}
 
 		_, err := ensureNodeSource(context.TODO(), ka)
-		if err == nil {
-			t.Errorf("should fail when neither cadvisor or container metrics is accessible")
+		if err != nil {
+			t.Errorf("should not fail when neither cadvisor or container metrics is accessible")
 		}
 	})
 
@@ -323,7 +323,7 @@ func TestEnsureNodeSource(t *testing.T) {
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
-		if !ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
+		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Expected /stats/summary to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
 			return
@@ -364,8 +364,8 @@ func TestEnsureNodeSource(t *testing.T) {
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
-		if !ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected /stats/summary to allow proxy method but got %v: %v",
+		if ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
+			t.Errorf("Expected /stats/summary to use direct, but proxy was allowed %v: %v",
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
 			return
 		}
@@ -389,7 +389,7 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure successful proxy node source test", func(t *testing.T) {
-		returnCodes := []int{200, 404, 200, 200}
+		returnCodes := []int{404, 404, 200, 200}
 		ts := launchTLSTestServer(returnCodes)
 		cs := NewTestClient(ts, nodeSampleLabels)
 		defer ts.Close()
@@ -410,8 +410,14 @@ func TestEnsureNodeSource(t *testing.T) {
 		ka, err := ensureNodeSource(context.TODO(), ka)
 
 		if !ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected stats/summary to allow proxy method but got %v: %v",
+			t.Errorf("Expected stats/summary to proxy direct method but got %v: %v",
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
+			return
+		}
+
+		if !ka.NodeMetrics.ProxyAllowed(NodeContainerEndpoint) {
+			t.Errorf("Expected node container to allow proxy method but got %v: %v",
+				ka.NodeMetrics.Options(NodeContainerEndpoint), err)
 			return
 		}
 	})
