@@ -22,7 +22,7 @@ func TestFetchEndpoint(t *testing.T) {
 	t.Run("Verify that endpoint is removed from map upon successful fetch", func(t *testing.T) {
 		endpointsToFetch := map[Endpoint]bool{
 			NodeStatsSummaryEndpoint: true,
-			NodeCadvisorEndpoint:     true,
+			NodeContainerEndpoint:    true,
 		}
 		mask := EndpointMask{}
 		// Direct method is enabled
@@ -46,15 +46,15 @@ func TestFetchEndpoint(t *testing.T) {
 			t.Errorf("%s should have been removed from map upon successful fetch, got %+v",
 				NodeStatsSummaryEndpoint, endpointsToFetch)
 		}
-		if !endpointsToFetch[NodeCadvisorEndpoint] {
-			t.Errorf("should not have removed unfetched %s endpoint from map", NodeCadvisorEndpoint)
+		if !endpointsToFetch[NodeContainerEndpoint] {
+			t.Errorf("should not have removed unfetched %s endpoint from map", NodeContainerEndpoint)
 		}
 	})
 
 	t.Run("Verify that endpoint is not removed from map upon unsuccessful fetch", func(t *testing.T) {
 		endpointsToFetch := map[Endpoint]bool{
 			NodeStatsSummaryEndpoint: true,
-			NodeCadvisorEndpoint:     true,
+			NodeContainerEndpoint:    true,
 		}
 		mask := EndpointMask{}
 		mask.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
@@ -82,11 +82,11 @@ func TestFetchEndpoint(t *testing.T) {
 
 	t.Run("Verify that endpoint is not fetched if method is not available", func(t *testing.T) {
 		endpointsToFetch := map[Endpoint]bool{
-			NodeCadvisorEndpoint: true,
+			NodeContainerEndpoint: true,
 		}
 		mask := EndpointMask{}
 		// only proxy is available
-		mask.SetAvailability(NodeCadvisorEndpoint, Proxy, true)
+		mask.SetAvailability(NodeContainerEndpoint, Proxy, true)
 		config := KubeAgentConfig{
 			NodeMetrics:       mask,
 			ConcurrentPollers: 10,
@@ -100,13 +100,13 @@ func TestFetchEndpoint(t *testing.T) {
 			return "", fmt.Errorf("whoa there buddy you can't fetch that there endpoint pardner")
 		}
 
-		err := fetchEndpoint(endpointsToFetch, NodeCadvisorEndpoint, config, cm, endpointFetcherMock)
+		err := fetchEndpoint(endpointsToFetch, NodeContainerEndpoint, config, cm, endpointFetcherMock)
 		if err != nil {
 			t.Errorf("should not have error because endpointFetcherMock shouldn't have been called: %v", err)
 		}
-		if !endpointsToFetch[NodeCadvisorEndpoint] {
+		if !endpointsToFetch[NodeContainerEndpoint] {
 			t.Errorf("%s should not have been removed from map upon failed fetch, got %+v",
-				NodeCadvisorEndpoint, endpointsToFetch)
+				NodeContainerEndpoint, endpointsToFetch)
 		}
 	})
 }
@@ -164,22 +164,20 @@ func TestEnsureNodeSource(t *testing.T) {
 	// The final 400 fails the direct connection test, and as no proxy client is provided
 	// for the "unsuccessful" node test, it falls through to unreachable status.
 	// If no status code is provided, the default response is 200.
-	returnCodes := []int{200, 200, 200, 400, 400, 400, 200, 200, 200, 400}
-	ts := launchTLSTestServer(returnCodes)
-	cs := NewTestClient(ts, nodeSampleLabels)
-	ka := KubeAgentConfig{
-		Clientset:            cs,
-		HTTPClient:           http.Client{},
-		CollectionRetryLimit: 0,
-		GetAllConStats:       true,
-		ConcurrentPollers:    10,
-		NodeMetrics:          EndpointMask{},
-	}
-
-	defer ts.Close()
 
 	t.Run("Ensure successful direct node source test", func(t *testing.T) {
-
+		returnCodes := []int{200, 200}
+		ts := launchTLSTestServer(returnCodes)
+		cs := NewTestClient(ts, nodeSampleLabels)
+		defer ts.Close()
+		ka := KubeAgentConfig{
+			Clientset:            cs,
+			HTTPClient:           http.Client{},
+			CollectionRetryLimit: 0,
+			GetAllConStats:       true,
+			ConcurrentPollers:    10,
+			NodeMetrics:          EndpointMask{},
+		}
 		ka, err := ensureNodeSource(context.TODO(), ka)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -196,13 +194,18 @@ func TestEnsureNodeSource(t *testing.T) {
 		}
 	})
 
-	t.Run("Ensure successful direct node source test without both containers metrics endpoints", func(t *testing.T) {
-		returnCodes := []int{200, 200, 400, 400, 200, 200, 400}
+	t.Run("Ensure failure to direct node source test without metrics endpoint", func(t *testing.T) {
+		returnCodes := []int{200, 404}
 		ts := launchTLSTestServer(returnCodes)
+		defer ts.Close()
 		cs := NewTestClient(ts, nodeSampleLabels)
 		ka := KubeAgentConfig{
-			Clientset:            cs,
-			HTTPClient:           http.Client{},
+			Clientset: cs,
+			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
+				// nolint gosec
+				InsecureSkipVerify: true,
+			},
+			}},
 			CollectionRetryLimit: 0,
 			GetAllConStats:       false,
 			ConcurrentPollers:    10,
@@ -210,8 +213,9 @@ func TestEnsureNodeSource(t *testing.T) {
 		}
 
 		ka, err := ensureNodeSource(context.TODO(), ka)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
+
+		if err == nil {
+			t.Errorf("expected an error")
 		}
 		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Expected direct node retrieval method but got %v: %v",
@@ -226,13 +230,14 @@ func TestEnsureNodeSource(t *testing.T) {
 
 	})
 
-	t.Run("Ensure proxy succeeds even if one container source fails and GetAllConStats=true", func(t *testing.T) {
+	t.Run("Ensure proxy fails if one container source fails and GetAllConStats=true", func(t *testing.T) {
 		// stats/summary and cadvisor will succeed, containers will fail both times
 		// This simulates 1.18+ clusters where containers is no longer available
 		directConnectionAttempts := []int{200, 200, 404}
 		proxyConnectionAttempts := []int{200, 200, 404}
 		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
 		ts := launchTLSTestServer(directConnectionReturnCodes)
+		defer ts.Close()
 		cs := NewTestClient(ts, nodeSampleLabels)
 		ka := KubeAgentConfig{
 			Clientset: cs,
@@ -252,17 +257,12 @@ func TestEnsureNodeSource(t *testing.T) {
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
-		if !ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected /stats/summary to allow proxy method but got %v: %v",
+		if ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
+			t.Errorf("Expected /stats/summary to fail proxy method but got %v: %v",
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
 			return
 		}
-		if !ka.NodeMetrics.ProxyAllowed(NodeCadvisorEndpoint) {
-			t.Errorf("Expected /metrics/cadvisor to allow proxy method but got %v: %v",
-				ka.NodeMetrics.Options(NodeCadvisorEndpoint), err)
-			return
-		}
-		if !ka.NodeMetrics.Unreachable(NodeContainerEndpoint) {
+		if ka.NodeMetrics.Unreachable(NodeContainerEndpoint) {
 			t.Errorf("%s should be unreachable after failing both connections, got: %s",
 				NodeContainerEndpoint, ka.NodeMetrics.Options(NodeContainerEndpoint))
 		}
@@ -275,6 +275,7 @@ func TestEnsureNodeSource(t *testing.T) {
 		proxyConnectionAttempts := []int{200, 400, 404}
 		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
 		ts := launchTLSTestServer(directConnectionReturnCodes)
+		defer ts.Close()
 		cs := NewTestClient(ts, nodeSampleLabels)
 		ka := KubeAgentConfig{
 			Clientset: cs,
@@ -297,11 +298,12 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure that both proxy and direct options are encoded", func(t *testing.T) {
-		// stats/summary will succeed both times, but cadvisor will fail on direct, and containers will fail on proxy
-		directConnectionAttempts := []int{200, 400, 200}
-		proxyConnectionAttempts := []int{200, 200, 404}
+		// stats/summary will succeed both times, node container will succeed on proxy
+		directConnectionAttempts := []int{200, 400}
+		proxyConnectionAttempts := []int{200, 200}
 		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
 		ts := launchTLSTestServer(directConnectionReturnCodes)
+		defer ts.Close()
 		cs := NewTestClient(ts, nodeSampleLabels)
 		ka := KubeAgentConfig{
 			Clientset: cs,
@@ -326,29 +328,20 @@ func TestEnsureNodeSource(t *testing.T) {
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
 			return
 		}
-		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected /stats/summary to allow direct method but got %v: %v",
-				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
-			return
-		}
-		if !ka.NodeMetrics.ProxyAllowed(NodeCadvisorEndpoint) {
-			t.Errorf("Expected /metrics/cadvisor to allow proxy method but got %v: %v",
-				ka.NodeMetrics.Options(NodeCadvisorEndpoint), err)
-			return
-		}
-		if !ka.NodeMetrics.DirectAllowed(NodeContainerEndpoint) {
-			t.Errorf("Expected /stats/container to allow direct method but got %v: %v",
+		if ka.NodeMetrics.DirectAllowed(NodeContainerEndpoint) {
+			t.Errorf("Expected /stats/container to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(NodeContainerEndpoint), err)
 			return
 		}
 	})
 
 	t.Run("Ensure all needed clients function when multiple methods are set", func(t *testing.T) {
-		// Two endpoints will succeed both times, but cadvisor will fail on direct
-		directConnectionAttempts := []int{200, 400, 200}
-		proxyConnectionAttempts := []int{200, 200, 200}
+		// Two endpoints will succeed both times, but stats summary will fail on direct
+		directConnectionAttempts := []int{200, 404}
+		proxyConnectionAttempts := []int{200, 200}
 		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
 		ts := launchTLSTestServer(directConnectionReturnCodes)
+		defer ts.Close()
 		cs := NewTestClient(ts, nodeSampleLabels)
 		ka := KubeAgentConfig{
 			Clientset: cs,
@@ -381,13 +374,8 @@ func TestEnsureNodeSource(t *testing.T) {
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
 			return
 		}
-		if !ka.NodeMetrics.ProxyAllowed(NodeCadvisorEndpoint) {
-			t.Errorf("Expected metrics/cadvisor to allow proxy method but got %v: %v",
-				ka.NodeMetrics.Options(NodeCadvisorEndpoint), err)
-			return
-		}
-		if !ka.NodeMetrics.DirectAllowed(NodeContainerEndpoint) {
-			t.Errorf("Expected direct method but got %v: %v",
+		if ka.NodeMetrics.DirectAllowed(NodeContainerEndpoint) {
+			t.Errorf("Expected proxy method but got %v: %v",
 				ka.NodeMetrics.Options(NodeContainerEndpoint), err)
 			return
 		}
@@ -401,6 +389,10 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure successful proxy node source test", func(t *testing.T) {
+		returnCodes := []int{200, 404, 200, 200}
+		ts := launchTLSTestServer(returnCodes)
+		cs := NewTestClient(ts, nodeSampleLabels)
+		defer ts.Close()
 		ka := KubeAgentConfig{
 			Clientset: cs,
 			// The proxy connection method uses the config http client
@@ -425,6 +417,18 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure unsuccessful node source test", func(t *testing.T) {
+		returnCodes := []int{400, 400, 400, 400}
+		ts := launchTLSTestServer(returnCodes)
+		cs := NewTestClient(ts, nodeSampleLabels)
+		defer ts.Close()
+		ka := KubeAgentConfig{
+			Clientset:            cs,
+			HTTPClient:           http.Client{},
+			CollectionRetryLimit: 0,
+			GetAllConStats:       true,
+			ConcurrentPollers:    10,
+			NodeMetrics:          EndpointMask{},
+		}
 		ka, err := ensureNodeSource(context.TODO(), ka)
 
 		if !ka.NodeMetrics.Unreachable(NodeStatsSummaryEndpoint) {
@@ -435,6 +439,8 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure Fargate node forces proxy connection", func(t *testing.T) {
+		returnCodes := []int{200, 200, 200, 200}
+		ts := launchTLSTestServer(returnCodes)
 		cs := NewTestClient(ts, fargateLabels)
 		ka := KubeAgentConfig{
 			Clientset: cs,
@@ -463,6 +469,8 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure config flag forces proxy connection", func(t *testing.T) {
+		returnCodes := []int{200, 200, 200, 200}
+		ts := launchTLSTestServer(returnCodes)
 		cs := NewTestClient(ts, nodeSampleLabels)
 		ka := KubeAgentConfig{
 			Clientset: cs,

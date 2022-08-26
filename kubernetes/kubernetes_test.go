@@ -289,7 +289,6 @@ func TestCollectMetrics(t *testing.T) {
 	// set Proxy method available
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
 	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Proxy, true)
-	ka.NodeMetrics.SetAvailability(NodeCadvisorEndpoint, Proxy, true)
 	// set Direct as option as well
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Direct, true)
@@ -317,9 +316,6 @@ func TestCollectMetrics(t *testing.T) {
 		nodeBaselineFiles := []string{}
 		nodeSummaryFiles := []string{}
 		expectedBaselineFiles := []string{
-			"baseline-cadvisor_metrics-node0.json",
-			"baseline-cadvisor_metrics-node1.json",
-			"baseline-cadvisor_metrics-node2.json",
 			"baseline-container-node0.json",
 			"baseline-container-node1.json",
 			"baseline-container-node2.json",
@@ -328,9 +324,6 @@ func TestCollectMetrics(t *testing.T) {
 			"baseline-summary-node2.json",
 		}
 		expectedSummaryFiles := []string{
-			"stats-cadvisor_metrics-node0.json",
-			"stats-cadvisor_metrics-node1.json",
-			"stats-cadvisor_metrics-node2.json",
 			"stats-container-node0.json",
 			"stats-container-node1.json",
 			"stats-container-node2.json",

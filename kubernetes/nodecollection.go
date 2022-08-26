@@ -256,7 +256,6 @@ func retrieveNodeData(nd nodeFetchData, config KubeAgentConfig, ns NodeSource, n
 	}
 	toFetch := map[Endpoint]bool{
 		NodeStatsSummaryEndpoint: true,
-		NodeCadvisorEndpoint:     true,
 		NodeContainerEndpoint:    true,
 	}
 	// if we receive an error after the max number of retries when attempting to hit an endpoint that
@@ -265,13 +264,6 @@ func retrieveNodeData(nd nodeFetchData, config KubeAgentConfig, ns NodeSource, n
 		err := fetchEndpoint(toFetch, NodeStatsSummaryEndpoint, config, cm, func() (string, error) {
 			return cm.client.GetRawEndPoint(http.MethodGet, source.summary(),
 				nd.workDir, cm.API.statsSummary(), nil, true)
-		})
-		if err != nil {
-			return err
-		}
-		err = fetchEndpoint(toFetch, NodeCadvisorEndpoint, config, cm, func() (string, error) {
-			return cm.client.GetRawEndPoint(http.MethodGet, source.cadvisorMetrics(),
-				nd.workDir, cm.API.mCAdvisor(), nil, true)
 		})
 		if err != nil {
 			return err
@@ -397,13 +389,6 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 	log.Infof("/stats/summary endpoint available via %s connection? %v", method, ns)
 	config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, method, ns)
 
-	cm, _, err := util.TestHTTPConnection(client, cadvisorMetrics, http.MethodGet, config.BearerToken, 0, false)
-	if err != nil {
-		return false, err
-	}
-	log.Infof("/metrics/cadvisor endpoint available via %s connection? %v", method, cm)
-	config.NodeMetrics.SetAvailability(NodeCadvisorEndpoint, method, cm)
-
 	cs, _, err := util.TestHTTPConnection(client, containerStats, http.MethodPost, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
@@ -411,18 +396,18 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 	log.Infof("/stats/container endpoint available via %s connection? %v", method, cs)
 	config.NodeMetrics.SetAvailability(NodeContainerEndpoint, method, cs)
 
-	con := metricsRequirementsSatisfied(config, cm, cs, method)
+	con := metricsRequirementsSatisfied(config, cs, method)
 	return ns && con, nil
 }
 
 // metricsRequirementsSatisfied returns whether all of the desired containers metrics endpoints were reached
-func metricsRequirementsSatisfied(config KubeAgentConfig, cm, cs bool, method Connection) bool {
+func metricsRequirementsSatisfied(config KubeAgentConfig, cs bool, method Connection) bool {
 	// Don't fail if the connection method is proxy and one of the endpoints
 	// is still missing, as this is expected in 1.18+
 	if config.GetAllConStats && method.hasMethod(Direct) {
-		return cm && cs
+		return cs
 	}
-	return cm || cs
+	return cs
 }
 
 // isFargateNode detects whether a node is a Fargate node, which affects
