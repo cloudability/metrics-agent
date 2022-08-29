@@ -39,6 +39,7 @@ livenessProbe:
       - tmp/healthy
   initialDelaySeconds: 120
   periodSeconds: 600
+  timeoutSeconds: 5
 
 # serviceAccount.create: true is required
 serviceAccount:
