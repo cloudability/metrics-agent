@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	cadvisor "github.com/google/cadvisor/info/v1"
 	v1 "k8s.io/api/core/v1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
@@ -25,10 +24,8 @@ func TestMetricSample(t *testing.T) {
 	}
 
 	parsedK8sLists := &ParsedK8sLists{
-		NodeSummaries:          make(map[string]statsapi.Summary),
-		BaselineNodeSummaries:  make(map[string]statsapi.Summary),
-		NodeContainers:         make(map[string]map[string]cadvisor.ContainerInfo),
-		BaselineNodeContainers: make(map[string]map[string]cadvisor.ContainerInfo),
+		NodeSummaries:         make(map[string]statsapi.Summary),
+		BaselineNodeSummaries: make(map[string]statsapi.Summary),
 	}
 	t.Parallel()
 
@@ -58,7 +55,6 @@ func TestMetricSample(t *testing.T) {
 
 				}
 			}
-
 			return nil
 		})
 		if err != nil {
@@ -84,7 +80,6 @@ func TestMetricSample(t *testing.T) {
 			if strings.HasPrefix(po.Name, stress) && po.Status.QOSClass == v1.PodQOSBestEffort {
 				return
 			}
-
 		}
 		t.Error("pod stress not found in metric sample")
 	})
