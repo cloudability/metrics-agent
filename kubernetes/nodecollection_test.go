@@ -185,99 +185,10 @@ func TestEnsureNodeSource(t *testing.T) {
 		}
 	})
 
-	t.Run("Ensure successful connection to direct node source test without metrics endpoint", func(t *testing.T) {
-		returnCodes := []int{200, 404}
-		ts := launchTLSTestServer(returnCodes)
-		defer ts.Close()
-		cs := NewTestClient(ts, nodeSampleLabels)
-		ka := KubeAgentConfig{
-			Clientset: cs,
-			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
-				// nolint gosec
-				InsecureSkipVerify: true,
-			},
-			}},
-			CollectionRetryLimit: 0,
-			ConcurrentPollers:    10,
-			NodeMetrics:          EndpointMask{},
-		}
-
-		ka, err := ensureNodeSource(context.TODO(), ka)
-
-		if err != nil {
-			t.Errorf("did not expect an error")
-		}
-		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected direct node retrieval method but got %v: %v",
-				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint),
-				err)
-			return
-		}
-	})
-
-	t.Run("Do not expect failure if container metrics unavailable", func(t *testing.T) {
-		// stats/summary will succeed, but cadvisor and containers will fail both times
-		directConnectionAttempts := []int{200, 400, 404}
-		proxyConnectionAttempts := []int{200, 400, 404}
-		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
-		ts := launchTLSTestServer(directConnectionReturnCodes)
-		defer ts.Close()
-		cs := NewTestClient(ts, nodeSampleLabels)
-		ka := KubeAgentConfig{
-			Clientset: cs,
-			// The proxy connection method uses the config http client
-			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
-				// nolint gosec
-				InsecureSkipVerify: true,
-			},
-			}},
-			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			ConcurrentPollers: 10,
-			NodeMetrics:       EndpointMask{},
-		}
-
-		_, err := ensureNodeSource(context.TODO(), ka)
-		if err != nil {
-			t.Errorf("should not fail when neither cadvisor or container metrics is accessible")
-		}
-	})
-
-	t.Run("Ensure that both proxy and direct options are encoded", func(t *testing.T) {
-		// stats/summary will succeed both times, node container will succeed on proxy
-		directConnectionAttempts := []int{200, 400}
-		proxyConnectionAttempts := []int{200, 200}
-		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
-		ts := launchTLSTestServer(directConnectionReturnCodes)
-		defer ts.Close()
-		cs := NewTestClient(ts, nodeSampleLabels)
-		ka := KubeAgentConfig{
-			Clientset: cs,
-			// The proxy connection method uses the config http client
-			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
-				// nolint gosec
-				InsecureSkipVerify: true,
-			},
-			}},
-			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			ConcurrentPollers: 10,
-			NodeMetrics:       EndpointMask{},
-		}
-
-		ka, err := ensureNodeSource(context.TODO(), ka)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected /stats/summary to allow proxy method but got %v: %v",
-				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
-			return
-		}
-	})
-
 	t.Run("Ensure all needed clients function when multiple methods are set", func(t *testing.T) {
 		// Two endpoints will succeed both times, but stats summary will fail on direct
-		directConnectionAttempts := []int{200, 404}
-		proxyConnectionAttempts := []int{200, 200}
+		directConnectionAttempts := []int{200}
+		proxyConnectionAttempts := []int{200}
 		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
 		ts := launchTLSTestServer(directConnectionReturnCodes)
 		defer ts.Close()
@@ -349,7 +260,7 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure unsuccessful node source test", func(t *testing.T) {
-		returnCodes := []int{400, 400, 400, 400}
+		returnCodes := []int{400, 400}
 		ts := launchTLSTestServer(returnCodes)
 		cs := NewTestClient(ts, nodeSampleLabels)
 		defer ts.Close()
@@ -370,7 +281,7 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure Fargate node forces proxy connection", func(t *testing.T) {
-		returnCodes := []int{200, 200, 200, 200}
+		returnCodes := []int{200, 200}
 		ts := launchTLSTestServer(returnCodes)
 		cs := NewTestClient(ts, fargateLabels)
 		ka := KubeAgentConfig{
@@ -399,7 +310,7 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure config flag forces proxy connection", func(t *testing.T) {
-		returnCodes := []int{200, 200, 200, 200}
+		returnCodes := []int{200, 200}
 		ts := launchTLSTestServer(returnCodes)
 		cs := NewTestClient(ts, nodeSampleLabels)
 		ka := KubeAgentConfig{
