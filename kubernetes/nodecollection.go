@@ -22,6 +22,16 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
+type nodeError string
+
+func (err nodeError) Error() string {
+	return string(err)
+}
+
+const (
+	FatalNodeError = nodeError("unable to retrieve required set of node metrics via direct or proxy connection")
+)
+
 // NodeSource is an interface to get a list of Nodes
 type NodeSource interface {
 	GetReadyNodes(ctx context.Context) ([]v1.Node, error)
@@ -365,8 +375,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 		return config, nil
 	}
 
-	config.RetrieveNodeSummaries = false
-	return config, fmt.Errorf("unable to retrieve required set of node metrics via direct or proxy connection")
+	return config, FatalNodeError
 }
 
 func checkEndpointConnections(config KubeAgentConfig, client *http.Client, method Connection,

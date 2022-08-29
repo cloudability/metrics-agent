@@ -612,13 +612,12 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 		false,
 	)
 	ka := KubeAgentConfig{
-		Clientset:             cs,
-		HTTPClient:            c,
-		InClusterClient:       rc,
-		ClusterHostURL:        "https://" + ts.Listener.Addr().String(),
-		RetrieveNodeSummaries: true,
-		ConcurrentPollers:     10,
-		CollectionRetryLimit:  retries,
+		Clientset:            cs,
+		HTTPClient:           c,
+		InClusterClient:      rc,
+		ClusterHostURL:       "https://" + ts.Listener.Addr().String(),
+		ConcurrentPollers:    10,
+		CollectionRetryLimit: retries,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)

@@ -52,18 +52,15 @@ type KubeAgentConfig struct {
 	ClusterName           string
 	ClusterHostURL        string
 	clusterUID            string
-	HeapsterOverrideURL   string
 	HeapsterURL           string
 	Key                   string
 	OutboundProxyAuth     string
 	OutboundProxy         string
 	provisioningID        string
-	RetrieveNodeSummaries bool
 	ForceKubeProxy        bool
 	Insecure              bool
 	OutboundProxyInsecure bool
 	UseInClusterConfig    bool
-	CollectHeapsterExport bool
 	PollInterval          int
 	ConcurrentPollers     int
 	CollectionRetryLimit  uint
@@ -120,8 +117,6 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
 	log.Infof("Metric collection retry limit set to %d (default is %d)",
 		config.CollectionRetryLimit, DefaultCollectionRetry)
-
-	validateMetricCollectionConfig(config)
 
 	ctx := context.Background()
 
@@ -191,20 +186,6 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-func validateMetricCollectionConfig(config KubeAgentConfig) {
-	if !config.RetrieveNodeSummaries && !config.CollectHeapsterExport {
-		log.Fatal("Invalid agent configuration. Must either retrieve node summaries or collect from Heapster.")
-	}
-	if config.RetrieveNodeSummaries {
-		log.Info("Primary metrics will be collected from each node.")
-	}
-	if config.RetrieveNodeSummaries && config.CollectHeapsterExport {
-		log.Debug("Collecting Heapster exports if found in cluster.")
-	} else if config.CollectHeapsterExport {
-		log.Warn("Primary metrics collected from Heapster exports. WARNING: Heapster is being deprecated.")
-	}
-}
-
 func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
 	config, err := createClusterConfig(config)
 	if err != nil {
@@ -260,18 +241,9 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 		return err
 	}
 
-	if config.RetrieveNodeSummaries {
-		err = retrieveNodeSummaries(ctx, config, msd, metricSampleDir, nodeSource)
-		if err != nil {
-			log.Warnf("Warning: %s", err)
-		}
-	}
-
-	if config.CollectHeapsterExport {
-		err = collectHeapsterExportMetrics(config, msd, metricSampleDir)
-		if err != nil {
-			return err
-		}
+	err = retrieveNodeSummaries(ctx, config, msd, metricSampleDir, nodeSource)
+	if err != nil {
+		log.Warnf("Warning: %s", err)
 	}
 
 	// export additional metrics from the k8s api to the metric sample directory
@@ -288,29 +260,6 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	}
 
 	return err
-}
-
-func collectHeapsterExportMetrics(config KubeAgentConfig, msd string, metricSampleDir *os.File) error {
-	verbose := !config.RetrieveNodeSummaries
-	// get raw Heapster metric sample
-	filename, err := config.InClusterClient.GetRawEndPoint(http.MethodGet, "heapster-metrics-export",
-		metricSampleDir, config.HeapsterURL, nil, verbose)
-	if err != nil {
-		if config.RetrieveNodeSummaries {
-			return nil
-		}
-		return fmt.Errorf("unable to retrieve raw heapster metrics: %s", err)
-	}
-
-	baselineMetricSample, err := util.MatchOneFile(
-		path.Dir(config.msExportDirectory.Name()), "/baseline-metrics-export*")
-	if err == nil || err.Error() == "No matches found" {
-		if err = handleBaselineHeapsterMetrics(
-			config.msExportDirectory.Name(), msd, baselineMetricSample, filename); err != nil {
-			log.Debugf("Warning: updating Heapster Baseline failed: %v", err)
-		}
-	}
-	return nil
 }
 
 func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, error) {
@@ -498,7 +447,6 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 
 	updatedConfig.NodeMetrics = EndpointMask{}
 
-	updatedConfig = updateConfigWithOverrideURLs(updatedConfig)
 	updatedConfig, err = createKubeHTTPClient(updatedConfig)
 	if err != nil {
 		return updatedConfig, err
@@ -531,13 +479,6 @@ func updateConfigurationForServices(ctx context.Context, config KubeAgentConfig)
 	}
 
 	config.OutboundProxyURL = proxyRef
-
-	if config.CollectHeapsterExport {
-		config.HeapsterProxyURL, err = getHeapsterURL(ctx, config.Clientset, config.ClusterHostURL)
-		if err != nil {
-			log.Debugf("cloudability metric agent encountered an error while looking for heapster: %v", err)
-		}
-	}
 
 	return config, err
 }
@@ -605,66 +546,29 @@ func downloadBaselineMetricExport(ctx context.Context, config KubeAgentConfig, n
 	defer util.SafeClose(ed.Close, &rerr)
 
 	// get baseline metric sample
-	if config.RetrieveNodeSummaries {
-		config.failedNodeList, err = downloadNodeData(ctx, "baseline", config, ed, nodeSource)
-		if len(config.failedNodeList) > 0 {
-			log.Warnf("Warning failed to retrieve metric data from %v nodes. Metric samples may be incomplete: %+v %v",
-				len(config.failedNodeList), config.failedNodeList, err)
-		}
+	config.failedNodeList, err = downloadNodeData(ctx, "baseline", config, ed, nodeSource)
+	if len(config.failedNodeList) > 0 {
+		log.Warnf("Warning failed to retrieve metric data from %v nodes. Metric samples may be incomplete: %+v %v",
+			len(config.failedNodeList), config.failedNodeList, err)
 	}
 
-	if config.CollectHeapsterExport {
-		// get baseline metric sample
-		_, err = config.InClusterClient.GetRawEndPoint(
-			http.MethodGet, "baseline-metrics-export", ed, config.HeapsterURL, nil, false)
-		if err != nil && !config.RetrieveNodeSummaries {
-			return fmt.Errorf("Heapster metrics: %s", err)
-		}
-		return nil
-	}
 	return err
 }
 
-func updateConfigWithOverrideURLs(config KubeAgentConfig) KubeAgentConfig {
-
-	// determine heapster URL to use
-	if config.HeapsterOverrideURL != "" && util.IsValidURL(config.HeapsterOverrideURL) {
-		config.HeapsterURL = config.HeapsterOverrideURL
-	} else {
-		config.HeapsterURL = config.HeapsterProxyURL.Host + config.HeapsterProxyURL.Path
-	}
-	return config
-}
-
 func ensureMetricServicesAvailable(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {
-	var err error
-
-	if config.RetrieveNodeSummaries {
-		config, err = ensureNodeSource(ctx, config)
-		if err != nil {
-			log.Warnf(handleNodeSourceError(err))
-		} else {
-			log.Infof("Node summaries connection method: %s", config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
-		}
-	}
-	if config.CollectHeapsterExport {
-		if config.HeapsterURL != "" {
-			err = validateHeapster(config, &config.HTTPClient)
-			if err != nil {
-				log.Errorf("Error occurred validating custom heapster URL: %v %v", config.HeapsterURL, err)
-				config.CollectHeapsterExport = false
-			}
-		} else {
-			config.CollectHeapsterExport = false
-		}
+	config, err := ensureNodeSource(ctx, config)
+	if err != nil {
+		log.Warnf(handleNodeSourceError(err))
+	} else {
+		log.Infof("Node summaries connection method: %s", config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
 	}
 
-	if !config.RetrieveNodeSummaries && !config.CollectHeapsterExport {
+	if err == FatalNodeError {
 		//nolint lll
 		log.Debugf(`Unable to retrieve data due to metrics-agent configuration.
 			May be caused by cluster security mis-configurations or the RBAC role in the Cloudability namespace needs to be updated.
 			Please confirm with your cluster security administrators that the RBAC role is able to work within your cluster's security configurations.`)
-		return config, fmt.Errorf("unable to retrieve node summaries or heapster export: %s", err)
+		return config, fmt.Errorf("unable to retrieve node summaries: %s", err)
 	}
 
 	return config, nil
@@ -764,14 +668,13 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["cluster_version_major"] = config.ClusterVersion.versionInfo.Major
 	m.Values["cluster_version_minor"] = config.ClusterVersion.versionInfo.Minor
 	m.Values["heapster_url"] = config.HeapsterURL
-	m.Values["heapster_override_url"] = config.HeapsterOverrideURL
 	m.Values["incluster_config"] = strconv.FormatBool(config.UseInClusterConfig)
 	m.Values["insecure"] = strconv.FormatBool(config.Insecure)
 	m.Values["poll_interval"] = strconv.Itoa(config.PollInterval)
 	m.Values["provisioning_id"] = config.provisioningID
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
 	m.Values["stats_summary_retrieval_method"] = config.NodeMetrics.Options(NodeStatsSummaryEndpoint)
-	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
+	m.Values["retrieve_node_summaries"] = "true"
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	m.Values["number_of_concurrent_node_pollers"] = strconv.Itoa(config.ConcurrentPollers)
 	m.Values["parse_metric_data"] = strconv.FormatBool(config.ParseMetricData)

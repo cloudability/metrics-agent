@@ -8,7 +8,7 @@ The metrics-agent collects allocation metrics from a Kubernetes cluster system a
 
 ## Kubernetes
 
-By default, the agent runs in a namespace named "cloudability" (see options below).  Once deployed, the agent will pull metrics from the Kubernetes API and directly from each node in the cluster it is running in. Additionally it will pull metrics from [Heapster](https://github.com/kubernetes/heapster) if found running in the kube-system namespace.  An example kubernetes deployment can be found [here](deploy/kubernetes/cloudability-metrics-agent.yaml).
+By default, the agent runs in a namespace named "cloudability" (see options below).  Once deployed, the agent will pull metrics from the Kubernetes API and directly from each node in the cluster it is running in.  An example kubernetes deployment can be found [here](deploy/kubernetes/cloudability-metrics-agent.yaml).
 
 Every 10 minutes the metrics agent creates a tarball of the gathered metrics and uploads to an Amazon Web Service S3 bucket. This process requires outbound connections to https://metrics-collector.cloudability.com/, to obtain a pre-signed URL, and https://cldy-cake-pipeline.s3.amazonaws.com/ to upload the data. If the metrics agent is deployed behind a firewall, these addresses should be added to the outbound allow list.
 
@@ -37,15 +37,11 @@ Cloudability Metrics Agent currently does not support OpenShift, Rancher or On P
 | CLOUDABILITY_API_KEY                 |                                                                                              Required: Cloudability api key                                                                                              |
 | CLOUDABILITY_CLUSTER_NAME            |                                                                      Required: The cluster name to be used for the cluster the agent is running in.                                                                      |
 | CLOUDABILITY_POLL_INTERVAL           |                                                                              Optional: The interval (Seconds) to poll metrics. Default: 180                                                                              |
-| CLOUDABILITY_HEAPSTER_URL            |                                                Optional: Only required if heapster is not deployed as a service in your cluster or is only accessable via a specific URL.                                                |
 | CLOUDABILITY_OUTBOUND_PROXY          |                              Optional: The URL of an outbound HTTP/HTTPS proxy for the agent to use (eg: http://x.x.x.x:8080). The URL must contain the scheme prefix (http:// or https://)                              |
 | CLOUDABILITY_OUTBOUND_PROXY_AUTH     |           Optional: Basic Authentication credentials to be used with the defined outbound proxy. If your outbound proxy requires basic authentication credentials can be defined in the form username:password           |
 | CLOUDABILITY_OUTBOUND_PROXY_INSECURE |                                                           Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False                                                            |
 | CLOUDABILITY_INSECURE                |                                                              Optional: When true, does not verify certificates when making TLS connections. Default: False                                                               |
-| CLOUDABILITY_RETRIEVE_NODE_SUMMARIES |                                    Optional: When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True                                    |
-| CLOUDABILITY_GET_ALL_CONTAINER_STATS | Optional: When true, attempts to collect from both the stats/container and metrics/cadvisor endpoints, which may result in a larger metrics payload. When False, only collects first successful endpoint. Default: False |
 | CLOUDABILITY_FORCE_KUBE_PROXY        |                                            Optional: When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False                                             |
-| CLOUDABILITY_COLLECT_HEAPSTER_EXPORT |                                        Optional: When true, attempts to collect metrics from Heapster if available. When False, does not collect Heapster metrics. Default: True                                         |
 | CLOUDABILITY_COLLECTION_RETRY_LIMIT  |                                                       Optional: Number of times agent should attempt to gather metrics from each source upon a failure Default: 1                                                        |
 | CLOUDABILITY_NAMESPACE               |                  Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`                   |
 | CLOUDABILITY_LOG_FORMAT              |                                                                               Optional: Format for log output (JSON,PLAIN) Default: PLAIN                                                                                |
@@ -66,7 +62,6 @@ Flags:
       --api_key string                           Cloudability API Key - required
       --certificate_file string                  The path to a certificate file. - Optional
       --cluster_name string                      Kubernetes Cluster Name - required this must be unique to every cluster.
-      --heapster_override_url string             URL to connect to a running heapster instance. - optionally override the discovered Heapster URL.
       --collection_retry_limit uint              Number of times agent should attempt to gather metrics from each source upon a failure (default 1)
   -h, --help                                     help for kubernetes
       --insecure                                 When true, does not verify certificates when making TLS connections. Default: False
@@ -74,8 +69,7 @@ Flags:
       --outbound_proxy string                    Outbound HTTP/HTTPS proxy eg: http://x.x.x.x:8080. Must have a scheme prefix (http:// or https://) - Optional
       --outbound_proxy_auth string               Outbound proxy basic authentication credentials. Must defined in the form username:password - Optional
       --outbound_proxy_insecure                  When true, does not verify TLS certificates when using the outbound proxy. Default: False
-      --retrieve_node_summaries                  When true, collects metrics directly from each node in a cluster. When False, uses Heapster as the primary metrics source. Default: True
-      --get_all_container_stats                  When true, attempts to collect from both the stats/container and metrics/cadvisor endpoints, which may result in a larger metrics payload. Default: False
+
       --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
