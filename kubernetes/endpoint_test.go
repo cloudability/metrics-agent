@@ -97,24 +97,24 @@ func TestConnection(t *testing.T) {
 func TestEndpointMask(t *testing.T) {
 	t.Run("endpoint should report Unreachable correctly", func(t *testing.T) {
 		mask := EndpointMask{}
-		if !mask.Unreachable(NodeContainerEndpoint) {
+		if !mask.Unreachable(NodeStatsSummaryEndpoint) {
 			t.Error("empty mask should return all endpoints as unreachable")
 		}
 
 		// Don't do this weird stuff, use mask.SetUnreachable
-		mask.SetAvailability(NodeContainerEndpoint, Unreachable, false)
-		if !mask.Unreachable(NodeContainerEndpoint) {
+		mask.SetAvailability(NodeStatsSummaryEndpoint, Unreachable, false)
+		if !mask.Unreachable(NodeStatsSummaryEndpoint) {
 			t.Errorf("endpoint should have remained unreachable")
 		}
 
-		mask.SetAvailability(NodeContainerEndpoint, Proxy, true)
-		if !mask.ProxyAllowed(NodeContainerEndpoint) {
-			t.Errorf("should have proxy method set, instead got: %s", mask.Options(NodeContainerEndpoint))
+		mask.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
+		if !mask.ProxyAllowed(NodeStatsSummaryEndpoint) {
+			t.Errorf("should have proxy method set, instead got: %s", mask.Options(NodeStatsSummaryEndpoint))
 		}
 
-		mask.SetUnreachable(NodeContainerEndpoint)
-		if !mask.Unreachable(NodeContainerEndpoint) {
-			t.Errorf("expected unreachable, got %s", mask.Options(NodeContainerEndpoint))
+		mask.SetUnreachable(NodeStatsSummaryEndpoint)
+		if !mask.Unreachable(NodeStatsSummaryEndpoint) {
+			t.Errorf("expected unreachable, got %s", mask.Options(NodeStatsSummaryEndpoint))
 		}
 	})
 	t.Run("endpoint should set availability correctly", func(t *testing.T) {

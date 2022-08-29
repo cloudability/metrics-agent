@@ -22,7 +22,6 @@ func TestFetchEndpoint(t *testing.T) {
 	t.Run("Verify that endpoint is removed from map upon successful fetch", func(t *testing.T) {
 		endpointsToFetch := map[Endpoint]bool{
 			NodeStatsSummaryEndpoint: true,
-			NodeContainerEndpoint:    true,
 		}
 		mask := EndpointMask{}
 		// Direct method is enabled
@@ -46,15 +45,12 @@ func TestFetchEndpoint(t *testing.T) {
 			t.Errorf("%s should have been removed from map upon successful fetch, got %+v",
 				NodeStatsSummaryEndpoint, endpointsToFetch)
 		}
-		if !endpointsToFetch[NodeContainerEndpoint] {
-			t.Errorf("should not have removed unfetched %s endpoint from map", NodeContainerEndpoint)
-		}
+
 	})
 
 	t.Run("Verify that endpoint is not removed from map upon unsuccessful fetch", func(t *testing.T) {
 		endpointsToFetch := map[Endpoint]bool{
 			NodeStatsSummaryEndpoint: true,
-			NodeContainerEndpoint:    true,
 		}
 		mask := EndpointMask{}
 		mask.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
@@ -82,11 +78,11 @@ func TestFetchEndpoint(t *testing.T) {
 
 	t.Run("Verify that endpoint is not fetched if method is not available", func(t *testing.T) {
 		endpointsToFetch := map[Endpoint]bool{
-			NodeContainerEndpoint: true,
+			NodeStatsSummaryEndpoint: true,
 		}
 		mask := EndpointMask{}
 		// only proxy is available
-		mask.SetAvailability(NodeContainerEndpoint, Proxy, true)
+		mask.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
 		config := KubeAgentConfig{
 			NodeMetrics:       mask,
 			ConcurrentPollers: 10,
@@ -100,13 +96,13 @@ func TestFetchEndpoint(t *testing.T) {
 			return "", fmt.Errorf("whoa there buddy you can't fetch that there endpoint pardner")
 		}
 
-		err := fetchEndpoint(endpointsToFetch, NodeContainerEndpoint, config, cm, endpointFetcherMock)
+		err := fetchEndpoint(endpointsToFetch, NodeStatsSummaryEndpoint, config, cm, endpointFetcherMock)
 		if err != nil {
 			t.Errorf("should not have error because endpointFetcherMock shouldn't have been called: %v", err)
 		}
-		if !endpointsToFetch[NodeContainerEndpoint] {
+		if !endpointsToFetch[NodeStatsSummaryEndpoint] {
 			t.Errorf("%s should not have been removed from map upon failed fetch, got %+v",
-				NodeContainerEndpoint, endpointsToFetch)
+				NodeStatsSummaryEndpoint, endpointsToFetch)
 		}
 	})
 }
@@ -174,7 +170,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			Clientset:            cs,
 			HTTPClient:           http.Client{},
 			CollectionRetryLimit: 0,
-			GetAllConStats:       true,
 			ConcurrentPollers:    10,
 			NodeMetrics:          EndpointMask{},
 		}
@@ -187,10 +182,6 @@ func TestEnsureNodeSource(t *testing.T) {
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint),
 				err)
 			return
-		}
-
-		if !ka.NodeMetrics.Available(NodeContainerEndpoint, Direct) {
-			t.Errorf("Expected node container endpoint to be available")
 		}
 	})
 
@@ -207,7 +198,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			},
 			}},
 			CollectionRetryLimit: 0,
-			GetAllConStats:       false,
 			ConcurrentPollers:    10,
 			NodeMetrics:          EndpointMask{},
 		}
@@ -222,49 +212,6 @@ func TestEnsureNodeSource(t *testing.T) {
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint),
 				err)
 			return
-		}
-
-		if ka.NodeMetrics.Available(NodeContainerEndpoint, Direct) {
-			t.Errorf("Expected node container endpoint to not be available")
-		}
-
-	})
-
-	t.Run("Ensure proxy fails if one container source fails and GetAllConStats=true", func(t *testing.T) {
-		// stats/summary and cadvisor will succeed, containers will fail both times
-		// This simulates 1.18+ clusters where containers is no longer available
-		directConnectionAttempts := []int{200, 200, 404}
-		proxyConnectionAttempts := []int{200, 200, 404}
-		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
-		ts := launchTLSTestServer(directConnectionReturnCodes)
-		defer ts.Close()
-		cs := NewTestClient(ts, nodeSampleLabels)
-		ka := KubeAgentConfig{
-			Clientset: cs,
-			// The proxy connection method uses the config http client
-			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
-				// nolint gosec
-				InsecureSkipVerify: true,
-			},
-			}},
-			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			GetAllConStats:    true,
-			ConcurrentPollers: 10,
-			NodeMetrics:       EndpointMask{},
-		}
-
-		ka, err := ensureNodeSource(context.TODO(), ka)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
-			t.Errorf("Expected /stats/summary to fail proxy method but got %v: %v",
-				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
-			return
-		}
-		if ka.NodeMetrics.Unreachable(NodeContainerEndpoint) {
-			t.Errorf("%s should be unreachable after failing both connections, got: %s",
-				NodeContainerEndpoint, ka.NodeMetrics.Options(NodeContainerEndpoint))
 		}
 	})
 
@@ -285,7 +232,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			},
 			}},
 			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			GetAllConStats:    true,
 			ConcurrentPollers: 10,
 			NodeMetrics:       EndpointMask{},
 		}
@@ -313,7 +259,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			},
 			}},
 			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			GetAllConStats:    true,
 			ConcurrentPollers: 10,
 			NodeMetrics:       EndpointMask{},
 		}
@@ -325,11 +270,6 @@ func TestEnsureNodeSource(t *testing.T) {
 		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Expected /stats/summary to allow proxy method but got %v: %v",
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
-			return
-		}
-		if ka.NodeMetrics.DirectAllowed(NodeContainerEndpoint) {
-			t.Errorf("Expected /stats/container to allow proxy method but got %v: %v",
-				ka.NodeMetrics.Options(NodeContainerEndpoint), err)
 			return
 		}
 	})
@@ -351,7 +291,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			},
 			}},
 			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			GetAllConStats:    true,
 			ConcurrentPollers: 10,
 			NodeMetrics:       EndpointMask{},
 			// just populate some dummy fields here to ensure neither client gets unset
@@ -373,11 +312,6 @@ func TestEnsureNodeSource(t *testing.T) {
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
 			return
 		}
-		if ka.NodeMetrics.DirectAllowed(NodeContainerEndpoint) {
-			t.Errorf("Expected proxy method but got %v: %v",
-				ka.NodeMetrics.Options(NodeContainerEndpoint), err)
-			return
-		}
 		// ensure that both clients are populated
 		if ka.NodeClient.HTTPClient == nil {
 			t.Errorf("Direct connection client should be populated")
@@ -388,7 +322,7 @@ func TestEnsureNodeSource(t *testing.T) {
 	})
 
 	t.Run("Ensure successful proxy node source test", func(t *testing.T) {
-		returnCodes := []int{404, 404, 200, 200}
+		returnCodes := []int{404, 200}
 		ts := launchTLSTestServer(returnCodes)
 		cs := NewTestClient(ts, nodeSampleLabels)
 		defer ts.Close()
@@ -401,7 +335,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			},
 			}},
 			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			GetAllConStats:    true,
 			ConcurrentPollers: 10,
 			NodeMetrics:       EndpointMask{},
 		}
@@ -411,12 +344,6 @@ func TestEnsureNodeSource(t *testing.T) {
 		if !ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Expected stats/summary to proxy direct method but got %v: %v",
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint), err)
-			return
-		}
-
-		if !ka.NodeMetrics.ProxyAllowed(NodeContainerEndpoint) {
-			t.Errorf("Expected node container to allow proxy method but got %v: %v",
-				ka.NodeMetrics.Options(NodeContainerEndpoint), err)
 			return
 		}
 	})
@@ -430,7 +357,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			Clientset:            cs,
 			HTTPClient:           http.Client{},
 			CollectionRetryLimit: 0,
-			GetAllConStats:       true,
 			ConcurrentPollers:    10,
 			NodeMetrics:          EndpointMask{},
 		}
@@ -455,7 +381,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			},
 			}},
 			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			GetAllConStats:    true,
 			ConcurrentPollers: 10,
 			NodeMetrics:       EndpointMask{},
 		}
@@ -485,7 +410,6 @@ func TestEnsureNodeSource(t *testing.T) {
 			},
 			}},
 			ClusterHostURL:    "https://" + ts.Listener.Addr().String(),
-			GetAllConStats:    true,
 			ForceKubeProxy:    true,
 			ConcurrentPollers: 10,
 			NodeMetrics:       EndpointMask{},
@@ -693,13 +617,11 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 		InClusterClient:       rc,
 		ClusterHostURL:        "https://" + ts.Listener.Addr().String(),
 		RetrieveNodeSummaries: true,
-		GetAllConStats:        true,
 		ConcurrentPollers:     10,
 		CollectionRetryLimit:  retries,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
-	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Proxy, true)
 
 	wd, _ := os.Getwd()
 	ed, _ := os.Open(fmt.Sprintf("%s/testdata", wd))

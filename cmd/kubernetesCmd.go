@@ -103,12 +103,6 @@ func init() {
 		"When true, includes node summary metrics in metric collection.",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
-		&config.GetAllConStats,
-		"get_all_container_stats",
-		false,
-		"When true, includes all available container metrics in metric collection. Default: False",
-	)
-	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.ForceKubeProxy,
 		"force_kube_proxy",
 		false,
@@ -186,7 +180,6 @@ func init() {
 		Cert:                  viper.GetString("certificate_file"),
 		Key:                   viper.GetString("key_file"),
 		RetrieveNodeSummaries: viper.GetBool("retrieve_node_summaries"),
-		GetAllConStats:        viper.GetBool("get_all_container_stats"),
 		ConcurrentPollers:     viper.GetInt("number_of_concurrent_node_pollers"),
 		ForceKubeProxy:        viper.GetBool("force_kube_proxy"),
 		Namespace:             viper.GetString("namespace"),

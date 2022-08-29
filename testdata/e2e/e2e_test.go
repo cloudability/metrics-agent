@@ -99,22 +99,4 @@ func TestMetricSample(t *testing.T) {
 		}
 		t.Error("pod summary data not found in metric sample")
 	})
-
-	// 2020.9.10 - TODO: Remove this test once we stop supporting minor versions below 18
-	t.Run("ensure that a metrics sample has expected containers stat data", func(t *testing.T) {
-		if minorVersion < 18 {
-			for _, nc := range parsedK8sLists.NodeContainers {
-
-				for _, s := range nc {
-					if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(
-						s.Spec.Labels["io.kubernetes.pod.name"], stress) {
-						return
-					}
-				}
-			}
-			t.Error("pod container stat data not found in metric sample")
-		}
-		return
-	})
-
 }

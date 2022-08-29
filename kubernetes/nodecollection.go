@@ -256,7 +256,6 @@ func retrieveNodeData(nd nodeFetchData, config KubeAgentConfig, ns NodeSource, n
 	}
 	toFetch := map[Endpoint]bool{
 		NodeStatsSummaryEndpoint: true,
-		NodeContainerEndpoint:    true,
 	}
 	// if we receive an error after the max number of retries when attempting to hit an endpoint that
 	// we had previously verified to work, we fail and assume the node is unreachable at this time
@@ -264,14 +263,6 @@ func retrieveNodeData(nd nodeFetchData, config KubeAgentConfig, ns NodeSource, n
 		err := fetchEndpoint(toFetch, NodeStatsSummaryEndpoint, config, cm, func() (string, error) {
 			return cm.client.GetRawEndPoint(http.MethodGet, source.summary(),
 				nd.workDir, cm.API.statsSummary(), nil, true)
-		})
-		if err != nil {
-			return err
-		}
-		err = fetchEndpoint(toFetch, NodeContainerEndpoint, config, cm, func() (string, error) {
-			return cm.client.GetRawEndPoint(
-				http.MethodPost, source.container(), nd.workDir, cm.API.statsContainer(),
-				nd.containersRequest, true)
 		})
 		if err != nil {
 			return err
@@ -355,8 +346,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 	if allowDirectConnect(config, nodes) {
 		// test node direct connectivity
 		d := directNodeEndpoints(ip, port)
-		success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary(),
-			d.statsContainer())
+		success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary())
 		if err != nil {
 			return config, err
 		}
@@ -367,8 +357,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 
 	// test node connectivity via kube-proxy
 	p := setupProxyAPI(config.ClusterHostURL, firstNode.Name)
-	success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary(),
-		p.statsContainer())
+	success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary())
 	if err != nil {
 		return config, err
 	}
@@ -380,21 +369,14 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 	return config, fmt.Errorf("unable to retrieve required set of node metrics via direct or proxy connection")
 }
 
-func checkEndpointConnections(config KubeAgentConfig, client *http.Client, method Connection, nodeStatSum,
-	containerStats string) (success bool, err error) {
+func checkEndpointConnections(config KubeAgentConfig, client *http.Client, method Connection,
+	nodeStatSum string) (success bool, err error) {
 	ns, _, err := util.TestHTTPConnection(client, nodeStatSum, http.MethodGet, config.BearerToken, 0, false)
 	if err != nil {
 		return false, err
 	}
 	log.Infof("/stats/summary endpoint available via %s connection? %v", method, ns)
 	config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, method, ns)
-
-	cs, _, err := util.TestHTTPConnection(client, containerStats, http.MethodPost, config.BearerToken, 0, false)
-	if err != nil {
-		return false, err
-	}
-	log.Infof("/stats/container endpoint available via %s connection? %v", method, cs)
-	config.NodeMetrics.SetAvailability(NodeContainerEndpoint, method, cs)
 
 	return ns, nil
 }

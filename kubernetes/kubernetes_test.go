@@ -282,17 +282,13 @@ func TestCollectMetrics(t *testing.T) {
 		BearerTokenPath:       "",
 		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
-		GetAllConStats:        true,
 		ConcurrentPollers:     10,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
-	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Proxy, true)
 	// set Direct as option as well
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
-	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Direct, true)
-
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Error(err)
@@ -316,17 +312,11 @@ func TestCollectMetrics(t *testing.T) {
 		nodeBaselineFiles := []string{}
 		nodeSummaryFiles := []string{}
 		expectedBaselineFiles := []string{
-			"baseline-container-node0.json",
-			"baseline-container-node1.json",
-			"baseline-container-node2.json",
 			"baseline-summary-node0.json",
 			"baseline-summary-node1.json",
 			"baseline-summary-node2.json",
 		}
 		expectedSummaryFiles := []string{
-			"stats-container-node0.json",
-			"stats-container-node1.json",
-			"stats-container-node2.json",
 			"stats-summary-node0.json",
 			"stats-summary-node1.json",
 			"stats-summary-node2.json",

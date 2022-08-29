@@ -59,7 +59,6 @@ type KubeAgentConfig struct {
 	OutboundProxy         string
 	provisioningID        string
 	RetrieveNodeSummaries bool
-	GetAllConStats        bool
 	ForceKubeProxy        bool
 	Insecure              bool
 	OutboundProxyInsecure bool
@@ -198,11 +197,6 @@ func validateMetricCollectionConfig(config KubeAgentConfig) {
 	}
 	if config.RetrieveNodeSummaries {
 		log.Info("Primary metrics will be collected from each node.")
-		if config.GetAllConStats {
-			log.Info("All available node container metrics will be collected.")
-		} else {
-			log.Info("Minimum viable set of node container metrics will be collected.")
-		}
 	}
 	if config.RetrieveNodeSummaries && config.CollectHeapsterExport {
 		log.Debug("Collecting Heapster exports if found in cluster.")
@@ -651,7 +645,6 @@ func ensureMetricServicesAvailable(ctx context.Context, config KubeAgentConfig) 
 			log.Warnf(handleNodeSourceError(err))
 		} else {
 			log.Infof("Node summaries connection method: %s", config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
-			log.Infof("Node container metrics connection method: %s", config.NodeMetrics.Options(NodeContainerEndpoint))
 		}
 	}
 	if config.CollectHeapsterExport {
@@ -778,7 +771,6 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["provisioning_id"] = config.provisioningID
 	m.Values["outbound_proxy_url"] = config.OutboundProxyURL.String()
 	m.Values["stats_summary_retrieval_method"] = config.NodeMetrics.Options(NodeStatsSummaryEndpoint)
-	m.Values["stats_container_retrieval_method"] = config.NodeMetrics.Options(NodeContainerEndpoint)
 	m.Values["retrieve_node_summaries"] = strconv.FormatBool(config.RetrieveNodeSummaries)
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	m.Values["number_of_concurrent_node_pollers"] = strconv.Itoa(config.ConcurrentPollers)
