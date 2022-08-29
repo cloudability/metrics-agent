@@ -134,6 +134,7 @@ spec:
                 - tmp/healthy
             initialDelaySeconds: 120
             periodSeconds: 600
+            timeoutSeconds: 5
           name: "metrics-agent"
           args:
             - 'kubernetes'
