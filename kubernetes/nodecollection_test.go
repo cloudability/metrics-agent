@@ -194,7 +194,7 @@ func TestEnsureNodeSource(t *testing.T) {
 		}
 	})
 
-	t.Run("Ensure failure to direct node source test without metrics endpoint", func(t *testing.T) {
+	t.Run("Ensure successful connection to direct node source test without metrics endpoint", func(t *testing.T) {
 		returnCodes := []int{200, 404}
 		ts := launchTLSTestServer(returnCodes)
 		defer ts.Close()
@@ -268,9 +268,8 @@ func TestEnsureNodeSource(t *testing.T) {
 		}
 	})
 
-	t.Run("do not expect failure if container metrics unavailable", func(t *testing.T) {
+	t.Run("Do not expect failure if container metrics unavailable", func(t *testing.T) {
 		// stats/summary will succeed, but cadvisor and containers will fail both times
-		// Metrics collection is incomplete without at least one
 		directConnectionAttempts := []int{200, 400, 404}
 		proxyConnectionAttempts := []int{200, 400, 404}
 		directConnectionReturnCodes := append(directConnectionAttempts, proxyConnectionAttempts...)
