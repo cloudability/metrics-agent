@@ -97,7 +97,7 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	for _, k8Resource := range resourceList {
 
 		if parseMetricData {
-			k8Resource = getSanitizedK8sResource(k8Resource)
+			k8Resource = sanitizeData(k8Resource)
 		}
 
 		data, err := json.Marshal(k8Resource)
@@ -121,10 +121,6 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	}
 
 	return err
-}
-
-func getSanitizedK8sResource(k8Resource interface{}) interface{} {
-	return sanitizeData(k8Resource)
 }
 
 //nolint: gocyclo

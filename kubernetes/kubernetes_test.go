@@ -267,7 +267,14 @@ func TestCollectMetrics(t *testing.T) {
 	// set Direct as option as well
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 
-	ka.Informers = getMockInformers(t, ka.ClusterVersion.version)
+	ka.Informers, err = getMockInformers(ka.ClusterVersion.version)
+	if err != nil {
+		t.Error(err)
+	}
+	parseInformers, err := getMockInformers(1.22)
+	if err != nil {
+		t.Error(err)
+	}
 
 	kubeAgentParseMetrics := KubeAgentConfig{
 		ClusterVersion: ClusterVersion{
@@ -288,7 +295,7 @@ func TestCollectMetrics(t *testing.T) {
 		GetAllConStats:        true,
 		ConcurrentPollers:     10,
 		ParseMetricData:       true,
-		Informers:             getMockInformers(t, 1.22),
+		Informers:             parseInformers,
 	}
 
 	wd, err := os.Getwd()
@@ -360,28 +367,31 @@ func TestCollectMetrics(t *testing.T) {
 		" ensure sensitive data is not stripped", func(t *testing.T) {
 
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				t.Error(err)
+			}
 			if strings.Contains(info.Name(), "jsonl") {
+				in, err := os.ReadFile(path)
+				if err != nil {
+					t.Error(err)
+				}
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were not stripped from pods if parseMetrics is false
-					in, _ := os.ReadFile(path)
 					if !strings.Contains(string(in), "ReallySecretStuff") {
 						t.Error("Original file should have contained secret, but did not")
 					}
 				} else if strings.Contains(info.Name(), "namespaces") {
 					// check if secrets were not stripped from namespaces if parseMetrics is false
-					in, _ := os.ReadFile(path)
 					if !strings.Contains(string(in), "ManageFieldToBeDeleted") {
 						t.Error("Original file should have contained ManagedField data, but did not")
 					}
 				} else if strings.Contains(info.Name(), "deployments") {
 					// check if sensitive fields were not stripped from deployments if parseMetrics is false
-					in, _ := os.ReadFile(path)
 					if !strings.Contains(string(in), "DangThisIsSecret") {
 						t.Error("Original file should have contained sensitive data, but did not")
 					}
 				} else {
 					// all other jsonl share the same annotation that should not be removed
-					in, _ := os.ReadFile(path)
 					if !strings.Contains(string(in), "IAmSecretEnvVariables") {
 						t.Error("Original file should have contained sensitive data, but did not")
 					}
@@ -397,28 +407,31 @@ func TestCollectMetrics(t *testing.T) {
 			t.Error(err)
 		}
 		filepath.Walk(kubeAgentParseMetrics.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				t.Error(err)
+			}
 			if strings.Contains(info.Name(), "jsonl") {
+				in, err := os.ReadFile(path)
+				if err != nil {
+					t.Error(err)
+				}
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were stripped from pods if parseMetrics is true
-					in, _ := os.ReadFile(path)
 					if strings.Contains(string(in), "ReallySecretStuff") {
 						t.Error("Stripped file should not have contained secret, but did")
 					}
 				} else if strings.Contains(info.Name(), "namespaces") {
 					// check if sensitive fields were stripped from namespaces if parseMetrics is true
-					in, _ := os.ReadFile(path)
 					if strings.Contains(string(in), "ManageFieldToBeDeleted") {
 						t.Error("Stripped file should not have contained ManagedField data, but did")
 					}
 				} else if strings.Contains(info.Name(), "deployments") {
 					// check if sensitive fields were stripped from deployments if parseMetrics is true
-					in, _ := os.ReadFile(path)
 					if strings.Contains(string(in), "DangThisIsSecret") {
 						t.Error("Stripped file should not have contained sensitive data, but did")
 					}
 				} else {
 					// all other jsonl share the same annotation that should be removed
-					in, _ := os.ReadFile(path)
 					if strings.Contains(string(in), "IAmSecretEnvVariables") {
 						t.Error("Stripped file should not have contained sensitive data, but did")
 					}
@@ -511,7 +524,7 @@ func NewTestServer() *httptest.Server {
 }
 
 //nolint: lll
-func getMockInformers(t *testing.T, clusterVersion float64) map[string]*cache.SharedIndexInformer {
+func getMockInformers(clusterVersion float64) (map[string]*cache.SharedIndexInformer, error) {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
 	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
@@ -594,7 +607,7 @@ func getMockInformers(t *testing.T, clusterVersion float64) map[string]*cache.Sh
 	var myPod *v1.Pod
 	err := json.Unmarshal(podData, &myPod)
 	if err != nil {
-		t.Error(err)
+		return nil, err
 	}
 	pods.Add(myPod)
 	// namespace also used in testing
@@ -602,7 +615,7 @@ func getMockInformers(t *testing.T, clusterVersion float64) map[string]*cache.Sh
 	var myNamespace *v1.Namespace
 	err = json.Unmarshal(namespaceData, &myNamespace)
 	if err != nil {
-		t.Error(err)
+		return nil, err
 	}
 	namespaces.Add(myNamespace)
 	// deployments also used in testing
@@ -610,11 +623,11 @@ func getMockInformers(t *testing.T, clusterVersion float64) map[string]*cache.Sh
 	var myDeployment *v1apps.Deployment
 	err = json.Unmarshal(deploymentData, &myDeployment)
 	if err != nil {
-		t.Error(err)
+		return nil, err
 	}
 	deployments.Add(myDeployment)
 
-	return mockInformers
+	return mockInformers, nil
 }
 
 func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer) {
