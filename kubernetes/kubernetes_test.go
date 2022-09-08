@@ -268,10 +268,13 @@ func TestCollectMetrics(t *testing.T) {
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 
 	ka.Informers, err = getMockInformers(ka.ClusterVersion.version)
+	stopCh := make(chan struct{})
+	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, stopCh)
 	if err != nil {
 		t.Error(err)
 	}
-	parseInformers, err := getMockInformers(1.22)
+	parseStopCh := make(chan struct{})
+	parseInformers, err := getMockInformers(1.22, parseStopCh)
 	if err != nil {
 		t.Error(err)
 	}
@@ -290,9 +293,7 @@ func TestCollectMetrics(t *testing.T) {
 		Insecure:              true,
 		BearerToken:           "",
 		BearerTokenPath:       "",
-		RetrieveNodeSummaries: true,
 		ForceKubeProxy:        false,
-		GetAllConStats:        true,
 		ConcurrentPollers:     10,
 		ParseMetricData:       true,
 		Informers:             parseInformers,
@@ -524,7 +525,7 @@ func NewTestServer() *httptest.Server {
 }
 
 //nolint: lll
-func getMockInformers(clusterVersion float64) (map[string]*cache.SharedIndexInformer, error) {
+func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
 	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
@@ -581,7 +582,7 @@ func getMockInformers(clusterVersion float64) (map[string]*cache.SharedIndexInfo
 		"cronjobs":               &cjinformer,
 	}
 	// Call the Run function for each Informer, allowing the informers to listen for Add events
-	startMockInformers(mockInformers)
+	startMockInformers(mockInformers, stopCh)
 
 	// Private Annotation to be removed if ParseMetrics is enabled
 	annotation := map[string]string{
@@ -603,15 +604,21 @@ func getMockInformers(clusterVersion float64) (map[string]*cache.SharedIndexInfo
 
 	// pods is unique as we use this pod file for parseMetrics testing
 	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
-	podData, _ := ioutil.ReadFile("../testdata/pods.jsonl")
+	podData, err := ioutil.ReadFile("../testdata/pods.jsonl")
+	if err != nil {
+		return nil, err
+	}
 	var myPod *v1.Pod
-	err := json.Unmarshal(podData, &myPod)
+	err = json.Unmarshal(podData, &myPod)
 	if err != nil {
 		return nil, err
 	}
 	pods.Add(myPod)
 	// namespace also used in testing
-	namespaceData, _ := ioutil.ReadFile("../testdata/namespaces.jsonl")
+	namespaceData, err := ioutil.ReadFile("../testdata/namespaces.jsonl")
+	if err != nil {
+		return nil, err
+	}
 	var myNamespace *v1.Namespace
 	err = json.Unmarshal(namespaceData, &myNamespace)
 	if err != nil {
@@ -619,7 +626,10 @@ func getMockInformers(clusterVersion float64) (map[string]*cache.SharedIndexInfo
 	}
 	namespaces.Add(myNamespace)
 	// deployments also used in testing
-	deploymentData, _ := ioutil.ReadFile("../testdata/deployments.jsonl")
+	deploymentData, err := ioutil.ReadFile("../testdata/deployments.jsonl")
+	if err != nil {
+		return nil, err
+	}
 	var myDeployment *v1apps.Deployment
 	err = json.Unmarshal(deploymentData, &myDeployment)
 	if err != nil {
@@ -630,12 +640,11 @@ func getMockInformers(clusterVersion float64) (map[string]*cache.SharedIndexInfo
 	return mockInformers, nil
 }
 
-func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer) {
-	informerStopCh := make(chan struct{})
+func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, stopCh chan struct{}) {
 	for _, informer := range mockInformers {
 		if (*informer) == nil {
 			continue
 		}
-		go (*informer).Run(informerStopCh)
+		go (*informer).Run(stopCh)
 	}
 }

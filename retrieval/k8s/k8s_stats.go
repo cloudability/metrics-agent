@@ -221,9 +221,7 @@ func sanitizeData(to interface{}) interface{} {
 
 func sanitizeMeta(objectMeta *metav1.ObjectMeta) {
 	objectMeta.ManagedFields = nil
-	if _, ok := objectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-		delete(objectMeta.Annotations, KubernetesLastAppliedConfig)
-	}
+	delete(objectMeta.Annotations, KubernetesLastAppliedConfig)
 	objectMeta.Finalizers = nil
 }
 
@@ -232,9 +230,8 @@ func sanitizePod(to interface{}) interface{} {
 
 	// stripping env var and related data from the object
 	(*cast).ObjectMeta.ManagedFields = nil
-	if _, ok := (*cast).ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-		delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-	}
+	delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+
 	for j, container := range (*cast).Spec.Containers {
 		(*cast).Spec.Containers[j] = sanitizeContainer(container)
 	}
