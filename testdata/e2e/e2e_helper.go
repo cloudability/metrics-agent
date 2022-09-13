@@ -1,22 +1,14 @@
 package test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"math"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
-
-	"github.com/prometheus/common/expfmt"
-
 	cadvisor "github.com/google/cadvisor/info/v1"
 	"github.com/prometheus/prom2json"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
+	"strings"
 )
 
 type ParsedK8sLists struct {
@@ -33,8 +25,6 @@ type ParsedK8sLists struct {
 	ReplicationControllers     LabelMapMatchedResourceList
 	NodeSummaries              map[string]statsapi.Summary
 	BaselineNodeSummaries      map[string]statsapi.Summary
-	NodeContainers             map[string]map[string]cadvisor.ContainerInfo
-	BaselineNodeContainers     map[string]map[string]cadvisor.ContainerInfo
 	CadvisorPrometheus         map[string]map[string]cadvisor.ContainerInfo
 	BaselineCadvisorPrometheus map[string]map[string]cadvisor.ContainerInfo
 	CldyAgent                  CldyAgent
@@ -160,10 +150,6 @@ var knownFileTypes = map[string]UnmarshalForK8sListFn{
 	"persistentvolumeclaims.json": ByRefFn(func(p *ParsedK8sLists) interface{} { return &p.PersistentVolumeClaims }),
 	"stats-summary-":              AsNodeSummary(false),
 	"baseline-summary-":           AsNodeSummary(true),
-	"stats-container-":            AsContainerNodeSummary(false),
-	"baseline-container-":         AsContainerNodeSummary(true),
-	"stats-cadvisor_metrics-":     AsCadvisorMetrics(false),
-	"baseline-cadvisor_metrics-":  AsCadvisorMetrics(true),
 }
 
 var agentFileTypes = map[string]bool{
@@ -207,299 +193,6 @@ func AsNodeSummary(baseline bool) UnmarshalForK8sListFn {
 		summaries[s.Node.NodeName] = s
 		return nil
 	}
-}
-
-// AsContainerNodeSummary returns a UnmarshalForK8sListFn that will parse the data as a Container Summary
-func AsContainerNodeSummary(baseline bool) UnmarshalForK8sListFn {
-	return func(fname string, fdata []byte, parsedK8sList *ParsedK8sLists) error {
-		ci := map[string]cadvisor.ContainerInfo{}
-		err := json.Unmarshal(fdata, &ci)
-		if err != nil {
-			return err
-		}
-		nodeContainers := parsedK8sList.NodeContainers
-		if baseline {
-			nodeContainers = parsedK8sList.BaselineNodeContainers
-		}
-		nodeContainers[parseHostFromFileName(fname)] = ci
-		return nil
-	}
-}
-
-func parseHostFromFileName(fileName string) string {
-	s := strings.SplitAfterN(fileName, "-", 3)
-	return strings.TrimSuffix(s[2], filepath.Ext(s[2]))
-}
-
-func AsCadvisorMetrics(baseline bool) UnmarshalForK8sListFn {
-	return func(fname string, fdata []byte, parsedK8sList *ParsedK8sLists) error {
-		cPromMetrics, err := parseRawCadvisorPrometheusFile(fdata)
-		if err != nil {
-			return err
-		}
-		cPromMetricsCI := parsedK8sList.CadvisorPrometheus
-		if baseline {
-			cPromMetricsCI = parsedK8sList.BaselineCadvisorPrometheus
-		}
-		cPromMetricsCI[parseHostFromFileName(fname)] = cPromToContainerInfo(cPromMetrics)
-		return nil
-	}
-}
-
-func parseRawCadvisorPrometheusFile(fdata []byte) (map[string]*prom2json.Family, error) {
-	cPromMetrics := make(map[string]*prom2json.Family)
-	in := bytes.NewReader(fdata)
-	var parser expfmt.TextParser
-	metricFamilies, err := parser.TextToMetricFamilies(in)
-	if err != nil {
-		return nil, fmt.Errorf("reading cadvisor prometheus text format failed: %v", err)
-	}
-	for name, mf := range metricFamilies {
-		cPromMetrics[name] = prom2json.NewFamily(mf)
-	}
-	return cPromMetrics, nil
-}
-
-func cPromToContainerInfo(metricFamilies map[string]*prom2json.Family) map[string]cadvisor.ContainerInfo {
-	containerInfos := make(map[string]cadvisor.ContainerInfo)
-	missingMetrics := make(map[string]bool)
-	for metricName, metricsFamily := range metricFamilies {
-		for _, containerMetric := range metricsFamily.Metrics {
-			metric, ok := containerMetric.(prom2json.Metric)
-			if !ok {
-				continue
-			}
-			container := metric.Labels["id"]
-			if container == "" {
-				container = "node-level-metric"
-			}
-			var ci cadvisor.ContainerInfo
-			var err error
-			if ci, ok = containerInfos[container]; !ok {
-				ci, err = newContainerInfoFromCProm(metric, container)
-				if err != nil {
-					continue
-				}
-			}
-			ci = containerMetricsFromCProm(ci, metricName, metric, missingMetrics)
-			containerInfos[container] = ci
-		}
-	}
-	return containerInfos
-}
-
-func containerMetricsFromCProm(
-	ci cadvisor.ContainerInfo,
-	metricName string,
-	metric prom2json.Metric,
-	tmp map[string]bool) cadvisor.ContainerInfo {
-	converterFunc, ok := cPromToCIConversions[metricName]
-	if !ok {
-		tmp[metricName] = true
-		return ci
-	}
-	converterFunc(metric, &ci)
-	return ci
-}
-
-var cPromToCIConversions = map[string]metricConverter{
-	"container_fs_io_time_seconds_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
-			fs.IoTime = (strToUint(metric.Value) * 1000) // convert to milliseconds
-			return fs
-		})
-	},
-	// DiskIO
-	"container_fs_writes_bytes_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		updateDiskIOEntry(metric, ci, func(disk cadvisor.PerDiskStats) cadvisor.PerDiskStats {
-			metricVal := strToUint(metric.Value)
-			disk.Stats["Write"] = metricVal
-			disk.Stats["Total"] += metricVal
-			disk.Stats["Sync"] = metricVal
-			return disk
-		})
-	},
-	"container_fs_reads_bytes_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		updateDiskIOEntry(metric, ci, func(disk cadvisor.PerDiskStats) cadvisor.PerDiskStats {
-			bytesRead := strToUint(metric.Value)
-			disk.Stats["Read"] = bytesRead
-			disk.Stats["Total"] += bytesRead
-			return disk
-		})
-	},
-	// Filesystem
-	"container_fs_sector_reads_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
-			// Cumulative count of sector reads completed
-			fs.ReadsCompleted = strToUint(metric.Value)
-			return fs
-		})
-	},
-	"container_fs_limit_bytes": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
-			fs.Limit = strToUint(metric.Value)
-			return fs
-		})
-	},
-	"container_fs_usage_bytes": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		updateFileSystemEntry(metric, ci, func(fs cadvisor.FsStats) cadvisor.FsStats {
-			fs.Usage = strToUint(metric.Value)
-			var writeBytes uint64
-			updateDiskIOEntry(metric, ci, func(disk cadvisor.PerDiskStats) cadvisor.PerDiskStats {
-				writeBytes = disk.Stats["Write"]
-				return disk
-			})
-			if writeBytes >= fs.Usage {
-				fs.Available = writeBytes - fs.Usage
-			}
-			return fs
-		})
-	},
-	"container_start_time_seconds": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		tm := time.Unix(strToInt(metric.Value, 64), 0)
-		ci.Spec.CreationTime = tm.UTC()
-	},
-	"container_network_receive_errors_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		addNetworkEntries(metric, ci, func(net cadvisor.InterfaceStats) cadvisor.InterfaceStats {
-			net.RxErrors = strToUint(metric.Value)
-			return net
-		})
-	},
-	"container_spec_memory_limit_bytes": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		ci.Spec.Memory.Limit = strToUint(metric.Value)
-		ci.Spec.HasMemory = true
-	},
-	"container_memory_rss": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		ci.Stats[0].Memory.RSS = strToUint(metric.Value)
-	},
-	"container_memory_swap": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		ci.Stats[0].Memory.Swap = strToUint(metric.Value)
-
-	},
-	"container_cpu_cfs_periods_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		ci.Stats[0].Cpu.CFS.Periods = strToUint(metric.Value)
-	},
-	"container_cpu_load_average_10s": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		ci.Stats[0].Cpu.LoadAverage = int32(strToInt(metric.Value, 32))
-	},
-	"container_cpu_cfs_throttled_seconds_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		ci.Stats[0].Cpu.CFS.ThrottledTime = (strToUint(metric.Value) * 1e+9) // convert to nanoseconds
-	},
-	"container_cpu_usage_seconds_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		ci.Stats[0].Cpu.Usage.Total = strToUint(metric.Value)
-	},
-	"container_memory_failures_total": func(metric prom2json.Metric, ci *cadvisor.ContainerInfo) {
-		ci.Stats[0].Memory.Failcnt = strToUint(metric.Value)
-	},
-}
-
-func strToUint(str string) uint64 {
-	bitSize := 64
-	fl, err := strconv.ParseFloat(str, bitSize)
-	if err != nil {
-		return 0
-	}
-	rounded := math.Round(fl)
-	return uint64(rounded)
-}
-
-func strToInt(str string, bitSize int) int64 {
-	fl, err := strconv.ParseFloat(str, bitSize)
-	if err != nil {
-		return 0
-	}
-	rounded := math.Round(fl)
-	return int64(rounded)
-}
-
-func updateFileSystemEntry(m prom2json.Metric, ci *cadvisor.ContainerInfo, fn FileSystemMetricAdder) {
-	var fs cadvisor.FsStats
-	ci.Spec.HasFilesystem = true
-	for i, entry := range ci.Stats[0].Filesystem {
-		if entry.Device == m.Labels["device"] {
-			fs = fn(entry)
-			ci.Stats[0].Filesystem[i] = fs
-			return
-		}
-	}
-	fs.Device = m.Labels["device"]
-	fs = fn(fs)
-	ci.Stats[0].Filesystem = append(ci.Stats[0].Filesystem, fs)
-}
-
-func updateDiskIOEntry(m prom2json.Metric, ci *cadvisor.ContainerInfo, fn DiskIOMetricAdder) {
-	var fs cadvisor.PerDiskStats
-	ci.Spec.HasDiskIo = true
-	for i, entry := range ci.Stats[0].DiskIo.IoServiceBytes {
-		if entry.Device == m.Labels["device"] {
-			if entry.Stats == nil {
-				entry.Stats = make(map[string]uint64)
-			}
-			fs = fn(entry)
-			ci.Stats[0].DiskIo.IoServiceBytes[i] = fs
-			return
-		}
-	}
-	fs.Device = m.Labels["device"]
-	fs.Stats = make(map[string]uint64)
-	fs = fn(fs)
-	ci.Stats[0].DiskIo.IoServiceBytes = append(ci.Stats[0].DiskIo.IoServiceBytes, fs)
-}
-
-func addNetworkEntries(m prom2json.Metric, ci *cadvisor.ContainerInfo, fn NetworkMetricAdder) {
-	var net cadvisor.InterfaceStats
-	for i, entry := range ci.Stats[0].Network.Interfaces {
-		if entry.Name == m.Labels["interface"] {
-			net = fn(entry)
-			ci.Stats[0].Network.Interfaces[i] = net
-			return
-		}
-	}
-	net.Name = m.Labels["interface"]
-	net = fn(net)
-	ci.Stats[0].Network.Interfaces = append(ci.Stats[0].Network.Interfaces, net)
-}
-
-func newContainerInfoFromCProm(metric prom2json.Metric, container string) (cadvisor.ContainerInfo, error) {
-	if metric.TimestampMs == "" {
-		metric.TimestampMs = "0"
-	}
-	i, err := strconv.ParseInt(metric.TimestampMs, 10, 64)
-	if err != nil {
-		return cadvisor.ContainerInfo{}, fmt.Errorf("could not parse timestamp: %v", err)
-	}
-	tm := time.Unix(i, 0)
-	ci := cadvisor.ContainerInfo{
-		ContainerReference: cadvisor.ContainerReference{
-			Id:        metric.Labels["name"],
-			Name:      container,
-			Namespace: metric.Labels["namespace"],
-		},
-		Subcontainers: nil,
-		Spec: cadvisor.ContainerSpec{
-			Labels: map[string]string{
-				"io.kubernetes.container.name": metric.Labels["container"],
-				"io.kubernetes.pod.namespace":  metric.Labels["namespace"],
-				"io.kubernetes.pod.name":       metric.Labels["pod"],
-			},
-			Image: metric.Labels["image"],
-		},
-		Stats: []*cadvisor.ContainerStats{
-			{
-				Timestamp:     tm,
-				Cpu:           cadvisor.CpuStats{},
-				DiskIo:        cadvisor.DiskIoStats{},
-				Memory:        cadvisor.MemoryStats{},
-				Network:       cadvisor.NetworkStats{},
-				Filesystem:    nil,
-				TaskStats:     cadvisor.LoadStats{},
-				Accelerators:  nil,
-				Processes:     cadvisor.ProcessStats{},
-				CustomMetrics: nil,
-			},
-		},
-	}
-	return ci, nil
 }
 
 func toAgentFileType(n string) string {

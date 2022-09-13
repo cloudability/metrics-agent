@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -96,7 +95,6 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 }
 
 func TestEnsureMetricServicesAvailable(t *testing.T) {
-	t.Parallel()
 	t.Run("should return error if can't get node summaries", func(t *testing.T) {
 		cs := fake.NewSimpleClientset(
 			&v1.Node{
@@ -110,11 +108,9 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "node0", Namespace: v1.NamespaceDefault}},
 		)
 		config := KubeAgentConfig{
-			RetrieveNodeSummaries: true,
-			CollectHeapsterExport: false,
-			Clientset:             cs,
-			NodeMetrics:           EndpointMask{},
-			ConcurrentPollers:     10,
+			Clientset:         cs,
+			NodeMetrics:       EndpointMask{},
+			ConcurrentPollers: 10,
 		}
 		config, err := ensureMetricServicesAvailable(context.TODO(), config)
 		if err == nil {
@@ -136,14 +132,12 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 		ts := NewTestServer()
 		defer ts.Close()
 		config := KubeAgentConfig{
-			RetrieveNodeSummaries: true,
-			CollectHeapsterExport: false,
-			Clientset:             cs,
-			ClusterHostURL:        ts.URL,
-			HeapsterURL:           ts.URL,
-			HTTPClient:            client,
-			ConcurrentPollers:     10,
-			InClusterClient:       raw.NewClient(client, true, "", "", 0, false),
+			Clientset:         cs,
+			ClusterHostURL:    ts.URL,
+			HeapsterURL:       ts.URL,
+			HTTPClient:        client,
+			ConcurrentPollers: 10,
+			InClusterClient:   raw.NewClient(client, true, "", "", 0, false),
 		}
 
 		var err error
@@ -152,37 +146,6 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			t.Errorf("Unexpected error fetching node summaries: %s", err)
 		}
 	})
-}
-
-// nolint: dupl
-func TestUpdateConfigWithOverrideURLs(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("ensure that heapsterURL is set when Overridden Heapster URL argument is defined", func(t *testing.T) {
-		config := updateConfigWithOverrideURLs(KubeAgentConfig{
-			HeapsterOverrideURL: "https://heapster.availabile.here:443/",
-			Insecure:            false,
-		})
-		if config.HeapsterURL != config.HeapsterOverrideURL || config.Insecure {
-			t.Error(" HeapsterURL override URL set but not validated and set to heapsterURL ")
-		}
-
-	})
-
-	t.Run("ensure that heapsterURL is set to proxyPath when overridden Heapster URL is not defined", func(t *testing.T) {
-		config := updateConfigWithOverrideURLs(KubeAgentConfig{
-			HeapsterOverrideURL: "",
-			HeapsterProxyURL: url.URL{
-				Host: "http://localhost:8888/",
-				Path: "/api/v1/namespaces/default/services/heapster:8888/proxy/metrics"},
-		})
-		if config.HeapsterURL != config.HeapsterProxyURL.Host+config.HeapsterProxyURL.Path {
-			t.Error(" HeapsterURL is not set to proxyPath ")
-		}
-
-	})
-
 }
 
 func TestUpdateConfigWithOverrideNamespace(t *testing.T) {
@@ -271,29 +234,23 @@ func TestCollectMetrics(t *testing.T) {
 			version:     1.1,
 			versionInfo: sv,
 		},
-		Clientset:             cs,
-		HTTPClient:            http.Client{},
-		msExportDirectory:     tDir,
-		UseInClusterConfig:    false,
-		ClusterHostURL:        ts.URL,
-		HeapsterURL:           ts.URL,
-		Insecure:              true,
-		BearerToken:           "",
-		BearerTokenPath:       "",
-		RetrieveNodeSummaries: true,
-		ForceKubeProxy:        false,
-		GetAllConStats:        true,
-		ConcurrentPollers:     10,
+		Clientset:          cs,
+		HTTPClient:         http.Client{},
+		msExportDirectory:  tDir,
+		UseInClusterConfig: false,
+		ClusterHostURL:     ts.URL,
+		HeapsterURL:        ts.URL,
+		Insecure:           true,
+		BearerToken:        "",
+		BearerTokenPath:    "",
+		ForceKubeProxy:     false,
+		ConcurrentPollers:  10,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
-	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Proxy, true)
-	ka.NodeMetrics.SetAvailability(NodeCadvisorEndpoint, Proxy, true)
 	// set Direct as option as well
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
-	ka.NodeMetrics.SetAvailability(NodeContainerEndpoint, Direct, true)
-
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Error(err)
@@ -317,23 +274,11 @@ func TestCollectMetrics(t *testing.T) {
 		nodeBaselineFiles := []string{}
 		nodeSummaryFiles := []string{}
 		expectedBaselineFiles := []string{
-			"baseline-cadvisor_metrics-node0.json",
-			"baseline-cadvisor_metrics-node1.json",
-			"baseline-cadvisor_metrics-node2.json",
-			"baseline-container-node0.json",
-			"baseline-container-node1.json",
-			"baseline-container-node2.json",
 			"baseline-summary-node0.json",
 			"baseline-summary-node1.json",
 			"baseline-summary-node2.json",
 		}
 		expectedSummaryFiles := []string{
-			"stats-cadvisor_metrics-node0.json",
-			"stats-cadvisor_metrics-node1.json",
-			"stats-cadvisor_metrics-node2.json",
-			"stats-container-node0.json",
-			"stats-container-node1.json",
-			"stats-container-node2.json",
 			"stats-summary-node0.json",
 			"stats-summary-node1.json",
 			"stats-summary-node2.json",

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	cadvisor "github.com/google/cadvisor/info/v1"
 	v1 "k8s.io/api/core/v1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
@@ -25,12 +24,8 @@ func TestMetricSample(t *testing.T) {
 	}
 
 	parsedK8sLists := &ParsedK8sLists{
-		NodeSummaries:              make(map[string]statsapi.Summary),
-		BaselineNodeSummaries:      make(map[string]statsapi.Summary),
-		NodeContainers:             make(map[string]map[string]cadvisor.ContainerInfo),
-		BaselineNodeContainers:     make(map[string]map[string]cadvisor.ContainerInfo),
-		CadvisorPrometheus:         make(map[string]map[string]cadvisor.ContainerInfo),
-		BaselineCadvisorPrometheus: make(map[string]map[string]cadvisor.ContainerInfo),
+		NodeSummaries:         make(map[string]statsapi.Summary),
+		BaselineNodeSummaries: make(map[string]statsapi.Summary),
 	}
 	t.Parallel()
 
@@ -60,7 +55,6 @@ func TestMetricSample(t *testing.T) {
 
 				}
 			}
-
 			return nil
 		})
 		if err != nil {
@@ -86,7 +80,6 @@ func TestMetricSample(t *testing.T) {
 			if strings.HasPrefix(po.Name, stress) && po.Status.QOSClass == v1.PodQOSBestEffort {
 				return
 			}
-
 		}
 		t.Error("pod stress not found in metric sample")
 	})
@@ -101,43 +94,4 @@ func TestMetricSample(t *testing.T) {
 		}
 		t.Error("pod summary data not found in metric sample")
 	})
-
-	// 2020.9.10 - TODO: Remove this test once we stop supporting minor versions below 18
-	t.Run("ensure that a metrics sample has expected containers stat data", func(t *testing.T) {
-		if minorVersion < 18 {
-			for _, nc := range parsedK8sLists.NodeContainers {
-
-				for _, s := range nc {
-					if strings.HasPrefix(s.Name, "/kubepods/besteffort/pod") && s.Namespace == "containerd" && strings.HasPrefix(
-						s.Spec.Labels["io.kubernetes.pod.name"], stress) {
-						return
-					}
-				}
-			}
-			t.Error("pod container stat data not found in metric sample")
-		}
-		return
-	})
-
-	t.Run("ensure that a metrics sample has expected cadvisor prometheus data", func(t *testing.T) {
-		for _, containerInfos := range parsedK8sLists.CadvisorPrometheus {
-			for _, containerInfo := range containerInfos {
-				if minorVersion >= 21 {
-					if strings.HasPrefix(containerInfo.Name, "/kubelet/kubepods/besteffort/pod") &&
-						containerInfo.Namespace == stress &&
-						strings.HasPrefix(containerInfo.Spec.Labels["io.kubernetes.pod.name"], stress) {
-						return
-					}
-				} else {
-					if strings.HasPrefix(containerInfo.Name, "/kubepods/besteffort/pod") &&
-						containerInfo.Namespace == stress &&
-						strings.HasPrefix(containerInfo.Spec.Labels["io.kubernetes.pod.name"], stress) {
-						return
-					}
-				}
-			}
-		}
-		t.Error("pod cadvisor prometheus data not found in metric sample")
-	})
-
 }

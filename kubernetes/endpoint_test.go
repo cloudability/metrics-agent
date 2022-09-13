@@ -97,24 +97,24 @@ func TestConnection(t *testing.T) {
 func TestEndpointMask(t *testing.T) {
 	t.Run("endpoint should report Unreachable correctly", func(t *testing.T) {
 		mask := EndpointMask{}
-		if !mask.Unreachable(NodeCadvisorEndpoint) {
+		if !mask.Unreachable(NodeStatsSummaryEndpoint) {
 			t.Error("empty mask should return all endpoints as unreachable")
 		}
 
 		// Don't do this weird stuff, use mask.SetUnreachable
-		mask.SetAvailability(NodeCadvisorEndpoint, Unreachable, false)
-		if !mask.Unreachable(NodeCadvisorEndpoint) {
+		mask.SetAvailability(NodeStatsSummaryEndpoint, Unreachable, false)
+		if !mask.Unreachable(NodeStatsSummaryEndpoint) {
 			t.Errorf("endpoint should have remained unreachable")
 		}
 
-		mask.SetAvailability(NodeCadvisorEndpoint, Proxy, true)
-		if !mask.ProxyAllowed(NodeCadvisorEndpoint) {
-			t.Errorf("should have proxy method set, instead got: %s", mask.Options(NodeCadvisorEndpoint))
+		mask.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
+		if !mask.ProxyAllowed(NodeStatsSummaryEndpoint) {
+			t.Errorf("should have proxy method set, instead got: %s", mask.Options(NodeStatsSummaryEndpoint))
 		}
 
-		mask.SetUnreachable(NodeCadvisorEndpoint)
-		if !mask.Unreachable(NodeCadvisorEndpoint) {
-			t.Errorf("expected unreachable, got %s", mask.Options(NodeCadvisorEndpoint))
+		mask.SetUnreachable(NodeStatsSummaryEndpoint)
+		if !mask.Unreachable(NodeStatsSummaryEndpoint) {
+			t.Errorf("expected unreachable, got %s", mask.Options(NodeStatsSummaryEndpoint))
 		}
 	})
 	t.Run("endpoint should set availability correctly", func(t *testing.T) {
@@ -135,7 +135,7 @@ func TestEndpointMask(t *testing.T) {
 		}
 		// an endpoint with no methods available should be unreachable
 		if !mask.Unreachable(NodeStatsSummaryEndpoint) {
-			t.Errorf("expected unreachable, got %s", mask.Options(NodeCadvisorEndpoint))
+			t.Errorf("expected unreachable, got %s", mask.Options(NodeStatsSummaryEndpoint))
 		}
 	})
 	t.Run("should be able to set multiple connection methods per endpoint", func(t *testing.T) {

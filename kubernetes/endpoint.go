@@ -57,12 +57,6 @@ type Endpoint string
 const (
 	// NodeStatsSummaryEndpoint the /stats/summary endpoint
 	NodeStatsSummaryEndpoint Endpoint = "/stats/summary"
-
-	// NodeContainerEndpoint the /stats/container endpoint
-	NodeContainerEndpoint Endpoint = "/stats/container"
-
-	// NodeCadvisorEndpoint the /metrics/cadvisor endpoint
-	NodeCadvisorEndpoint Endpoint = "/metrics/cadvisor"
 )
 
 // EndpointMask a map representing the currently active endpoints.

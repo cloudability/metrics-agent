@@ -42,12 +42,6 @@ func init() {
 		"",
 		"Kubernetes Cluster Name - required this must be unique to every cluster.",
 	)
-	kubernetesCmd.PersistentFlags().StringVar(
-		&config.HeapsterOverrideURL,
-		"heapster_override_url",
-		"",
-		"URL to connect to a running heapster instance. - optionally override the discovered Heapster URL.",
-	)
 	kubernetesCmd.PersistentFlags().IntVar(
 		&config.PollInterval,
 		"poll_interval",
@@ -97,28 +91,10 @@ func init() {
 		"When true, does not verify certificates when making TLS connections. Default: False",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
-		&config.RetrieveNodeSummaries,
-		"retrieve_node_summaries",
-		true,
-		"When true, includes node summary metrics in metric collection.",
-	)
-	kubernetesCmd.PersistentFlags().BoolVar(
-		&config.GetAllConStats,
-		"get_all_container_stats",
-		false,
-		"When true, includes all available container metrics in metric collection. Default: False",
-	)
-	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.ForceKubeProxy,
 		"force_kube_proxy",
 		false,
 		"When true, disables direct node connection and forces proxy use.",
-	)
-	kubernetesCmd.PersistentFlags().BoolVar(
-		&config.CollectHeapsterExport,
-		"collect_heapster_export",
-		true,
-		"When true, tries to fetch heapster metrics if present.",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.Namespace,
@@ -175,8 +151,6 @@ func init() {
 	config = kubernetes.KubeAgentConfig{
 		APIKey:                viper.GetString("api_key"),
 		ClusterName:           viper.GetString("cluster_name"),
-		CollectHeapsterExport: viper.GetBool("collect_heapster_export"),
-		HeapsterOverrideURL:   viper.GetString("heapster_override_url"),
 		PollInterval:          viper.GetInt("poll_interval"),
 		CollectionRetryLimit:  viper.GetUint("collection_retry_limit"),
 		OutboundProxy:         viper.GetString("outbound_proxy"),
@@ -185,8 +159,6 @@ func init() {
 		Insecure:              viper.GetBool("insecure"),
 		Cert:                  viper.GetString("certificate_file"),
 		Key:                   viper.GetString("key_file"),
-		RetrieveNodeSummaries: viper.GetBool("retrieve_node_summaries"),
-		GetAllConStats:        viper.GetBool("get_all_container_stats"),
 		ConcurrentPollers:     viper.GetInt("number_of_concurrent_node_pollers"),
 		ForceKubeProxy:        viper.GetBool("force_kube_proxy"),
 		Namespace:             viper.GetString("namespace"),
