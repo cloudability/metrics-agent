@@ -409,7 +409,7 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 	if err != nil {
 		return false, err
 	}
-	log.Infof("/stats/summary endpoint on node [%s] available via %s connection? %v", nodeStatSum, method, ns)
+	log.Infof("Node [%s] available via %s connection? %v", nodeStatSum, method, ns)
 	config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, method, ns)
 
 	return ns, nil
