@@ -396,7 +396,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 			"agent will operate in a limited mode.", pct)
 	}
 
-	if (len(nodes) - failedProxy) == 0 {
+	if (directNodes + proxyNodes) == 0 {
 		return config, FatalNodeError
 	}
 
