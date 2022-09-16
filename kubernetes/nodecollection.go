@@ -346,8 +346,6 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 		return config, fmt.Errorf("error retrieving nodes: %s", err)
 	}
 
-	firstNode := &nodes[0]
-
 	directNodes := 0
 	proxyNodes := 0
 	failedDirect := 0
@@ -374,7 +372,7 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 			}
 		}
 		if !directlyConnected {
-			p := setupProxyAPI(config.ClusterHostURL, firstNode.Name)
+			p := setupProxyAPI(config.ClusterHostURL, nodes[i].Name)
 			success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary())
 			if err != nil {
 				log.Warnf("Failed to connect to node [%s] via proxy with cause [%s]",
