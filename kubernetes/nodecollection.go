@@ -29,7 +29,7 @@ func (err nodeError) Error() string {
 }
 
 const (
-	FatalNodeError = nodeError("unable to retrieve required set of node metrics via direct or proxy connection")
+	FatalNodeError = nodeError("unable to retrieve required metrics from any node via direct or proxy connection")
 )
 
 // NodeSource is an interface to get a list of Nodes
@@ -348,34 +348,59 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 
 	firstNode := &nodes[0]
 
-	ip, port, err := clientSetNodeSource.NodeAddress(firstNode)
-	if err != nil {
-		return config, fmt.Errorf("error retrieving node addresses: %s", err)
-	}
-
-	if allowDirectConnect(config, nodes) {
-		// test node direct connectivity
-		d := directNodeEndpoints(ip, port)
-		success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary())
+	directNodes := 0
+	proxyNodes := 0
+	failedDirect := 0
+	failedProxy := 0
+	directAllowed := allowDirectConnect(config, nodes)
+	for i := range nodes {
+		directlyConnected := false
+		ip, port, err := clientSetNodeSource.NodeAddress(&nodes[i])
 		if err != nil {
-			return config, err
+			return config, fmt.Errorf("error retrieving node addresses: %s", err)
 		}
-		if success {
-			return config, nil
+		if directAllowed {
+			// test node direct connectivity
+			d := directNodeEndpoints(ip, port)
+			success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary())
+			if err != nil {
+				log.Warnf("Failed to connect to node [%s] directly with cause [%s]",
+					d.statsSummary(), err.Error())
+				failedDirect++
+			}
+			if success {
+				directlyConnected = true
+				directNodes++
+			}
+		}
+		if !directlyConnected {
+			p := setupProxyAPI(config.ClusterHostURL, firstNode.Name)
+			success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary())
+			if err != nil {
+				log.Warnf("Failed to connect to node [%s] via proxy with cause [%s]",
+					p.statsSummary(), err.Error())
+				failedProxy++
+			}
+			if success {
+				proxyNodes++
+			}
 		}
 	}
 
-	// test node connectivity via kube-proxy
-	p := setupProxyAPI(config.ClusterHostURL, firstNode.Name)
-	success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary())
-	if err != nil {
-		return config, err
-	}
-	if success {
-		return config, nil
+	log.Infof("Of %d nodes, %d connected directly, %d connected via proxy, and %d could not be reached",
+		len(nodes), directNodes, proxyNodes, failedProxy)
+
+	if len(nodes) != (directNodes + proxyNodes) {
+		pct := (directNodes + proxyNodes) * 100 / len(nodes)
+		log.Warnf("Only %d percent of ready nodes could could be connected to, "+
+			"agent will operate in a limited mode.", pct)
 	}
 
-	return config, FatalNodeError
+	if (len(nodes) - failedProxy) == 0 {
+		return config, FatalNodeError
+	}
+
+	return config, nil
 }
 
 func checkEndpointConnections(config KubeAgentConfig, client *http.Client, method Connection,
@@ -384,7 +409,7 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 	if err != nil {
 		return false, err
 	}
-	log.Infof("/stats/summary endpoint available via %s connection? %v", method, ns)
+	log.Infof("/stats/summary endpoint on node [%s] available via %s connection? %v", nodeStatSum, method, ns)
 	config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, method, ns)
 
 	return ns, nil
