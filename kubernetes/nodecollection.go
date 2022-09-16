@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
@@ -346,50 +347,66 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 		return config, fmt.Errorf("error retrieving nodes: %s", err)
 	}
 
-	directNodes := 0
-	proxyNodes := 0
-	failedDirect := 0
-	failedProxy := 0
+	directNodes := int32(0)
+	proxyNodes := int32(0)
+	failedDirect := int32(0)
+	failedProxy := int32(0)
 	directAllowed := allowDirectConnect(config, nodes)
-	for i := range nodes {
-		directlyConnected := false
-		ip, port, err := clientSetNodeSource.NodeAddress(&nodes[i])
-		if err != nil {
-			return config, fmt.Errorf("error retrieving node addresses: %s", err)
-		}
-		if directAllowed {
-			// test node direct connectivity
-			d := directNodeEndpoints(ip, port)
-			success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary())
-			if err != nil {
-				log.Warnf("Failed to connect to node [%s] directly with cause [%s]",
-					d.statsSummary(), err.Error())
-				failedDirect++
-			}
-			if success {
-				directlyConnected = true
-				directNodes++
-			}
-		}
-		if !directlyConnected {
-			p := setupProxyAPI(config.ClusterHostURL, nodes[i].Name)
-			success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary())
-			if err != nil {
-				log.Warnf("Failed to connect to node [%s] via proxy with cause [%s]",
-					p.statsSummary(), err.Error())
-				failedProxy++
-			}
-			if success {
-				proxyNodes++
-			}
-		}
-	}
 
+	var wg sync.WaitGroup
+
+	limiter := make(chan struct{}, config.ConcurrentPollers)
+
+	for _, n := range nodes {
+		// block if channel is full (limiting number of goroutines)
+		limiter <- struct{}{}
+		wg.Add(1)
+		go func(currentNode v1.Node) {
+			defer func() {
+				<-limiter
+				wg.Done()
+			}()
+			directlyConnected := false
+			ip, port, err := clientSetNodeSource.NodeAddress(&currentNode)
+			if err != nil {
+				log.Warnf("error retrieving node addresses: %s", err)
+				return
+			}
+			if directAllowed {
+				// test node direct connectivity
+				d := directNodeEndpoints(ip, port)
+				success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary())
+				if err != nil {
+					log.Warnf("Failed to connect to node [%s] directly with cause [%s]",
+						d.statsSummary(), err.Error())
+					atomic.AddInt32(&failedDirect, 1)
+				}
+				if success {
+					directlyConnected = true
+					atomic.AddInt32(&directNodes, 1)
+				}
+			}
+			if !directlyConnected {
+				p := setupProxyAPI(config.ClusterHostURL, currentNode.Name)
+				success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary())
+				if err != nil {
+					log.Warnf("Failed to connect to node [%s] via proxy with cause [%s]",
+						p.statsSummary(), err.Error())
+					atomic.AddInt32(&failedProxy, 1)
+				}
+				if success {
+					atomic.AddInt32(&proxyNodes, 1)
+				}
+			}
+		}(n)
+	}
+	log.Debugln("Currently Waiting for all node data to be gathered")
+	wg.Wait()
 	log.Infof("Of %d nodes, %d connected directly, %d connected via proxy, and %d could not be reached",
 		len(nodes), directNodes, proxyNodes, failedProxy)
 
-	if len(nodes) != (directNodes + proxyNodes) {
-		pct := (directNodes + proxyNodes) * 100 / len(nodes)
+	if len(nodes) != int(directNodes+proxyNodes) {
+		pct := int(directNodes+proxyNodes) * 100 / len(nodes)
 		log.Warnf("Only %d percent of ready nodes could could be connected to, "+
 			"agent will operate in a limited mode.", pct)
 	}
