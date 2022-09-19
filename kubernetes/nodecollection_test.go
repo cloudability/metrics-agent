@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -121,13 +122,18 @@ var nodeSampleLabels = map[string]string{
 }
 
 func NewTestClient(ts *httptest.Server, labels map[string]string) *fake.Clientset {
+	return NewTestClientWithNodes(ts, labels, 1)
+}
+
+func NewTestClientWithNodes(ts *httptest.Server, labels map[string]string, numNodes int) *fake.Clientset {
 	s := strings.Split(ts.Listener.Addr().String(), ":")
 	ip := s[0]
 	port, _ := strconv.Atoi(s[1])
-	return fake.NewSimpleClientset(
-		&v1.Node{
+	nodes := make([]runtime.Object, numNodes)
+	for i := 0; i < numNodes; i++ {
+		nodes[i] = &v1.Node{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "proxyNode",
+				Name:      fmt.Sprintf("proxyNode.%d", i),
 				Namespace: v1.NamespaceDefault,
 				Labels:    labels,
 			},
@@ -148,8 +154,9 @@ func NewTestClient(ts *httptest.Server, labels map[string]string) *fake.Clientse
 					},
 				},
 			},
-		},
-	)
+		}
+	}
+	return fake.NewSimpleClientset(nodes...)
 }
 
 func TestEnsureNodeSource(t *testing.T) {
@@ -179,6 +186,67 @@ func TestEnsureNodeSource(t *testing.T) {
 		}
 		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
 			t.Errorf("Expected direct node retrieval method but got %v: %v",
+				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint),
+				err)
+			return
+		}
+	})
+
+	t.Run("Ensure successful on mix of node failures and success", func(t *testing.T) {
+		returnCodes := []int{200, 400, 400}
+		ts := launchTLSTestServer(returnCodes)
+		cs := NewTestClientWithNodes(ts, nodeSampleLabels, 2)
+		defer ts.Close()
+		ka := KubeAgentConfig{
+			Clientset:            cs,
+			HTTPClient:           http.Client{},
+			CollectionRetryLimit: 0,
+			ConcurrentPollers:    10,
+			NodeMetrics:          EndpointMask{},
+		}
+		ka, err := ensureNodeSource(context.TODO(), ka)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if !ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
+			t.Errorf("Expected direct node retrieval method but got %v: %v",
+				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint),
+				err)
+			return
+		}
+	})
+
+	t.Run("Ensure proxy on mix of node direct and proxy", func(t *testing.T) {
+		returnCodes := []int{200, 400, 200}
+		ts := launchTLSTestServer(returnCodes)
+		cs := NewTestClientWithNodes(ts, nodeSampleLabels, 2)
+		defer ts.Close()
+		ka := KubeAgentConfig{
+			Clientset:            cs,
+			CollectionRetryLimit: 0,
+			ConcurrentPollers:    10,
+			NodeMetrics:          EndpointMask{},
+			ClusterHostURL:       "https://" + ts.Listener.Addr().String(),
+			// The proxy connection method uses the config http client
+			HTTPClient: http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
+				// nolint gosec
+				InsecureSkipVerify: true,
+			},
+			}},
+		}
+		ka, err := ensureNodeSource(context.TODO(), ka)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if ka.NodeMetrics.DirectAllowed(NodeStatsSummaryEndpoint) {
+			t.Errorf("Expected proxy node retrieval method but got %v: %v",
+				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint),
+				err)
+			return
+		}
+
+		if !ka.NodeMetrics.ProxyAllowed(NodeStatsSummaryEndpoint) {
+			t.Errorf("Expected proxy node retrieval method but got %v: %v",
 				ka.NodeMetrics.Options(NodeStatsSummaryEndpoint),
 				err)
 			return

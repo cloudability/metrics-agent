@@ -415,7 +415,19 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 		return config, FatalNodeError
 	}
 
+	validateConfig(config, proxyNodes, directNodes)
 	return config, nil
+}
+
+func validateConfig(config KubeAgentConfig, proxyNodes, directNodes int32) {
+	if proxyNodes > 0 {
+		config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
+	} else if directNodes > 0 {
+		config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
+	} else {
+		config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, false)
+		config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, false)
+	}
 }
 
 func checkEndpointConnections(config KubeAgentConfig, client *http.Client, method Connection,
@@ -425,7 +437,6 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 		return false, err
 	}
 	log.Infof("Node [%s] available via %s connection? %v", nodeStatSum, method, ns)
-	config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, method, ns)
 
 	return ns, nil
 }
