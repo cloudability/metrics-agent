@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
@@ -29,7 +30,7 @@ func (err nodeError) Error() string {
 }
 
 const (
-	FatalNodeError = nodeError("unable to retrieve required set of node metrics via direct or proxy connection")
+	FatalNodeError = nodeError("unable to retrieve required metrics from any node via direct or proxy connection")
 )
 
 // NodeSource is an interface to get a list of Nodes
@@ -346,36 +347,87 @@ func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentCon
 		return config, fmt.Errorf("error retrieving nodes: %s", err)
 	}
 
-	firstNode := &nodes[0]
+	directNodes := int32(0)
+	proxyNodes := int32(0)
+	failedDirect := int32(0)
+	failedProxy := int32(0)
+	directAllowed := allowDirectConnect(config, nodes)
 
-	ip, port, err := clientSetNodeSource.NodeAddress(firstNode)
-	if err != nil {
-		return config, fmt.Errorf("error retrieving node addresses: %s", err)
+	var wg sync.WaitGroup
+
+	limiter := make(chan struct{}, config.ConcurrentPollers)
+
+	for _, n := range nodes {
+		// block if channel is full (limiting number of goroutines)
+		limiter <- struct{}{}
+		wg.Add(1)
+		go func(currentNode v1.Node) {
+			defer func() {
+				<-limiter
+				wg.Done()
+			}()
+			directlyConnected := false
+			ip, port, err := clientSetNodeSource.NodeAddress(&currentNode)
+			if err != nil {
+				log.Warnf("error retrieving node addresses: %s", err)
+				return
+			}
+			if directAllowed {
+				// test node direct connectivity
+				d := directNodeEndpoints(ip, port)
+				success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary())
+				if err != nil {
+					log.Warnf("Failed to connect to node [%s] directly with cause [%s]",
+						d.statsSummary(), err.Error())
+					atomic.AddInt32(&failedDirect, 1)
+				}
+				if success {
+					directlyConnected = true
+					atomic.AddInt32(&directNodes, 1)
+				}
+			}
+			if !directlyConnected {
+				p := setupProxyAPI(config.ClusterHostURL, currentNode.Name)
+				success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary())
+				if err != nil {
+					log.Warnf("Failed to connect to node [%s] via proxy with cause [%s]",
+						p.statsSummary(), err.Error())
+					atomic.AddInt32(&failedProxy, 1)
+				}
+				if success {
+					atomic.AddInt32(&proxyNodes, 1)
+				}
+			}
+		}(n)
+	}
+	log.Debugln("Currently Waiting for all node data to be gathered")
+	wg.Wait()
+	log.Infof("Of %d nodes, %d connected directly, %d connected via proxy, and %d could not be reached",
+		len(nodes), directNodes, proxyNodes, failedProxy)
+
+	if len(nodes) != int(directNodes+proxyNodes) {
+		pct := int(directNodes+proxyNodes) * 100 / len(nodes)
+		log.Warnf("Only %d percent of ready nodes could could be connected to, "+
+			"agent will operate in a limited mode.", pct)
 	}
 
-	if allowDirectConnect(config, nodes) {
-		// test node direct connectivity
-		d := directNodeEndpoints(ip, port)
-		success, err := checkEndpointConnections(config, &nodeHTTPClient, Direct, d.statsSummary())
-		if err != nil {
-			return config, err
-		}
-		if success {
-			return config, nil
-		}
+	if (directNodes + proxyNodes) == 0 {
+		return config, FatalNodeError
 	}
 
-	// test node connectivity via kube-proxy
-	p := setupProxyAPI(config.ClusterHostURL, firstNode.Name)
-	success, err := checkEndpointConnections(config, &config.HTTPClient, Proxy, p.statsSummary())
-	if err != nil {
-		return config, err
-	}
-	if success {
-		return config, nil
-	}
+	validateConfig(config, proxyNodes, directNodes)
+	return config, nil
+}
 
-	return config, FatalNodeError
+func validateConfig(config KubeAgentConfig, proxyNodes, directNodes int32) {
+	if proxyNodes > 0 {
+		config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, true)
+	} else if directNodes > 0 {
+		config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
+	} else {
+		config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Proxy, false)
+		config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, false)
+	}
 }
 
 func checkEndpointConnections(config KubeAgentConfig, client *http.Client, method Connection,
@@ -384,8 +436,7 @@ func checkEndpointConnections(config KubeAgentConfig, client *http.Client, metho
 	if err != nil {
 		return false, err
 	}
-	log.Infof("/stats/summary endpoint available via %s connection? %v", method, ns)
-	config.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, method, ns)
+	log.Infof("Node [%s] available via %s connection? %v", nodeStatSum, method, ns)
 
 	return ns, nil
 }
