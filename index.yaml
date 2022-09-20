@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   metrics-agent:
   - apiVersion: v2
+    appVersion: 2.11.1
+    created: "2022-09-20T13:37:31.961628446Z"
+    description: A Helm chart for Kubernetes
+    digest: f28fdc6d8743bc3d492bbc8568a02a5b2749221449320d3f0f901b759a5bb555
+    name: metrics-agent
+    type: application
+    urls:
+    - https://github.com/cloudability/metrics-agent/releases/download/metrics-agent-2.11.1/metrics-agent-2.11.1.tgz
+    version: 2.11.1
+  - apiVersion: v2
     appVersion: 2.11.0
     created: "2022-09-13T19:20:59.596349817Z"
     description: A Helm chart for Kubernetes
