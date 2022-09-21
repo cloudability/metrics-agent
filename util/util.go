@@ -30,9 +30,9 @@ func IsValidURL(toTest string) bool {
 	return err == nil
 }
 
-//TestHTTPConnection takes
-//a given client / URL(string) / bearerToken(string)/ retries count (int)
-//and returns true if response code is 2xx.
+// TestHTTPConnection takes
+// a given client / URL(string) / bearerToken(string)/ retries count (int)
+// and returns true if response code is 2xx.
 func TestHTTPConnection(testClient rest.HTTPClient,
 	URL, method, bearerToken string, retries uint, verbose bool) (successful bool, body *[]byte, err error) {
 	IsValidURL(URL)
@@ -69,7 +69,7 @@ func TestHTTPConnection(testClient rest.HTTPClient,
 
 }
 
-//CheckRequiredSettings checks for required min values / flags / environment variables
+// CheckRequiredSettings checks for required min values / flags / environment variables
 func CheckRequiredSettings(requiredArgs []string) error {
 
 	for _, a := range requiredArgs {
@@ -89,7 +89,7 @@ func CheckRequiredSettings(requiredArgs []string) error {
 	return nil
 }
 
-//CreateMetricSample creates a metric sample from a given directory removing the source directory if cleanup is true
+// CreateMetricSample creates a metric sample from a given directory removing the source directory if cleanup is true
 func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scratchDir string) (*os.File, error) {
 
 	ed, err := exportDirectory.Stat()
@@ -117,7 +117,7 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scrat
 		return nil, err
 	}
 
-	//cleanup directory after creating the sample
+	// cleanup directory after creating the sample
 	if cleanUp {
 		err = removeDirectoryContents(exportDirectory.Name() + "/")
 	}
@@ -130,7 +130,7 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scrat
 	return destFile, err
 }
 
-//createTGZ takes a source and variable writers and walks 'source' writing each file
+// createTGZ takes a source and variable writers and walks 'source' writing each file
 // found to the tar writer; the purpose for accepting multiple writers is to allow
 // for multiple outputs
 func createTGZ(src os.File, writers ...io.Writer) (rerr error) {
@@ -207,9 +207,9 @@ func getExportFilename(uid string) string {
 	return uid + "_" + t.Format("20060102150405")
 }
 
-//CreateMSWorkingDirectory takes a given prefix and returns a metric sample working directory
+// CreateMSWorkingDirectory takes a given prefix and returns a metric sample working directory
 func CreateMSWorkingDirectory(uid string, scratchDir string) (*os.File, error) {
-	//create metric sample directory
+	// create metric sample directory
 	td, err := ioutil.TempDir(scratchDir, "cldy-metrics")
 	if err != nil {
 		log.Errorf("Unable to create temporary directory: %v", err)
@@ -307,7 +307,7 @@ func MatchOneFile(directory string, pattern string) (fileName string, err error)
 	return "", fmt.Errorf("No matches found")
 }
 
-//SetupLogger sets configuration for the default logger
+// SetupLogger sets configuration for the default logger
 func SetupLogger() (err error) {
 
 	var (
@@ -336,7 +336,7 @@ func SetupLogger() (err error) {
 	return nil
 }
 
-//ValidateScratchDir validates whether or not the scratch directory exists or not
+// ValidateScratchDir validates whether or not the scratch directory exists or not
 func ValidateScratchDir(scratchDir string) error {
 	if _, err := os.Stat(scratchDir); os.IsNotExist(err) {
 		return fmt.Errorf("There was a problem validating provided scratch directory: %v", err)
