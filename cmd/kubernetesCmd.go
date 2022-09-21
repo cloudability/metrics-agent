@@ -29,7 +29,7 @@ var (
 
 func init() {
 
-	//add cobra and viper ENVs and flags
+	// add cobra and viper ENVs and flags
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.APIKey,
 		"api_key",

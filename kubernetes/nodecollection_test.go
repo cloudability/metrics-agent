@@ -557,7 +557,7 @@ func (tns testNodeSource) NodeAddress(node *v1.Node) (string, int32, error) {
 	return "", int32(0), nil
 }
 
-//launchTLSTestServer takes a slice of http status codes (int) to return
+// launchTLSTestServer takes a slice of http status codes (int) to return
 func launchTLSTestServer(responseCodes []int) *httptest.Server {
 	callCount := 0
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

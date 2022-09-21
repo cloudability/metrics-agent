@@ -100,7 +100,7 @@ func TestCheckRequiredSettings(t *testing.T) {
 		Run: func(cmd *cobra.Command, args []string) {},
 	}
 
-	//add cobra and viper ENVs and flags
+	// add cobra and viper ENVs and flags
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.APIKey,
 		"api_key",
@@ -208,7 +208,7 @@ func TestCreateMetricSample(t *testing.T) {
 			}
 			defer tgz.Close()
 
-			//clean up
+			// clean up
 			_ = os.Remove("/tmp/" + filepath.Base(testDataDirectory) + ".tgz")
 
 		} else {
@@ -292,7 +292,7 @@ func TestMatchOneFile(t *testing.T) {
 
 	})
 
-	//clean up
+	// clean up
 	_ = os.RemoveAll(dir)
 
 }
