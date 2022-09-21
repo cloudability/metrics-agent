@@ -97,11 +97,11 @@ const apiEndpoint string = "https://metrics-collector.cloudability.com"
 const forbiddenError string = uploadURIError + ": 403"
 const uploadURIError string = "Error retrieving upload URI"
 
-//nolint lll
+// nolint lll
 const transportError string = `Network transport issues are potentially blocking the agent from contacting the metrics collection API.
 	Please confirm that the metrics-agent is able to establish a connection to: %s`
 
-//nolint lll
+// nolint lll
 const apiKeyError string = `Current Cloudability API Key is expired and access needs to be re-enabled before re-provisioning the metrics-agent as detailed here: %s.
 	Please contact support to re-activate the API keys.
 	Note: Be sure to use the exact same cluster name as what is currently in use.

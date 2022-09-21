@@ -181,7 +181,7 @@ func createRandomMeasurement() measurement.Measurement {
 	return m
 }
 
-//nolint gocyclo
+// nolint gocyclo
 func TestSendMetricSample(t *testing.T) {
 	token := test.SecureRandomAlphaString(20)
 	contentTypeJson := "application/json"
@@ -540,7 +540,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 	})
 }
 
-//nolint gocyclo
+// nolint gocyclo
 func TestGetUploadURL(t *testing.T) {
 	token := test.SecureRandomAlphaString(20)
 	contentTypeJson := "application/json"
