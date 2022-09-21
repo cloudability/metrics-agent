@@ -37,13 +37,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-//ClusterVersion contains a concatenated version number as well as the k8s version discovery info
+// ClusterVersion contains a concatenated version number as well as the k8s version discovery info
 type ClusterVersion struct {
 	version     float64
 	versionInfo *version.Info
 }
 
-//KubeAgentConfig K8s agent configuration
+// KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
 	APIKey                string
 	BearerToken           string
@@ -111,7 +111,7 @@ const rbacError string = `RBAC role in the Cloudability namespace may need to be
 	`Note: Be sure to use the exact same cluster name as what is currently in use.
 	***IMPORTANT*** If the cluster is managed by GKE - there are special instructions for provisioning.`
 
-//CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
+// CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
 func CollectKubeMetrics(config KubeAgentConfig) {
 
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
@@ -156,7 +156,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 		case <-sendChan.C:
 
-			//Bundle raw metrics
+			// Bundle raw metrics
 			metricSample, err := util.CreateMetricSample(
 				*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true, kubeAgent.ScratchDir)
 			if err != nil {
@@ -168,7 +168,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 					log.Fatalf("Error creating metric sample: %s", err)
 				}
 			}
-			//Send metric sample
+			// Send metric sample
 			log.Info("Uploading Metrics")
 			go kubeAgent.sendMetrics(metricSample)
 
@@ -209,7 +209,7 @@ func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
 		log.Fatal(err)
 	}
 
-	//Create metric sample working directory
+	// Create metric sample working directory
 	config.msExportDirectory, err = util.CreateMSWorkingDirectory(config.clusterUID, config.ScratchDir)
 	if err != nil {
 		log.Fatalf("cloudability metric agent is unable to create a temporary working directory: %v", err)
@@ -593,7 +593,7 @@ func createKubeHTTPClient(config KubeAgentConfig) (KubeAgentConfig, error) {
 		tlsConfig *tls.Config
 	)
 
-	//Check for client side certificates / inClusterConfig
+	// Check for client side certificates / inClusterConfig
 	if config.Insecure {
 		transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -644,7 +644,7 @@ func createKubeHTTPClient(config KubeAgentConfig) (KubeAgentConfig, error) {
 
 }
 
-//CreateAgentStatusMetric creates a agent status measurement and returns a Cloudability Measurement
+// CreateAgentStatusMetric creates a agent status measurement and returns a Cloudability Measurement
 func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleStartTime time.Time) error {
 	var err error
 

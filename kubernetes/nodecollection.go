@@ -322,7 +322,7 @@ func connectionOptions(config KubeAgentConfig, n v1.Node, nd nodeFetchData, ns N
 	return connectionMethods
 }
 
-//ensureNodeSource validates connectivity to the kubelet metrics endpoints.
+// ensureNodeSource validates connectivity to the kubelet metrics endpoints.
 // Attempts direct connection to the node summary & container stats endpoint
 // if possible and allowed, otherwise attempts to connect via kube-proxy
 func ensureNodeSource(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {

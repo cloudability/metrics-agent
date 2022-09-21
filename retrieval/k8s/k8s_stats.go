@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//GetK8sMetrics returns cloudabilty measurements retrieved from a given K8S Clientset
+// GetK8sMetrics returns cloudabilty measurements retrieved from a given K8S Clientset
 func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.File, rawClient raw.Client) (err error) {
 
 	v1Sources, v1beta1Sources, v1AppSources := getk8sSourcePaths(clusterVersion)
