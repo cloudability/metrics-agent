@@ -39,7 +39,7 @@ spec:
             - name: "CLOUDABILITY_API_KEY"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "metrics-agent.fullname" . }}
+                  name: {{- if not .Values.secretName }} {{ include "metrics-agent.fullname" . }} {{- else }} {{ .Values.secretName }} {{- end }}
                   key: CLOUDABILITY_API_KEY
             - name: CLOUDABILITY_CLUSTER_NAME
               value: {{ .Values.clusterName }}

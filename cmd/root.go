@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-//RootCmd is the cobra root command to be executed
+// RootCmd is the cobra root command to be executed
 var RootCmd = &cobra.Command{
 	Use:              "metrics-agent [command] [flags]",
 	Short:            "Starts the Cloudability Metrics Agent",

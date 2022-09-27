@@ -23,7 +23,7 @@ const (
 	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
-//Client defines an HTTP Client
+// Client defines an HTTP Client
 type Client struct {
 	HTTPClient      *http.Client
 	insecure        bool
@@ -33,7 +33,7 @@ type Client struct {
 	parseMetricData bool
 }
 
-//NewClient creates a new raw.Client
+// NewClient creates a new raw.Client
 func NewClient(HTTPClient http.Client, insecure bool, bearerToken, bearerTokenPath string, retries uint,
 	parseMetricData bool) Client {
 	return Client{
@@ -46,7 +46,7 @@ func NewClient(HTTPClient http.Client, insecure bool, bearerToken, bearerTokenPa
 	}
 }
 
-//createRequest creates a HTTP request using a given client
+// createRequest creates a HTTP request using a given client
 func (c *Client) createRequest(method, url string, body io.Reader) (*http.Request, error) {
 
 	request, err := http.NewRequest(method, url, body)
@@ -61,7 +61,7 @@ func (c *Client) createRequest(method, url string, body io.Reader) (*http.Reques
 	return request, err
 }
 
-//GetRawEndPoint retrives the body of HTTP response from a given method ,
+// GetRawEndPoint retrives the body of HTTP response from a given method ,
 // sourcename, working directory, URL, and request body
 func (c *Client) GetRawEndPoint(method, sourceName string,
 	workDir *os.File, URL string, body []byte, verbose bool) (filename string, err error) {

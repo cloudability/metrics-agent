@@ -47,7 +47,7 @@ const proxyAuthHeader = "Proxy-Authorization"
 
 var /* const */ validToken = regexp.MustCompile(`^\w+$`)
 
-//Configuration represents configurable values for the Cloudability Client
+// Configuration represents configurable values for the Cloudability Client
 type Configuration struct {
 	Timeout       time.Duration
 	Token         string
@@ -59,7 +59,7 @@ type Configuration struct {
 	Verbose       bool
 }
 
-//NewHTTPMetricClient will configure a new instance of a Cloudability client.
+// NewHTTPMetricClient will configure a new instance of a Cloudability client.
 func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 
 	if cfg.Timeout.Seconds() > 60 {
@@ -133,7 +133,7 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 
 }
 
-//MetricClient represents a interface to send a cloudability measurement or metrics sample to an endpoint.
+// MetricClient represents a interface to send a cloudability measurement or metrics sample to an endpoint.
 type MetricClient interface {
 	SendMeasurement(measurements []measurement.Measurement) error
 	SendMetricSample(*os.File, string, string) error
@@ -149,7 +149,7 @@ type httpMetricClient struct {
 	maxRetries int
 }
 
-//MetricSampleResponse represents the response from the uploadmetrics endpoint
+// MetricSampleResponse represents the response from the uploadmetrics endpoint
 type MetricSampleResponse struct {
 	Location string `json:"location"`
 }
@@ -201,7 +201,7 @@ func (c httpMetricClient) SendMeasurement(measurements []measurement.Measurement
 	return nil
 }
 
-//SendMetricSample uploads a file at a given path to the metrics endpoint.
+// SendMetricSample uploads a file at a given path to the metrics endpoint.
 func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersion string, UID string) (rerr error) {
 	metricSampleURL := c.baseURL + "/metricsample"
 
@@ -417,7 +417,7 @@ func (c httpMetricClient) GetUploadURL(
 	return d.Location, hash, err
 }
 
-//GetB64MD5Hash returns base64 encoded MD5 Hash
+// GetB64MD5Hash returns base64 encoded MD5 Hash
 func GetB64MD5Hash(name string) (b64Hash string, rerr error) {
 	//nolint gosec
 	f, err := os.Open(name)
@@ -427,7 +427,7 @@ func GetB64MD5Hash(name string) (b64Hash string, rerr error) {
 
 	defer util.SafeClose(f.Close, &rerr)
 
-	// nolint gas
+	//nolint gas
 	h := md5.New()
 
 	if _, err := io.Copy(h, f); err != nil {

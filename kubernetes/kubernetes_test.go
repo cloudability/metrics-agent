@@ -195,7 +195,7 @@ func TestCreateAgentStatusMetric(t *testing.T) {
 	})
 }
 
-//nolint gocyclo
+// nolint gocyclo
 func TestCollectMetrics(t *testing.T) {
 
 	ts := NewTestServer()
