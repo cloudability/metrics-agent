@@ -5,6 +5,7 @@ metadata:
   name: {{ include "metrics-agent.fullname" . }}
   labels:
     {{- include "metrics-agent.labels" . | nindent 4 }}
+  namespace: {{ .Values.namespace }}
 roleRef:
   kind: Role
   name: {{ include "metrics-agent.fullname" . }}

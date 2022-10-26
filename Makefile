@@ -139,7 +139,7 @@ test-e2e-1.22: container-build-single-platform install-tools
 test-e2e-1.21.1: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-1.20: container-build-single-platform install-tools
+test-1e2e-1.20: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
 test-e2e-1.19: container-build-single-platform install-tools

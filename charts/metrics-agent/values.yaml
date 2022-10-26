@@ -6,6 +6,10 @@
 nameOverride: ""
 fullnameOverride: ""
 
+
+# The namespace to the helm chart resources will be deployed to. Default: cloudability
+namespace: "cloudability"
+
 # apiKey or secretName is REQUIRED.
 # You must generate a template to get your apiKey.
 # In the Cloudability app, go to Insights -> Containers, then click
