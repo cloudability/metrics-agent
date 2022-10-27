@@ -21,6 +21,11 @@ To install the metrics-agent chart:
 
     helm install metrics-agent --set apiKey=<yourApiKey> --set clusterName=<yourClusterName> metrics-agent/metrics-agent
 
+To install the metrics-agent chart where the api key is stored in a kubernetes secret
+    
+    kubectl create secret generic metrics-agent-secret --from-literal=CLOUDABILITY_API_KEY=<YourApiKey> -n cloudability
+    helm install metrics-agent --set secretName=metrics-agent-secret --set clusterName=<yourClusterName> metrics-agent/metrics-agent
+
 To uninstall the chart:
 
     helm delete metrics-agent
