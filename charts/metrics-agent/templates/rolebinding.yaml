@@ -5,7 +5,7 @@ metadata:
   name: {{ include "metrics-agent.fullname" . }}
   labels:
     {{- include "metrics-agent.labels" . | nindent 4 }}
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Values.namespace.name }}
 roleRef:
   kind: Role
   name: {{ include "metrics-agent.fullname" . }}
@@ -13,5 +13,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ include "metrics-agent.serviceAccountName" . }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.namespace.name }}
 {{- end }}

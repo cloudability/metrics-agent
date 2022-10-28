@@ -8,7 +8,9 @@ fullnameOverride: ""
 
 
 # The namespace to the helm chart resources will be deployed to. Default: cloudability
-namespace: "cloudability"
+namespace:
+  name: "cloudability"
+  create: true
 
 # apiKey or secretName is REQUIRED.
 # You must generate a template to get your apiKey.
@@ -16,7 +18,7 @@ namespace: "cloudability"
 # the provisioning cluster button that will take you through our provisioning workflow.
 apiKey: ""
 
-# You may also store the apikey in a secret and pull the apikey from there as well.
+# You may also store the apikey in a secret that is already created.
 # name of the secret already stored in k8s containing CLOUDABILITY_API_KEY.
 secretName: ""
 
