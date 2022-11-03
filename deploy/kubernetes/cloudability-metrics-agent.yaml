@@ -122,11 +122,11 @@ spec:
             allowPrivilegeEscalation: false
           resources:
             requests:
-              memory: "128Mi"
-              cpu: ".1"
-            limits:
-              memory: "1Gi"
+              memory: "2Gi"
               cpu: ".5"
+            limits:
+              memory: "4Gi"
+              cpu: "1"
           livenessProbe:
             exec:
               command:

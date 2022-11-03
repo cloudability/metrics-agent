@@ -80,6 +80,19 @@ Global Flags:
       --log_level string    Log level to run the agent at (INFO,WARN,DEBUG) (default "INFO")
 ```
 
+## Computing Resources for Metrics Agent
+
+The following recommendation is based on number of nodes in the cluster. It's for references only. The actual required resources depends on a number of factors such as number of nodes, pods, workload, etc. Please adjust the resources depending on your actual usage. By default, the helm installation and manifest file configures the first row (nodes < 100) from the reference table.
+
+| Number of Nodes | CPU Request | CPU Limit | Mem Request |  Mem Limit |
+| --- | --- | --- | --- | --- |
+| < 100 | 500m | 1000m | 2GBi | 4GBi |
+| 100-200 | 1000m | 1500m | 4GBi | 8GBi |
+| 200-500 | 1500m | 2000m | 8GBi | 16GBi |
+| 500-1000 | 2000m | 3000m | 16GBi | 24GBi |
+| 1000+ | 3000m |  | 24GBi |  |
+
+
 ## Development
 
 ### Dependency management

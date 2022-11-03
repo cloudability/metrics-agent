@@ -24,18 +24,18 @@ pollInterval: 180
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.11.2
+  tag: 2.11.3
   pullPolicy: Always
 
 imagePullSecrets: []
 
 resources:
   requests:
-    cpu: ".1"
-    memory: "128Mi"
-  limits:
     cpu: ".5"
-    memory: "1Gi"
+    memory: "2Gi"
+  limits:
+    cpu: "1.0"
+    memory: "4Gi"
 
 livenessProbe:
   exec:
