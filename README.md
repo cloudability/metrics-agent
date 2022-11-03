@@ -82,7 +82,7 @@ Global Flags:
 
 ## Computing Resources for Metrics Agent
 
-The following recommendation is based on number of nodes in the cluster. It's for references only. The actual required resources depends on a number of factors such as number of nodes, pods, workload, etc. Please adjust the resources depending on your actual usage. By default, the helm installation and manifest file configures the first row (nodes < 100>) from the reference table.
+The following recommendation is based on number of nodes in the cluster. It's for references only. The actual required resources depends on a number of factors such as number of nodes, pods, workload, etc. Please adjust the resources depending on your actual usage. By default, the helm installation and manifest file configures the first row (nodes < 100) from the reference table.
 
 | Number of Nodes | CPU Request | CPU Limit | Mem Request |  Mem Limit |
 | --- | --- | --- | --- | --- |
