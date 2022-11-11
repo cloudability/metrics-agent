@@ -20,7 +20,7 @@ Kubernetes versions 1.24 and below are supported by the metrics agent on GCP and
 
 #### 1.23 and below
 
-Kubernetes versions 1.24 and below are supported by the metrics agent on AWS cloud services
+Kubernetes versions 1.23 and below are supported by the metrics agent on AWS cloud services
 
 #### Architectures
 
