@@ -40,7 +40,7 @@ jobs:
   test_e2e:
     name: Test E2E AMD
     needs: build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.10
     steps:
       - uses: actions/setup-go@v2
         with:
