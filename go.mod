@@ -172,7 +172,6 @@ require (
 	github.com/yagipy/maintidx v1.0.0 // indirect
 	github.com/yeya24/promlinter v0.1.1-0.20210918184747-d757024714a1 // indirect
 	gitlab.com/bosi/decorder v0.2.1 // indirect
-	golang.org/dl v0.0.0-20221101163307-8012bed62c3d // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220921203646-d300de134e69 // indirect
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
