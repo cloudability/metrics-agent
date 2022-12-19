@@ -264,9 +264,9 @@ func (c httpMetricClient) retryWithBackoff(
 
 		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
 		if err != nil {
-			log.Infof("Successfully put sample with retry=%v", i)
-		} else {
 			log.Infof("Failed to put sample with error %v", err)
+		} else {
+			log.Infof("Successfully put sample with retry=%v", i)
 		}
 
 		if c.verbose {
