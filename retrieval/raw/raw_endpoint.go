@@ -2,15 +2,12 @@ package raw
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	v1 "k8s.io/api/core/v1"
 	"math"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -30,7 +27,6 @@ type Client struct {
 	BearerToken     string
 	BearerTokenPath string
 	retries         uint
-	parseMetricData bool
 }
 
 // NewClient creates a new raw.Client
@@ -42,7 +38,6 @@ func NewClient(HTTPClient http.Client, insecure bool, bearerToken, bearerTokenPa
 		BearerToken:     bearerToken,
 		BearerTokenPath: bearerTokenPath,
 		retries:         retries,
-		parseMetricData: parseMetricData,
 	}
 }
 
@@ -126,142 +121,10 @@ func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL 
 	defer util.SafeClose(rawRespFile.Close, &rerr)
 	filename = rawRespFile.Name()
 
-	if _, ok := ParsableFileSet[sourceName]; c.parseMetricData && ok {
-		err = parseAndWriteData(sourceName, resp.Body, rawRespFile)
-		return filename, err
-	}
-
 	_, err = io.Copy(rawRespFile, resp.Body)
 	if err != nil {
 		return filename, fmt.Errorf("error writing file: %s", rawRespFile.Name())
 	}
 
 	return filename, rerr
-}
-
-// TODO: investigate streamed json reading / writing
-func parseAndWriteData(filename string, reader io.Reader, writer io.Writer) error {
-	var to = getType(filename)
-	out := reflect.New(reflect.TypeOf(to))
-	err := json.NewDecoder(reader).Decode(out.Interface())
-
-	if err != nil {
-		return fmt.Errorf("unable to decode data for file: %s", filename)
-	}
-	to = sanitizeData(out.Elem().Interface())
-
-	data, err := json.Marshal(to)
-	if err != nil {
-		return fmt.Errorf("unable to marshal data for file: %s", filename)
-	}
-	_, err = io.Copy(writer, bytes.NewReader(data))
-	if err != nil {
-		return fmt.Errorf("error writing file: %s", filename)
-	}
-	return nil
-}
-
-func getType(filename string) interface{} {
-	var to interface{}
-	switch filename {
-	case Nodes:
-		to = NodeList{}
-	case Namespaces:
-		to = NamespaceList{}
-	case Pods:
-		to = PodList{}
-	case PersistentVolumes:
-		to = PersistentVolumeList{}
-	case PersistentVolumeClaims:
-		to = PersistentVolumeClaimList{}
-	case AgentMeasurement:
-		to = CldyAgent{}
-	case Services, ReplicationControllers:
-		to = LabelMapMatchedResourceList{}
-	case Deployments, ReplicaSets, Jobs, DaemonSets:
-		to = LabelSelectorMatchedResourceList{}
-	}
-	return to
-}
-
-func sanitizeData(to interface{}) interface{} {
-	switch to.(type) {
-	case LabelSelectorMatchedResourceList:
-		return sanitizeSelectorMatchedResourceList(to)
-	case PodList:
-		return sanitizePodList(to)
-	case LabelMapMatchedResourceList:
-		return sanitizeMapMatchedResourceList(to)
-	case NamespaceList:
-		return sanitizeNamespaceData(to)
-	}
-	return to
-}
-
-func sanitizeNamespaceData(to interface{}) interface{} {
-	cast := to.(NamespaceList)
-	for i := range cast.Items {
-		cast.Items[i].ObjectMeta.ManagedFields = nil
-	}
-	return cast
-}
-
-func sanitizeSelectorMatchedResourceList(to interface{}) interface{} {
-	cast := to.(LabelSelectorMatchedResourceList)
-	for i := range cast.Items {
-
-		// stripping env var and related data from the object
-		cast.Items[i].ObjectMeta.ManagedFields = nil
-		if _, ok := cast.Items[i].ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-			delete(cast.Items[i].ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-		}
-	}
-	return cast
-}
-
-func sanitizePodList(to interface{}) interface{} {
-	cast := to.(PodList)
-	for i := range cast.Items {
-
-		// stripping env var and related data from the object
-		cast.Items[i].ObjectMeta.ManagedFields = nil
-		if _, ok := cast.Items[i].ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-			delete(cast.Items[i].ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-		}
-		for j, container := range cast.Items[i].Spec.Containers {
-			cast.Items[i].Spec.Containers[j] = sanitizeContainer(container)
-		}
-		for j, container := range cast.Items[i].Spec.InitContainers {
-			cast.Items[i].Spec.InitContainers[j] = sanitizeContainer(container)
-		}
-	}
-	return cast
-}
-
-func sanitizeContainer(container v1.Container) v1.Container {
-	container.Env = nil
-	container.Command = nil
-	container.Args = nil
-	container.ImagePullPolicy = ""
-	container.LivenessProbe = nil
-	container.StartupProbe = nil
-	container.ReadinessProbe = nil
-	container.TerminationMessagePath = ""
-	container.TerminationMessagePolicy = ""
-	container.SecurityContext = nil
-	return container
-}
-
-func sanitizeMapMatchedResourceList(to interface{}) interface{} {
-	cast := to.(LabelMapMatchedResourceList)
-	for i := range cast.Items {
-
-		// stripping env var and related data from the object
-		cast.Items[i].ObjectMeta.ManagedFields = nil
-		if _, ok := cast.Items[i].ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-			delete(cast.Items[i].ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-		}
-		cast.Items[i].Finalizers = nil
-	}
-	return cast
 }

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"k8s.io/client-go/tools/cache"
 	"net/http"
 	"net/url"
 	"os"
@@ -84,6 +85,7 @@ type KubeAgentConfig struct {
 const uploadInterval time.Duration = 10
 const retryCount uint = 10
 const DefaultCollectionRetry = 1
+const DefaultInformerResync = 24
 
 // node connection methods
 const proxy = "proxy"
@@ -117,6 +119,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
 	log.Infof("Metric collection retry limit set to %d (default is %d)",
 		config.CollectionRetryLimit, DefaultCollectionRetry)
+	log.Debugf("Informer resync interval is set to %d (default is %d)",
+		config.InformerResyncInterval, DefaultInformerResync)
 
 	ctx := context.Background()
 
@@ -142,6 +146,17 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning non-fatal error: Agent error occurred retrieving runtime diagnostics: %s ", err)
 		log.Warnf("For more information see: %v", kbTroubleShootingURL)
 	}
+
+	// informer channel, closes only if metrics-agent stops executing
+	// closing this will kill all informers
+	informerStopCh := make(chan struct{})
+	// start up informers for each of the k8s resources that metrics are being collected on
+	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset, kubeAgent.ClusterVersion.version,
+		config.InformerResyncInterval, informerStopCh)
+	if err != nil {
+		log.Warnf("Warning: Informers failed to start up: %s", err)
+	}
+	defer close(informerStopCh)
 
 	err = downloadBaselineMetricExport(ctx, kubeAgent, clientSetNodeSource)
 
@@ -246,9 +261,8 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 		log.Warnf("Warning: %s", err)
 	}
 
-	// export additional metrics from the k8s api to the metric sample directory
-	err = k8s_stats.GetK8sMetrics(
-		config.ClusterHostURL, config.ClusterVersion.version, metricSampleDir, config.InClusterClient)
+	// export k8s resource metrics (ex: pods.jsonl) using informers to the metric sample directory
+	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir, config.ParseMetricData)
 	if err != nil {
 		return fmt.Errorf("unable to export k8s metrics: %s", err)
 	}
@@ -452,7 +466,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 		return updatedConfig, err
 	}
 	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
-		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit, config.ParseMetricData)
+		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit)
 
 	updatedConfig.clusterUID, err = getNamespaceUID(ctx, updatedConfig.Clientset, "default")
 	if err != nil {

@@ -1,82 +1,261 @@
 package k8s
 
 import (
-	"net/http"
+	"bufio"
+	"encoding/json"
+	"errors"
+	v1apps "k8s.io/api/apps/v1"
+	v1batch "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"os"
+	"time"
+)
 
-	"github.com/cloudability/metrics-agent/retrieval/raw"
-	log "github.com/sirupsen/logrus"
+const (
+	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
 // GetK8sMetrics returns cloudabilty measurements retrieved from a given K8S Clientset
 func GetK8sMetrics(clusterHostURL string, clusterVersion float64, workDir *os.File, rawClient raw.Client) (err error) {
 
-	v1Sources, v1beta1Sources, v1AppSources := getk8sSourcePaths(clusterVersion)
+	// v1Sources
+	replicationControllerInformer := factory.Core().V1().ReplicationControllers().Informer()
+	servicesInformer := factory.Core().V1().Services().Informer()
+	nodesInformer := factory.Core().V1().Nodes().Informer()
+	podsInformer := factory.Core().V1().Pods().Informer()
+	persistentVolumesInformer := factory.Core().V1().PersistentVolumes().Informer()
+	persistentVolumeClaimsInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
+	namespacesInformer := factory.Core().V1().Namespaces().Informer()
+	// AppSources
+	replicasetsInformer := factory.Apps().V1().ReplicaSets().Informer()
+	daemonsetsInformer := factory.Apps().V1().DaemonSets().Informer()
+	deploymentsInformer := factory.Apps().V1().Deployments().Informer()
+	// Jobs
+	jobsInformer := factory.Batch().V1().Jobs().Informer()
+	// Cronjobs were introduced in k8s 1.21 so for older versions do not attempt to create an informer
+	var cronJobsInformer cache.SharedIndexInformer
+	if clusterVersion > 1.20 {
+		cronJobsInformer = factory.Batch().V1().CronJobs().Informer()
+	}
 
-	// get v1 sources
-	for _, v1s := range v1Sources {
-		_, err := rawClient.GetRawEndPoint(http.MethodGet, v1s, workDir, clusterHostURL+"/api/v1/"+v1s, nil, true)
+	// runs in background, starts all informers that are a part of the factory
+	factory.Start(stopCh)
+	// wait until all informers have successfully synced
+	factory.WaitForCacheSync(stopCh)
+
+	var clusterInformers = map[string]*cache.SharedIndexInformer{
+		"replicationcontrollers": &replicationControllerInformer,
+		"services":               &servicesInformer,
+		"nodes":                  &nodesInformer,
+		"pods":                   &podsInformer,
+		"persistentvolumes":      &persistentVolumesInformer,
+		"persistentvolumeclaims": &persistentVolumeClaimsInformer,
+		"replicasets":            &replicasetsInformer,
+		"daemonsets":             &daemonsetsInformer,
+		"deployments":            &deploymentsInformer,
+		"namespaces":             &namespacesInformer,
+		"jobs":                   &jobsInformer,
+		"cronjobs":               &cronJobsInformer,
+	}
+	return clusterInformers, nil
+}
+
+//GetK8sMetricsFromInformer loops through all k8s resource informers in kubeAgentConfig writing each to the WSD
+func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
+	workDir *os.File, parseMetricData bool) error {
+	for resourceName, informer := range informers {
+		// Cronjob informer will be nil if k8s version is less than 1.21, if so skip getting the list of cronjobs
+		if *informer == nil {
+			continue
+		}
+		resourceList := (*informer).GetIndexer().List()
+		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData)
+
 		if err != nil {
-			log.Errorf("Error retrieving "+v1s+" metric endpoint: %s", err)
 			return err
 		}
 	}
+	return nil
+}
 
-	// get v1beta1 sources
-	for _, v1b1s := range v1beta1Sources {
-		_, err := rawClient.GetRawEndPoint(
-			http.MethodGet, v1b1s, workDir, clusterHostURL+"/apis/extensions/v1beta1/"+v1b1s, nil, true)
-		if err != nil {
-			log.Errorf("Error retrieving "+v1b1s+" metric endpoint: %s", err)
-			return err
-		}
-	}
+//writeK8sResourceFile creates a new file in the upload sample directory for the resource name passed in and writes data
+func writeK8sResourceFile(workDir *os.File, resourceName string,
+	resourceList []interface{}, parseMetricData bool) (rerr error) {
 
-	// get v1 App sources
-	for _, v1Apps := range v1AppSources {
-		_, err := rawClient.GetRawEndPoint(http.MethodGet, v1Apps, workDir, clusterHostURL+"/apis/apps/v1/"+v1Apps, nil, true)
-		if err != nil {
-			log.Errorf("Error retrieving "+v1Apps+" metric endpoint: %s", err)
-			return err
-		}
-	}
-
-	// get jobs
-	_, err = rawClient.GetRawEndPoint(http.MethodGet, "jobs", workDir, clusterHostURL+"/apis/batch/v1/jobs", nil, true)
+	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl",
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Errorf("Error retrieving jobs metric endpoint: %s", err)
+		return errors.New("error: unable to create kubernetes metric file")
+	}
+	datawriter := bufio.NewWriter(file)
+
+	for _, k8Resource := range resourceList {
+
+		if parseMetricData {
+			k8Resource = sanitizeData(k8Resource)
+		}
+
+		data, err := json.Marshal(k8Resource)
+
+		if err != nil {
+			return errors.New("error: unable to marshal resource: " + resourceName)
+		}
+		_, err = datawriter.WriteString(string(data) + "\n")
+		if err != nil {
+			return errors.New("error: unable to write resource to file: " + resourceName)
+		}
+	}
+
+	err = datawriter.Flush()
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
 		return err
 	}
 
 	return err
 }
 
-func getk8sSourcePaths(clusterVersion float64) (v1Sources []string, v1beta1Sources []string, v1AppSources []string) {
-	commonSrcs := []string{
-		"replicasets",
-		"daemonsets",
-		"deployments",
+//nolint: gocyclo
+func sanitizeData(to interface{}) interface{} {
+	switch to.(type) {
+	case *corev1.Pod:
+		return sanitizePod(to)
+	case *v1apps.DaemonSet:
+		cast := to.(*v1apps.DaemonSet)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Template = corev1.PodTemplateSpec{}
+		cast.Spec.RevisionHistoryLimit = nil
+		cast.Spec.UpdateStrategy = v1apps.DaemonSetUpdateStrategy{}
+		cast.Spec.MinReadySeconds = 0
+		cast.Spec.RevisionHistoryLimit = nil
+		return cast
+	case *v1apps.ReplicaSet:
+		cast := to.(*v1apps.ReplicaSet)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Replicas = nil
+		cast.Spec.Template = corev1.PodTemplateSpec{}
+		cast.Spec.MinReadySeconds = 0
+		return cast
+	case *v1apps.Deployment:
+		cast := to.(*v1apps.Deployment)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Template = corev1.PodTemplateSpec{}
+		cast.Spec.Replicas = nil
+		cast.Spec.Strategy = v1apps.DeploymentStrategy{}
+		cast.Spec.MinReadySeconds = 0
+		cast.Spec.RevisionHistoryLimit = nil
+		cast.Spec.ProgressDeadlineSeconds = nil
+		return cast
+	case *v1batch.Job:
+		cast := to.(*v1batch.Job)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Template = corev1.PodTemplateSpec{}
+		cast.Spec.Parallelism = nil
+		cast.Spec.Completions = nil
+		cast.Spec.ActiveDeadlineSeconds = nil
+		cast.Spec.BackoffLimit = nil
+		cast.Spec.ManualSelector = nil
+		cast.Spec.TTLSecondsAfterFinished = nil
+		cast.Spec.CompletionMode = nil
+		cast.Spec.Suspend = nil
+		return cast
+	case *v1batch.CronJob:
+		cast := to.(*v1batch.CronJob)
+		sanitizeMeta(&cast.ObjectMeta)
+		// cronjobs have no Selector
+		cast.Spec = v1batch.CronJobSpec{}
+		return cast
+	case *corev1.Service:
+		cast := to.(*corev1.Service)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Ports = nil
+		cast.Spec.ClusterIP = ""
+		cast.Spec.ClusterIPs = nil
+		cast.Spec.Type = ""
+		cast.Spec.ExternalIPs = nil
+		cast.Spec.SessionAffinity = ""
+		cast.Spec.LoadBalancerIP = ""
+		cast.Spec.LoadBalancerSourceRanges = nil
+		cast.Spec.ExternalName = ""
+		cast.Spec.ExternalTrafficPolicy = ""
+		cast.Spec.HealthCheckNodePort = 0
+		cast.Spec.SessionAffinityConfig = nil
+		cast.Spec.IPFamilies = nil
+		cast.Spec.IPFamilyPolicy = nil
+		cast.Spec.AllocateLoadBalancerNodePorts = nil
+		cast.Spec.LoadBalancerClass = nil
+		cast.Spec.InternalTrafficPolicy = nil
+		return cast
+	case *corev1.ReplicationController:
+		cast := to.(*corev1.ReplicationController)
+		sanitizeMeta(&cast.ObjectMeta)
+		cast.Spec.Replicas = nil
+		cast.Spec.Template = nil
+		cast.Spec.MinReadySeconds = 0
+		return cast
+	case *corev1.Namespace:
+		return sanitizeNamespace(to)
+	case *corev1.PersistentVolume:
+		cast := to.(*corev1.PersistentVolume)
+		sanitizeMeta(&cast.ObjectMeta)
+		return cast
+	case *corev1.PersistentVolumeClaim:
+		cast := to.(*corev1.PersistentVolumeClaim)
+		sanitizeMeta(&cast.ObjectMeta)
+		return cast
+	case *corev1.Node:
+		cast := to.(*corev1.Node)
+		sanitizeMeta(&cast.ObjectMeta)
+		return cast
 	}
-	v1Sources = []string{
-		"namespaces",
-		"replicationcontrollers",
-		"services",
-		"nodes",
-		"pods",
-		"persistentvolumes",
-		"persistentvolumeclaims",
+	return to
+}
+
+func sanitizeMeta(objectMeta *metav1.ObjectMeta) {
+	objectMeta.ManagedFields = nil
+	delete(objectMeta.Annotations, KubernetesLastAppliedConfig)
+	objectMeta.Finalizers = nil
+}
+
+func sanitizePod(to interface{}) interface{} {
+	cast := to.(*corev1.Pod)
+
+	// stripping env var and related data from the object
+	(*cast).ObjectMeta.ManagedFields = nil
+	delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+
+	for j, container := range (*cast).Spec.Containers {
+		(*cast).Spec.Containers[j] = sanitizeContainer(container)
 	}
-
-	v1beta1Sources = []string{}
-	v1AppSources = []string{}
-
-	// common sources [deployments, replicasets, daemonsets] moved from beta to apps v1.16 onward
-	if clusterVersion < 1.16 {
-		v1beta1Sources = append(v1beta1Sources, commonSrcs...)
-	} else {
-		v1AppSources = append(v1AppSources, commonSrcs...)
+	for j, container := range (*cast).Spec.InitContainers {
+		(*cast).Spec.InitContainers[j] = sanitizeContainer(container)
 	}
+	return cast
+}
 
-	return v1Sources, v1beta1Sources, v1AppSources
+func sanitizeContainer(container corev1.Container) corev1.Container {
+	container.Env = nil
+	container.Command = nil
+	container.Args = nil
+	container.ImagePullPolicy = ""
+	container.LivenessProbe = nil
+	container.StartupProbe = nil
+	container.ReadinessProbe = nil
+	container.TerminationMessagePath = ""
+	container.TerminationMessagePolicy = ""
+	container.SecurityContext = nil
+	return container
+}
 
+func sanitizeNamespace(to interface{}) interface{} {
+	cast := to.(*corev1.Namespace)
+	(*cast).ObjectMeta.ManagedFields = nil
+	return cast
 }

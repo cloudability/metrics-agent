@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"k8s.io/client-go/tools/cache"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,7 +14,11 @@ import (
 	"testing"
 	"time"
 
+	fcache "k8s.io/client-go/tools/cache/testing"
+
 	"github.com/cloudability/metrics-agent/retrieval/raw"
+	v1apps "k8s.io/api/apps/v1"
+	v1batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -228,6 +233,15 @@ func TestCollectMetrics(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error opening temp dir: %v", err)
 	}
+	// tmp dir for parseMetricsCollectionTest
+	dir2, err := ioutil.TempDir("", "TestCollectMetricsParseMetrics")
+	if err != nil {
+		t.Errorf("error creating temp dir2: %v", err)
+	}
+	tDir2, err := os.Open(dir2)
+	if err != nil {
+		t.Errorf("Error opening temp dir2: %v", err)
+	}
 
 	ka := KubeAgentConfig{
 		ClusterVersion: ClusterVersion{
@@ -257,7 +271,7 @@ func TestCollectMetrics(t *testing.T) {
 	}
 	ka.BearerTokenPath = wd + "/testdata/mockToken"
 
-	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, ka.BearerTokenPath, 0, false)
+	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, ka.BearerTokenPath, 0)
 	fns := NewClientsetNodeSource(cs)
 
 	t.Run("Ensure that a collection occurs", func(t *testing.T) {
@@ -315,6 +329,83 @@ func TestCollectMetrics(t *testing.T) {
 				t.Errorf("Expected file name %s instead got %s", n, nodeSummaryFiles[i])
 			}
 		}
+	})
+	t.Run("Ensure collection occurs with parseMetrics is disabled"+
+		" ensure sensitive data is not stripped", func(t *testing.T) {
+
+		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				t.Error(err)
+			}
+			if strings.Contains(info.Name(), "jsonl") {
+				in, err := os.ReadFile(path)
+				if err != nil {
+					t.Error(err)
+				}
+				if strings.Contains(info.Name(), "pods") {
+					// check if secrets were not stripped from pods if parseMetrics is false
+					if !strings.Contains(string(in), "ReallySecretStuff") {
+						t.Error("Original file should have contained secret, but did not")
+					}
+				} else if strings.Contains(info.Name(), "namespaces") {
+					// check if secrets were not stripped from namespaces if parseMetrics is false
+					if !strings.Contains(string(in), "ManageFieldToBeDeleted") {
+						t.Error("Original file should have contained ManagedField data, but did not")
+					}
+				} else if strings.Contains(info.Name(), "deployments") {
+					// check if sensitive fields were not stripped from deployments if parseMetrics is false
+					if !strings.Contains(string(in), "DangThisIsSecret") {
+						t.Error("Original file should have contained sensitive data, but did not")
+					}
+				} else {
+					// all other jsonl share the same annotation that should not be removed
+					if !strings.Contains(string(in), "IAmSecretEnvVariables") {
+						t.Error("Original file should have contained sensitive data, but did not")
+					}
+				}
+			}
+			return nil
+		})
+	})
+	t.Run("Ensure collection occurs with parseMetrics enabled"+
+		"ensure sensitive data is stripped", func(t *testing.T) {
+		err = kubeAgentParseMetrics.collectMetrics(context.TODO(), kubeAgentParseMetrics, cs, fns)
+		if err != nil {
+			t.Error(err)
+		}
+		filepath.Walk(kubeAgentParseMetrics.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				t.Error(err)
+			}
+			if strings.Contains(info.Name(), "jsonl") {
+				in, err := os.ReadFile(path)
+				if err != nil {
+					t.Error(err)
+				}
+				if strings.Contains(info.Name(), "pods") {
+					// check if secrets were stripped from pods if parseMetrics is true
+					if strings.Contains(string(in), "ReallySecretStuff") {
+						t.Error("Stripped file should not have contained secret, but did")
+					}
+				} else if strings.Contains(info.Name(), "namespaces") {
+					// check if sensitive fields were stripped from namespaces if parseMetrics is true
+					if strings.Contains(string(in), "ManageFieldToBeDeleted") {
+						t.Error("Stripped file should not have contained ManagedField data, but did")
+					}
+				} else if strings.Contains(info.Name(), "deployments") {
+					// check if sensitive fields were stripped from deployments if parseMetrics is true
+					if strings.Contains(string(in), "DangThisIsSecret") {
+						t.Error("Stripped file should not have contained sensitive data, but did")
+					}
+				} else {
+					// all other jsonl share the same annotation that should be removed
+					if strings.Contains(string(in), "IAmSecretEnvVariables") {
+						t.Error("Stripped file should not have contained sensitive data, but did")
+					}
+				}
+			}
+			return nil
+		})
 	})
 
 }
@@ -397,4 +488,129 @@ func NewTestServer() *httptest.Server {
 
 	}))
 	return ts
+}
+
+//nolint: lll
+func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
+	// create mock informers for each resource we collect k8s metrics on
+	replicationControllers := fcache.NewFakeControllerSource()
+	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	services := fcache.NewFakeControllerSource()
+	sinformer := cache.NewSharedInformer(services, &v1.Service{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	nodes := fcache.NewFakeControllerSource()
+	ninformer := cache.NewSharedInformer(nodes, &v1.Node{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	pods := fcache.NewFakeControllerSource()
+	pinformer := cache.NewSharedInformer(pods, &v1.Pod{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	persistentVolumes := fcache.NewFakeControllerSource()
+	pvinformer := cache.NewSharedInformer(persistentVolumes, &v1.PersistentVolume{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	persistentVolumeClaims := fcache.NewFakeControllerSource()
+	pvcinformer := cache.NewSharedInformer(persistentVolumeClaims, &v1.PersistentVolumeClaim{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	replicaSets := fcache.NewFakeControllerSource()
+	rsinformer := cache.NewSharedInformer(replicaSets, &v1apps.ReplicaSet{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	daemonSets := fcache.NewFakeControllerSource()
+	dsinformer := cache.NewSharedInformer(daemonSets, &v1apps.DaemonSet{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	deployments := fcache.NewFakeControllerSource()
+	dinformer := cache.NewSharedInformer(deployments, &v1apps.Deployment{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	namespaces := fcache.NewFakeControllerSource()
+	nainformer := cache.NewSharedInformer(namespaces, &v1.Namespace{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	jobs := fcache.NewFakeControllerSource()
+	jinformer := cache.NewSharedInformer(jobs, &v1batch.Job{}, 1*time.Second).(cache.SharedIndexInformer)
+
+	var cjinformer cache.SharedIndexInformer
+	var cronJobs *fcache.FakeControllerSource
+	if clusterVersion > 1.20 {
+		cronJobs = fcache.NewFakeControllerSource()
+		cjinformer = cache.NewSharedInformer(cronJobs, &v1batch.CronJob{}, 1*time.Second).(cache.SharedIndexInformer)
+	}
+
+	mockInformers := map[string]*cache.SharedIndexInformer{
+		"replicationcontrollers": &rcinformer,
+		"services":               &sinformer,
+		"nodes":                  &ninformer,
+		"pods":                   &pinformer,
+		"persistentvolumes":      &pvinformer,
+		"persistentvolumeclaims": &pvcinformer,
+		"replicasets":            &rsinformer,
+		"daemonsets":             &dsinformer,
+		"deployments":            &dinformer,
+		"namespaces":             &nainformer,
+		"jobs":                   &jinformer,
+		"cronjobs":               &cjinformer,
+	}
+	// Call the Run function for each Informer, allowing the informers to listen for Add events
+	startMockInformers(mockInformers, stopCh)
+
+	// Private Annotation to be removed if ParseMetrics is enabled
+	annotation := map[string]string{
+		"kubectl.kubernetes.io/last-applied-configuration": "IAmSecretEnvVariables",
+	}
+
+	// now add items to informers after they are running
+	replicationControllers.Add(&v1.ReplicationController{ObjectMeta: metav1.ObjectMeta{Name: "rc1", Annotations: annotation}})
+	services.Add(&v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s1", Annotations: annotation}})
+	nodes.Add(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1", Annotations: annotation}})
+	persistentVolumes.Add(&v1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv1", Annotations: annotation}})
+	persistentVolumeClaims.Add(&v1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "pvc1", Annotations: annotation}})
+	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs1", Annotations: annotation}})
+	daemonSets.Add(&v1apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "ds1", Annotations: annotation}})
+	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job1", Annotations: annotation}})
+	if clusterVersion > 1.20 {
+		cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1", Annotations: annotation}})
+	}
+
+	// pods is unique as we use this pod file for parseMetrics testing
+	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
+	podData, err := ioutil.ReadFile("../testdata/pods.jsonl")
+	if err != nil {
+		return nil, err
+	}
+	var myPod *v1.Pod
+	err = json.Unmarshal(podData, &myPod)
+	if err != nil {
+		return nil, err
+	}
+	pods.Add(myPod)
+	// namespace also used in testing
+	namespaceData, err := ioutil.ReadFile("../testdata/namespaces.jsonl")
+	if err != nil {
+		return nil, err
+	}
+	var myNamespace *v1.Namespace
+	err = json.Unmarshal(namespaceData, &myNamespace)
+	if err != nil {
+		return nil, err
+	}
+	namespaces.Add(myNamespace)
+	// deployments also used in testing
+	deploymentData, err := ioutil.ReadFile("../testdata/deployments.jsonl")
+	if err != nil {
+		return nil, err
+	}
+	var myDeployment *v1apps.Deployment
+	err = json.Unmarshal(deploymentData, &myDeployment)
+	if err != nil {
+		return nil, err
+	}
+	deployments.Add(myDeployment)
+
+	return mockInformers, nil
+}
+
+func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, stopCh chan struct{}) {
+	for _, informer := range mockInformers {
+		if (*informer) == nil {
+			continue
+		}
+		go (*informer).Run(stopCh)
+	}
 }
