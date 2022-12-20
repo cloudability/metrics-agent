@@ -64,7 +64,7 @@ container-build-beta:
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION)-beta \
+	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION)-beta-with-curl \
 	-t $(PREFIX)/metrics-agent:beta-latest -f deploy/docker/Dockerfile . --push
 
 # Build a local container image with the linux AMD architecture
