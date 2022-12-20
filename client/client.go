@@ -265,17 +265,14 @@ func (c httpMetricClient) retryWithBackoff(
 		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
 		if err != nil {
 			log.Infof("Failed to put sample with error %v", err)
-		} else {
-			log.Infof("Successfully put sample with retry=%v", i)
-		}
-
-		if c.verbose {
 			reponseDump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
 				log.Errorln(err)
 				continue
 			}
 			log.Infoln(string(reponseDump))
+		} else {
+			log.Infof("Successfully put sample with retry=%v", i)
 		}
 
 		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
