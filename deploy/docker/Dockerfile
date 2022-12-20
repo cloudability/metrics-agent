@@ -13,13 +13,15 @@ ENV GOOS=linux
 COPY . /go/src/${package}
 RUN go build
 
-FROM alpine/curl:3.14
+FROM alpine:3.15
 ARG package
 ARG application
 
 
 # Allow delve to run on Alpine based containers.
 RUN apk --update upgrade && apk add ca-certificates
+
+RUN apk add curl
 
 RUN addgroup -g 1000 agent && \
     adduser agent -S -u 1000 -s /bin/nologin -g metrics-agent -H -G agent
