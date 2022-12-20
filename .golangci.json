@@ -31,7 +31,7 @@
       "line-length": 120
     },
     "gocyclo": {
-      "min-complexity": 12
+      "min-complexity": 14
     }
   },
   "issues": {

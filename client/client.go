@@ -260,16 +260,19 @@ func (c httpMetricClient) retryWithBackoff(
 			log.Errorf("error encountered while retrieving upload location: %v", err)
 			continue
 		}
+		log.Infof("Successfully retrieved upload URL with retry=%v", i)
 
 		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
-
-		if c.verbose {
+		if err != nil {
+			log.Infof("Failed to put sample with error %v", err)
 			reponseDump, err := httputil.DumpResponse(resp, true)
 			if err != nil {
 				log.Errorln(err)
 				continue
 			}
 			log.Infoln(string(reponseDump))
+		} else {
+			log.Infof("Successfully put sample with retry=%v", i)
 		}
 
 		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
@@ -317,12 +320,13 @@ func (c httpMetricClient) buildAndDoRequest(
 
 	metricFile, err = os.Open(metricFile.Name())
 	if err != nil {
-		log.Fatalf("Failed to open metric sample: %v", err)
+		log.Infof("Failed to open metric sample: %v", err)
 		return nil, err
 	}
 
 	fi, err := metricFile.Stat()
 	if err != nil {
+		log.Infof("Failed to read metric from file: %v", err)
 		return nil, err
 	}
 
@@ -330,6 +334,7 @@ func (c httpMetricClient) buildAndDoRequest(
 
 	req, err = http.NewRequest(http.MethodPut, metricSampleURL, metricFile)
 	if err != nil {
+		log.Infof("Failed to put metrics sample: %v", err)
 		return nil, err
 	}
 

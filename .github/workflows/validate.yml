@@ -13,7 +13,7 @@ jobs:
       - uses: snyk/actions/setup@master
       - uses: actions/checkout@v2
       - name: Snyk Test
-        run: snyk test  --severity-threshold=medium --org=cloudability
+        run: snyk test  --severity-threshold=high --org=cloudability
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       - name: Snyk monitor
