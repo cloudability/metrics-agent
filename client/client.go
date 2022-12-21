@@ -263,15 +263,7 @@ func (c httpMetricClient) retryWithBackoff(
 		log.Infof("Successfully retrieved upload URL with retry=%v", i)
 
 		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
-		if err != nil {
-			log.Infof("Failed to put sample with error %v", err)
-			reponseDump, err := httputil.DumpResponse(resp, true)
-			if err != nil {
-				log.Errorln(err)
-				continue
-			}
-			log.Infoln(string(reponseDump))
-		} else {
+		if err == nil {
 			log.Infof("Successfully put sample with retry=%v", i)
 		}
 
@@ -335,6 +327,12 @@ func (c httpMetricClient) buildAndDoRequest(
 	req, err = http.NewRequest(http.MethodPut, metricSampleURL, metricFile)
 	if err != nil {
 		log.Infof("Failed to put metrics sample: %v", err)
+		requestDump, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			log.Error(err)
+		}
+		log.Infoln(string(requestDump))
+		log.Infof("File info : %+v", metricFile)
 		return nil, err
 	}
 
