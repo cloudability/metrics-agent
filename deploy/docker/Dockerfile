@@ -21,9 +21,7 @@ ARG application
 # Allow delve to run on Alpine based containers.
 RUN apk --update upgrade && apk add ca-certificates
 
-RUN apk add --update libzip-dev curl-dev &&\
-    docker-php-ext-install curl && \
-    apk del gcc g++ &&\
+RUN apk add --update curl && \
     rm -rf /var/cache/apk/*
 
 RUN addgroup -g 1000 agent && \
