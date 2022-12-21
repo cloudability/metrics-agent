@@ -327,6 +327,7 @@ func (c httpMetricClient) buildAndDoRequest(
 	req, err = http.NewRequest(http.MethodPut, metricSampleURL, metricFile)
 	if err != nil {
 		log.Infof("Failed to put metrics sample: %v", err)
+		// dump request
 		requestDump, err := httputil.DumpRequest(req, true)
 		if err != nil {
 			log.Error(err)
