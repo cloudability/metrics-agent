@@ -65,7 +65,7 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	return clusterInformers, nil
 }
 
-//GetK8sMetricsFromInformer loops through all k8s resource informers in kubeAgentConfig writing each to the WSD
+// GetK8sMetricsFromInformer loops through all k8s resource informers in kubeAgentConfig writing each to the WSD
 func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 	workDir *os.File, parseMetricData bool) error {
 	for resourceName, informer := range informers {
@@ -83,7 +83,7 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 	return nil
 }
 
-//writeK8sResourceFile creates a new file in the upload sample directory for the resource name passed in and writes data
+// writeK8sResourceFile creates a new file in the upload sample directory for the resource name passed in and writes data
 func writeK8sResourceFile(workDir *os.File, resourceName string,
 	resourceList []interface{}, parseMetricData bool) (rerr error) {
 
@@ -123,7 +123,7 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	return err
 }
 
-//nolint: gocyclo
+// nolint: gocyclo
 func sanitizeData(to interface{}) interface{} {
 	switch to.(type) {
 	case *corev1.Pod:

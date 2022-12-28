@@ -182,8 +182,8 @@ var knownFileTypes = map[string]UnmarshalForK8sListFn{
 	"persistentvolumeclaims.jsonl": ByRefFnInformer(func(p *ParsedK8sLists) (interface{}, interface{}) {
 		return &p.PersistentVolumeClaims, &corev1.PersistentVolumeClaim{}
 	}),
-	"stats-summary-":             AsNodeSummary(false),
-	"baseline-summary-":          AsNodeSummary(true),
+	"stats-summary-":    AsNodeSummary(false),
+	"baseline-summary-": AsNodeSummary(true),
 }
 
 var agentFileTypes = map[string]bool{

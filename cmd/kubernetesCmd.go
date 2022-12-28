@@ -156,22 +156,22 @@ func init() {
 	RootCmd.AddCommand(kubernetesCmd)
 
 	config = kubernetes.KubeAgentConfig{
-		APIKey:                viper.GetString("api_key"),
-		ClusterName:           viper.GetString("cluster_name"),
-		PollInterval:          viper.GetInt("poll_interval"),
-		CollectionRetryLimit:  viper.GetUint("collection_retry_limit"),
-		OutboundProxy:         viper.GetString("outbound_proxy"),
-		OutboundProxyAuth:     viper.GetString("outbound_proxy_auth"),
-		OutboundProxyInsecure: viper.GetBool("outbound_proxy_insecure"),
-		Insecure:              viper.GetBool("insecure"),
-		Cert:                  viper.GetString("certificate_file"),
-		Key:                   viper.GetString("key_file"),
-		ConcurrentPollers:     viper.GetInt("number_of_concurrent_node_pollers"),
-		ForceKubeProxy:        viper.GetBool("force_kube_proxy"),
-		Namespace:             viper.GetString("namespace"),
-		ScratchDir:            viper.GetString("scratch_dir"),
+		APIKey:                 viper.GetString("api_key"),
+		ClusterName:            viper.GetString("cluster_name"),
+		PollInterval:           viper.GetInt("poll_interval"),
+		CollectionRetryLimit:   viper.GetUint("collection_retry_limit"),
+		OutboundProxy:          viper.GetString("outbound_proxy"),
+		OutboundProxyAuth:      viper.GetString("outbound_proxy_auth"),
+		OutboundProxyInsecure:  viper.GetBool("outbound_proxy_insecure"),
+		Insecure:               viper.GetBool("insecure"),
+		Cert:                   viper.GetString("certificate_file"),
+		Key:                    viper.GetString("key_file"),
+		ConcurrentPollers:      viper.GetInt("number_of_concurrent_node_pollers"),
+		ForceKubeProxy:         viper.GetBool("force_kube_proxy"),
+		Namespace:              viper.GetString("namespace"),
+		ScratchDir:             viper.GetString("scratch_dir"),
 		InformerResyncInterval: viper.GetInt("informer_resync_interval"),
-		ParseMetricData:       viper.GetBool("parse_metric_data"),
+		ParseMetricData:        viper.GetBool("parse_metric_data"),
 	}
 
 }
