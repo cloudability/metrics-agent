@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"k8s.io/client-go/tools/cache"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/cloudability/metrics-agent/client"
 	"github.com/cloudability/metrics-agent/measurement"
@@ -46,41 +47,41 @@ type ClusterVersion struct {
 
 // KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                string
-	BearerToken           string
-	BearerTokenPath       string
-	Cert                  string
-	ClusterName           string
-	ClusterHostURL        string
-	clusterUID            string
-	HeapsterURL           string
-	Key                   string
-	OutboundProxyAuth     string
-	OutboundProxy         string
-	provisioningID        string
-	ForceKubeProxy        bool
-	Insecure              bool
-	OutboundProxyInsecure bool
-	UseInClusterConfig    bool
-	PollInterval          int
-	ConcurrentPollers     int
-	CollectionRetryLimit  uint
-	failedNodeList        map[string]error
-	AgentStartTime        time.Time
-	Clientset             kubernetes.Interface
-	ClusterVersion        ClusterVersion
-	HeapsterProxyURL      url.URL
-	OutboundProxyURL      url.URL
-	HTTPClient            http.Client
-	NodeClient            raw.Client
-	InClusterClient       raw.Client
-	msExportDirectory     *os.File
-	TLSClientConfig       rest.TLSClientConfig
-	Namespace             string
-	ScratchDir            string
-	NodeMetrics           EndpointMask
-	Informers             map[string]*cache.SharedIndexInformer
-	ParseMetricData       bool
+	APIKey                 string
+	BearerToken            string
+	BearerTokenPath        string
+	Cert                   string
+	ClusterName            string
+	ClusterHostURL         string
+	clusterUID             string
+	HeapsterURL            string
+	Key                    string
+	OutboundProxyAuth      string
+	OutboundProxy          string
+	provisioningID         string
+	ForceKubeProxy         bool
+	Insecure               bool
+	OutboundProxyInsecure  bool
+	UseInClusterConfig     bool
+	PollInterval           int
+	ConcurrentPollers      int
+	CollectionRetryLimit   uint
+	failedNodeList         map[string]error
+	AgentStartTime         time.Time
+	Clientset              kubernetes.Interface
+	ClusterVersion         ClusterVersion
+	HeapsterProxyURL       url.URL
+	OutboundProxyURL       url.URL
+	HTTPClient             http.Client
+	NodeClient             raw.Client
+	InClusterClient        raw.Client
+	msExportDirectory      *os.File
+	TLSClientConfig        rest.TLSClientConfig
+	Namespace              string
+	ScratchDir             string
+	NodeMetrics            EndpointMask
+	Informers              map[string]*cache.SharedIndexInformer
+	ParseMetricData        bool
 	InformerResyncInterval int
 }
 
@@ -468,7 +469,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 		return updatedConfig, err
 	}
 	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
-		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit)
+		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit, config.ParseMetricData)
 
 	updatedConfig.clusterUID, err = getNamespaceUID(ctx, updatedConfig.Clientset, "default")
 	if err != nil {

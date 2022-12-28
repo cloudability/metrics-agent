@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	"k8s.io/client-go/tools/cache"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"k8s.io/client-go/tools/cache"
 
 	fcache "k8s.io/client-go/tools/cache/testing"
 
@@ -248,18 +249,18 @@ func TestCollectMetrics(t *testing.T) {
 			version:     1.1,
 			versionInfo: sv,
 		},
-		Clientset:             cs,
-		HTTPClient:            http.Client{},
-		msExportDirectory:     tDir,
-		UseInClusterConfig:    false,
-		ClusterHostURL:        ts.URL,
-		HeapsterURL:           ts.URL,
-		Insecure:              true,
-		BearerToken:           "",
-		BearerTokenPath:       "",
-		ForceKubeProxy:        false,
-		ConcurrentPollers:     10,
-		ParseMetricData:       false,
+		Clientset:          cs,
+		HTTPClient:         http.Client{},
+		msExportDirectory:  tDir,
+		UseInClusterConfig: false,
+		ClusterHostURL:     ts.URL,
+		HeapsterURL:        ts.URL,
+		Insecure:           true,
+		BearerToken:        "",
+		BearerTokenPath:    "",
+		ForceKubeProxy:     false,
+		ConcurrentPollers:  10,
+		ParseMetricData:    false,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
@@ -267,7 +268,6 @@ func TestCollectMetrics(t *testing.T) {
 	// set Direct as option as well
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 
-	ka.Informers, err = getMockInformers(ka.ClusterVersion.version)
 	stopCh := make(chan struct{})
 	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, stopCh)
 	if err != nil {
@@ -284,19 +284,19 @@ func TestCollectMetrics(t *testing.T) {
 			version:     1.22,
 			versionInfo: sv,
 		},
-		Clientset:             cs,
-		HTTPClient:            http.Client{},
-		msExportDirectory:     tDir2,
-		UseInClusterConfig:    false,
-		ClusterHostURL:        ts.URL,
-		HeapsterURL:           ts.URL,
-		Insecure:              true,
-		BearerToken:           "",
-		BearerTokenPath:       "",
-		ForceKubeProxy:        false,
-		ConcurrentPollers:     10,
-		ParseMetricData:       true,
-		Informers:             parseInformers,
+		Clientset:          cs,
+		HTTPClient:         http.Client{},
+		msExportDirectory:  tDir2,
+		UseInClusterConfig: false,
+		ClusterHostURL:     ts.URL,
+		HeapsterURL:        ts.URL,
+		Insecure:           true,
+		BearerToken:        "",
+		BearerTokenPath:    "",
+		ForceKubeProxy:     false,
+		ConcurrentPollers:  10,
+		ParseMetricData:    true,
+		Informers:          parseInformers,
 	}
 
 	wd, err := os.Getwd()
@@ -524,7 +524,7 @@ func NewTestServer() *httptest.Server {
 	return ts
 }
 
-//nolint: lll
+// nolint: lll
 func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
