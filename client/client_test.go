@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net"
 	"net/http"
@@ -81,7 +81,7 @@ func TestSendMeasurement(t *testing.T) {
 		if r.Header.Get(client.APIKeyHeader) != token {
 			t.Error("Expected token to be set on request")
 		}
-		bodyBytes, _ := ioutil.ReadAll(r.Body)
+		bodyBytes, _ := io.ReadAll(r.Body)
 		if !bytes.Equal(jsonBytes, bodyBytes) {
 			t.Errorf("Did not receive expect json.  Got %v, expected %v", string(bodyBytes), string(jsonBytes))
 		}

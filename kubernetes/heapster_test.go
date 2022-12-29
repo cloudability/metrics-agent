@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -71,7 +70,7 @@ func TestValidateHeapster(t *testing.T) {
 	t.Run("Ensure that a valid heapster service is found and responds with data", func(t *testing.T) {
 
 		testData := "../util/testdata/test-cluster-metrics-sample/sample-1510159016/heapster-metrics-export.json"
-		body, _ := ioutil.ReadFile(testData)
+		body, _ := os.ReadFile(testData)
 
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
@@ -111,13 +110,13 @@ func TestHandleBaselineHeapsterMetrics(t *testing.T) {
 	heapsterMetricExport := msd + "heapster-metrics-export.json"
 
 	_ = os.MkdirAll(msd, 0777)
-	_ = ioutil.WriteFile(baselineMetricSample, []byte("baseline"), 0777)
-	_ = ioutil.WriteFile(heapsterMetricExport, []byte("export"), 0777)
+	_ = os.WriteFile(baselineMetricSample, []byte("baseline"), 0777)
+	_ = os.WriteFile(heapsterMetricExport, []byte("export"), 0777)
 
 	t.Run("Ensure that heapster baseline is copied into metric sample directory ", func(t *testing.T) {
-		bme1, _ := ioutil.ReadFile(baselineMetricSample)
+		bme1, _ := os.ReadFile(baselineMetricSample)
 		err := handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample, heapsterMetricExport)
-		bme2, _ := ioutil.ReadFile(msd + "/baseline-metrics-export.json")
+		bme2, _ := os.ReadFile(msd + "/baseline-metrics-export.json")
 
 		if !bytes.Equal(bme1, bme2) || err != nil {
 			t.Errorf("Heapster baseline was not correcly copied into metric sample directory: %v", err)
@@ -130,8 +129,8 @@ func TestHandleBaselineHeapsterMetrics(t *testing.T) {
 
 			_ = handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample, heapsterMetricExport)
 
-			bme1, _ := ioutil.ReadFile(baselineMetricSample)
-			bme2, _ := ioutil.ReadFile(heapsterMetricExport)
+			bme1, _ := os.ReadFile(baselineMetricSample)
+			bme2, _ := os.ReadFile(heapsterMetricExport)
 
 			if bytes.Equal(bme1, bme2) {
 				t.Error("Heapster baseline was not correcly updated with the most recent sample from the collection")
@@ -143,7 +142,7 @@ func TestHandleBaselineHeapsterMetrics(t *testing.T) {
 
 		_ = os.Remove(baselineMetricSample)
 		baselineMetricSample := msExportDirectory + "/" + "baseline-metrics-export"
-		_ = ioutil.WriteFile(baselineMetricSample, []byte("baseline"), 0777)
+		_ = os.WriteFile(baselineMetricSample, []byte("baseline"), 0777)
 		_ = handleBaselineHeapsterMetrics(msExportDirectory, msd, baselineMetricSample, heapsterMetricExport)
 		if _, err := os.Stat(baselineMetricSample); err == nil {
 			t.Errorf("Heapster baseline without a json extension was not removed: %v", err)

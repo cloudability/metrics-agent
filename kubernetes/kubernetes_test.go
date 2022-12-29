@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -226,7 +225,7 @@ func TestCollectMetrics(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting server version: %v", err)
 	}
-	dir, err := ioutil.TempDir("", "TestCollectMetrics")
+	dir, err := os.MkdirTemp("", "TestCollectMetrics")
 	if err != nil {
 		t.Errorf("error creating temp dir: %v", err)
 	}
@@ -235,7 +234,7 @@ func TestCollectMetrics(t *testing.T) {
 		t.Errorf("Error opening temp dir: %v", err)
 	}
 	// tmp dir for parseMetricsCollectionTest
-	dir2, err := ioutil.TempDir("", "TestCollectMetricsParseMetrics")
+	dir2, err := os.MkdirTemp("", "TestCollectMetricsParseMetrics")
 	if err != nil {
 		t.Errorf("error creating temp dir2: %v", err)
 	}
@@ -604,7 +603,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 
 	// pods is unique as we use this pod file for parseMetrics testing
 	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
-	podData, err := ioutil.ReadFile("../testdata/pods.jsonl")
+	podData, err := os.ReadFile("../testdata/pods.jsonl")
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +614,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 	}
 	pods.Add(myPod)
 	// namespace also used in testing
-	namespaceData, err := ioutil.ReadFile("../testdata/namespaces.jsonl")
+	namespaceData, err := os.ReadFile("../testdata/namespaces.jsonl")
 	if err != nil {
 		return nil, err
 	}
@@ -626,7 +625,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 	}
 	namespaces.Add(myNamespace)
 	// deployments also used in testing
-	deploymentData, err := ioutil.ReadFile("../testdata/deployments.jsonl")
+	deploymentData, err := os.ReadFile("../testdata/deployments.jsonl")
 	if err != nil {
 		return nil, err
 	}

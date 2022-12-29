@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -623,7 +622,7 @@ func createKubeHTTPClient(config KubeAgentConfig) (KubeAgentConfig, error) {
 		return config, err
 	}
 
-	pemData, err := ioutil.ReadFile(config.TLSClientConfig.CAFile)
+	pemData, err := os.ReadFile(config.TLSClientConfig.CAFile)
 	if err != nil {
 		log.Fatalf("Could not load CA certificate: %v", err)
 	}
@@ -718,7 +717,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 		log.Errorf("An error occurred converting Cldy measure.  Error: %v", err)
 	}
 
-	err = ioutil.WriteFile(exportFile, cldyMetric, 0644)
+	err = os.WriteFile(exportFile, cldyMetric, 0644)
 	if err != nil {
 		log.Errorf("An error occurred creating a Cldy measure.  Error: %v", err)
 	}
@@ -796,7 +795,7 @@ func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, names
 
 // getBearerToken reads the service account token
 func getBearerToken(bearerTokenPath string) (string, error) {
-	token, err := ioutil.ReadFile(bearerTokenPath)
+	token, err := os.ReadFile(bearerTokenPath)
 	if err != nil {
 		return "", errors.New("could not read bearer token from file")
 	}

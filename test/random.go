@@ -1,10 +1,10 @@
 package test
 
 import (
-	"crypto/rand"
-	log "github.com/sirupsen/logrus"
 	r "math/rand"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -42,7 +42,7 @@ func SecureRandomAlphaString(length int) string {
 // SecureRandomBytes returns the requested number of bytes using crypto/rand
 func SecureRandomBytes(length int) []byte {
 	var randomBytes = make([]byte, length)
-	_, err := rand.Read(randomBytes)
+	_, err := r.Read(randomBytes)
 	if err != nil {
 		log.Fatal("Unable to generate random bytes")
 	}
