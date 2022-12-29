@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -149,6 +148,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
+	performConnectionChecks(config.APIKey)
+
 	log.Info("Cloudability Metrics Agent successfully started.")
 
 	for {
@@ -184,6 +185,27 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		}
 	}
 
+}
+
+func performConnectionChecks(apiKey string) {
+	log.Info("Performing connectivity checks")
+	metricsClient, err := client.NewHTTPMetricClient(client.Configuration{
+		Token: apiKey,
+	})
+	if err != nil {
+		log.Warnf("unable to perform connectivity check, continuing anyway, reason: %v", err)
+	} else {
+		var err error
+		err = metricsClient.TestAPIConnectivity()
+		if err != nil {
+			log.Warnf("unable to connect to cloudability API, reason: %v", err)
+		}
+
+		err = metricsClient.TestUploadConnectivity()
+		if err != nil {
+			log.Warnf("unable to connect to cloudability upload site, reason: %v", err)
+		}
+	}
 }
 
 func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
@@ -606,7 +628,7 @@ func createKubeHTTPClient(config KubeAgentConfig) (KubeAgentConfig, error) {
 		return config, err
 	}
 
-	pemData, err := ioutil.ReadFile(config.TLSClientConfig.CAFile)
+	pemData, err := os.ReadFile(config.TLSClientConfig.CAFile)
 	if err != nil {
 		log.Fatalf("Could not load CA certificate: %v", err)
 	}
@@ -700,7 +722,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 		log.Errorf("An error occurred converting Cldy measure.  Error: %v", err)
 	}
 
-	err = ioutil.WriteFile(exportFile, cldyMetric, 0644)
+	err = os.WriteFile(exportFile, cldyMetric, 0644)
 	if err != nil {
 		log.Errorf("An error occurred creating a Cldy measure.  Error: %v", err)
 	}
@@ -778,7 +800,7 @@ func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, names
 
 // getBearerToken reads the service account token
 func getBearerToken(bearerTokenPath string) (string, error) {
-	token, err := ioutil.ReadFile(bearerTokenPath)
+	token, err := os.ReadFile(bearerTokenPath)
 	if err != nil {
 		return "", errors.New("could not read bearer token from file")
 	}

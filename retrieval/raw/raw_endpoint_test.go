@@ -1,7 +1,6 @@
 package raw
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -56,7 +55,7 @@ func ensureThatErrorsAreHandled(t testing.TB) {
 		false,
 	)
 
-	wd, _ := ioutil.TempDir("", "raw_endpoint_test")
+	wd, _ := os.MkdirTemp("", "raw_endpoint_test")
 	workingDir, _ := os.Open(wd)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -93,10 +92,10 @@ func ensureThatFileCreated(t testing.TB, testData string, source string, parseDa
 		parseData,
 	)
 
-	wd, _ := ioutil.TempDir("", "raw_endpoint_test")
+	wd, _ := os.MkdirTemp("", "raw_endpoint_test")
 	workingDir, _ := os.Open(wd)
 
-	body, _ := ioutil.ReadFile(testData)
+	body, _ := os.ReadFile(testData)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write(body)
@@ -158,7 +157,7 @@ func ensureNetworkErrorsAreHandled(t testing.TB) {
 		false,
 	)
 
-	wd, _ := ioutil.TempDir("", "raw_endpoint_test")
+	wd, _ := os.MkdirTemp("", "raw_endpoint_test")
 	workingDir, _ := os.Open(wd)
 
 	_, err := client.GetRawEndPoint(http.MethodGet, "heapster", workingDir, "http://localhost:1234", nil, true)
