@@ -187,19 +187,38 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-func performConnectionChecks(kubeAgent *KubeAgentConfig) {
-	log.Info("Performing connectivity checks. Checking that the agent can retrieve S3 URL and upload to S3")
-	file, err := os.Create("/tmp/test.txt")
+func performConnectionChecks(ka *KubeAgentConfig) {
+	log.Info("Performing connectivity checks. Checking that the agent can retrieve S3 URL")
+
+	cldyMetricClient, err := client.NewHTTPMetricClient(client.Configuration{
+		Token:         ka.APIKey,
+		Verbose:       false,
+		ProxyURL:      ka.OutboundProxyURL,
+		ProxyAuth:     ka.OutboundProxyAuth,
+		ProxyInsecure: ka.OutboundProxyInsecure,
+	})
 	if err != nil {
-		log.Warnf("Failed to create test file /tmp/test.txt")
+		log.Fatalf("error creating Cloudability Metric client: %v ", err)
 	}
-	defer file.Close()
-	_, err = file.WriteString("Health check")
+
+	metricSampleURL := "https://metrics-collector.cloudability.com" + "/metricsample"
+
+	file, err := os.Create("/tmp/temp.txt")
 	if err != nil {
-		log.Warnf("Failed to write to file")
+		log.Warnf("Failed to create file temp.txt")
 	}
-	kubeAgent.sendMetrics(file)
-	log.Info("Connectivity check succeeded")
+
+	_, err = file.WriteString("Health Check")
+	if err != nil {
+		log.Warnf("Failed to write in file temp.txt")
+	}
+
+	_, _, err = cldyMetricClient.GetUploadURL(file, metricSampleURL, cldyVersion.VERSION, ka.clusterUID)
+	if err != nil {
+		log.Warnf("WARN: Failed to retrieve S3 URL with error: %v. Agent will fail to upload metrics!", err)
+	} else {
+		log.Info("Connectivity check succeeded")
+	}
 }
 
 func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
