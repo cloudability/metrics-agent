@@ -215,7 +215,8 @@ func performConnectionChecks(ka *KubeAgentConfig) {
 
 	_, _, err = cldyMetricClient.GetUploadURL(file, metricSampleURL, cldyVersion.VERSION, ka.clusterUID)
 	if err != nil {
-		log.Fatalf("WARN: Failed to retrieve S3 URL with error: %v. Agent will fail to upload metrics!", err)
+		log.Fatalf("FATAL: Failed to retrieve S3 URL with error: %v. Ensure CLOUDABILITY_API_KEY is valid"+
+			" and not expired", err)
 	} else {
 		log.Info("Connectivity check succeeded")
 	}
