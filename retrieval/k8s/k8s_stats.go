@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"os"
+	"time"
+
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -11,8 +14,6 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"os"
-	"time"
 )
 
 const (
@@ -83,7 +84,7 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 	return nil
 }
 
-// writeK8sResourceFile creates a new file in the upload sample directory for the resource name passed in and writes data
+// writeK8sResourceFile creates a new file in the upload sample directory for the resource name passed in and write data
 func writeK8sResourceFile(workDir *os.File, resourceName string,
 	resourceList []interface{}, parseMetricData bool) (rerr error) {
 
