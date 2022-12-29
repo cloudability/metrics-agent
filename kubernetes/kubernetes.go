@@ -148,7 +148,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	performConnectionChecks(config.APIKey)
+	performConnectionChecks(&kubeAgent)
 
 	log.Info("Cloudability Metrics Agent successfully started.")
 
@@ -187,25 +187,19 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-func performConnectionChecks(apiKey string) {
-	log.Info("Performing connectivity checks")
-	metricsClient, err := client.NewHTTPMetricClient(client.Configuration{
-		Token: apiKey,
-	})
+func performConnectionChecks(kubeAgent *KubeAgentConfig) {
+	log.Info("Performing connectivity checks. Checking that the agent can retrieve S3 URL and upload to S3")
+	file, err := os.Create("/tmp/test.txt")
 	if err != nil {
-		log.Warnf("unable to perform connectivity check, continuing anyway, reason: %v", err)
-	} else {
-		var err error
-		err = metricsClient.TestAPIConnectivity()
-		if err != nil {
-			log.Warnf("unable to connect to cloudability API, reason: %v", err)
-		}
-
-		err = metricsClient.TestUploadConnectivity()
-		if err != nil {
-			log.Warnf("unable to connect to cloudability upload site, reason: %v", err)
-		}
+		log.Warnf("Failed to create test file /tmp/test.txt")
 	}
+	defer file.Close()
+	_, err = file.WriteString("Health check")
+	if err != nil {
+		log.Warnf("Failed to write to file")
+	}
+	kubeAgent.sendMetrics(file)
+	log.Info("Connectivity check succeeded")
 }
 
 func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {

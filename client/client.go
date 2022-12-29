@@ -137,8 +137,6 @@ type MetricClient interface {
 	SendMeasurement(measurements []measurement.Measurement) error
 	SendMetricSample(*os.File, string, string) error
 	GetUploadURL(*os.File, string, string, string) (string, string, error)
-	TestAPIConnectivity() error
-	TestUploadConnectivity() error
 }
 
 type httpMetricClient struct {
@@ -148,46 +146,6 @@ type httpMetricClient struct {
 	token      string
 	verbose    bool
 	maxRetries int
-}
-
-func (c httpMetricClient) TestAPIConnectivity() error {
-	log.Infof("Testing presigned S3 URL api connectivity to %v (not validating credentials)", c.baseURL)
-	req, err := http.NewRequest(http.MethodGet, c.baseURL, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode < 500 {
-		log.Infof("Successfully tested connectivity to api, no 5xx gateway errors or timeouts connecting to %v",
-			c.baseURL)
-		return nil
-	}
-	return fmt.Errorf("cannot connect to Presigned S3 URL api, got a 5xx error response: %v %v",
-		resp.StatusCode, resp.Status)
-}
-
-func (c httpMetricClient) TestUploadConnectivity() error {
-	log.Infof("Testing upload connectivity to (not implemented)")
-	req, err := http.NewRequest(http.MethodGet, "https://cldy-cake-pipeline.s3.amazonaws.com", nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode < 500 {
-		log.Info("successfully tested connectivity to api, no 5xx gateway errors or timeouts connecting to upload bucket")
-		return nil
-	}
-	return fmt.Errorf("cannot connect to api, got a 5xx error response: %v %v", resp.StatusCode, resp.Status)
 }
 
 // MetricSampleResponse represents the response from the uploadmetrics endpoint
