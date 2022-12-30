@@ -188,7 +188,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 }
 
 func performConnectionChecks(ka *KubeAgentConfig) {
-	log.Info("Performing connectivity check. Verify that the agent can retrieve S3 URL from Cloudability")
+	log.Info("Performing connectivity checks. Checking that the agent can retrieve S3 URL")
 
 	cldyMetricClient, err := client.NewHTTPMetricClient(client.Configuration{
 		Token:         ka.APIKey,
@@ -203,7 +203,7 @@ func performConnectionChecks(ka *KubeAgentConfig) {
 
 	metricSampleURL := apiEndpoint + "/metricsample"
 
-	file, err := os.Create(ka.ScratchDir + "/healthcheck.txt")
+	file, err := os.Create("/tmp/temp.txt")
 	if err != nil {
 		log.Warnf("Failed to create file temp.txt")
 	}
@@ -215,15 +215,10 @@ func performConnectionChecks(ka *KubeAgentConfig) {
 
 	_, _, err = cldyMetricClient.GetUploadURL(file, metricSampleURL, cldyVersion.VERSION, ka.clusterUID)
 	if err != nil {
-		log.Fatalf("FATAL: Failed to retrieve S3 URL with error: %v. Ensure CLOUDABILITY_API_KEY is valid"+
-			" and not expired", err)
+		log.Warnf("WARNING: Failed to retrieve S3 URL with error: %v. Agent will fail to upload metrics to"+
+			" Cloudability", err)
 	} else {
 		log.Info("Connectivity check succeeded")
-	}
-	file.Close()
-	err = os.Remove(ka.ScratchDir + "/healthcheck.txt")
-	if err != nil {
-		log.Warnf("Failed to remove file")
 	}
 }
 
