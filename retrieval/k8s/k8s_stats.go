@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	v1apps "k8s.io/api/apps/v1"
 	v1batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,10 @@ const (
 	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
+// CurrentWSD global variable that stores updated current working directory
+var CurrentWSD, _ = os.OpenFile("TempWSD",
+	os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
 func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	resyncInterval int, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	factory := informers.NewSharedInformerFactory(clientset, time.Duration(resyncInterval)*time.Hour)
@@ -28,7 +33,42 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	replicationControllerInformer := factory.Core().V1().ReplicationControllers().Informer()
 	servicesInformer := factory.Core().V1().Services().Informer()
 	nodesInformer := factory.Core().V1().Nodes().Informer()
+
+	// For pods, we need a delete event to store data on pods that get deleted before being scraped by agent
 	podsInformer := factory.Core().V1().Pods().Informer()
+
+	podsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(obj interface{}) {
+
+			// open or create (if polling period has not happened yet in new WSD) Pods.jsonl
+			file, err := os.OpenFile(CurrentWSD.Name()+"/"+"pods.jsonl",
+				os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				log.Fatalf("Erorr opening file")
+				return
+			}
+			// prepare data writer for pods
+			datawriter := bufio.NewWriter(file)
+
+			// TODO implement sanitizing deleted pods
+			//if parseMetricData {
+			//	k8Resource = sanitizeData(k8Resource)
+			//}
+
+			podData, err := json.Marshal(obj)
+			if err != nil {
+				log.Fatalf("Failed to marshal deleted pod")
+				return
+			}
+			_, err = datawriter.WriteString(string(podData) + "\n")
+			if err != nil {
+				log.Fatalf("Failed to write deleted pod data to file")
+				return
+			}
+			log.Infof("Pod deleted!! %T", podData)
+		},
+	})
+
 	persistentVolumesInformer := factory.Core().V1().PersistentVolumes().Informer()
 	persistentVolumeClaimsInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
 	namespacesInformer := factory.Core().V1().Namespaces().Informer()
@@ -76,7 +116,6 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 		}
 		resourceList := (*informer).GetIndexer().List()
 		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData)
-
 		if err != nil {
 			return err
 		}

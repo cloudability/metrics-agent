@@ -257,6 +257,8 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	if err != nil {
 		return err
 	}
+	// update where deletedPods.jsonl will be stored
+	k8s_stats.CurrentWSD = metricSampleDir
 
 	err = retrieveNodeSummaries(ctx, config, msd, metricSampleDir, nodeSource)
 	if err != nil {
