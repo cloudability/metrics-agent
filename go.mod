@@ -203,4 +203,4 @@ require (
 )
 
 //Some of our dependencies have not updated their dependency imports
-replace golang.org/x/net => golang.org/x/net v0.0.0-20220403103023-749bd193bc2b
+replace golang.org/x/net => golang.org/x/net v0.4.0
