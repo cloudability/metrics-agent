@@ -148,7 +148,11 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	performConnectionChecks(&kubeAgent)
+	err = performConnectionChecks(&kubeAgent)
+	if err != nil {
+		log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
+			"upload metrics to Cloudability with error: %v", err)
+	}
 
 	log.Info("Cloudability Metrics Agent successfully started.")
 
@@ -187,7 +191,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-func performConnectionChecks(ka *KubeAgentConfig) {
+func performConnectionChecks(ka *KubeAgentConfig) error {
 	log.Info("Performing connectivity checks. Checking that the agent can retrieve S3 URL")
 
 	cldyMetricClient, err := client.NewHTTPMetricClient(client.Configuration{
@@ -198,28 +202,28 @@ func performConnectionChecks(ka *KubeAgentConfig) {
 		ProxyInsecure: ka.OutboundProxyInsecure,
 	})
 	if err != nil {
-		log.Fatalf("error creating Cloudability Metric client: %v ", err)
+		return errors.New("error creating Cloudability Metric client in connectivity test")
 	}
 
 	metricSampleURL := apiEndpoint + "/metricsample"
 
 	file, err := os.Create("/tmp/temp.txt")
 	if err != nil {
-		log.Warnf("Failed to create file temp.txt")
+		return errors.New("failed to create temp.txt file in connectivity test")
 	}
+	defer os.Remove(file.Name())
 
 	_, err = file.WriteString("Health Check")
 	if err != nil {
-		log.Warnf("Failed to write in file temp.txt")
+		return errors.New("failed to write in file temp.txt in connectivity test")
 	}
 
 	_, _, err = cldyMetricClient.GetUploadURL(file, metricSampleURL, cldyVersion.VERSION, ka.clusterUID)
 	if err != nil {
-		log.Warnf("WARNING: Failed to retrieve S3 URL with error: %v. Agent will fail to upload metrics to"+
-			" Cloudability", err)
-	} else {
-		log.Info("Connectivity check succeeded")
+		return err
 	}
+	log.Info("Connectivity check succeeded")
+	return nil
 }
 
 func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
