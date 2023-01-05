@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"net/url"
@@ -56,7 +55,7 @@ func TestHTTPConnection(testClient rest.HTTPClient,
 			continue
 		}
 		defer SafeClose(resp.Body.Close, &err)
-		body, rerr := ioutil.ReadAll(resp.Body)
+		body, rerr := io.ReadAll(resp.Body)
 		if rerr != nil {
 			err = fmt.Errorf("Unable to read response from: %s", URL)
 		}
@@ -210,7 +209,7 @@ func getExportFilename(uid string) string {
 // CreateMSWorkingDirectory takes a given prefix and returns a metric sample working directory
 func CreateMSWorkingDirectory(uid string, scratchDir string) (*os.File, error) {
 	// create metric sample directory
-	td, err := ioutil.TempDir(scratchDir, "cldy-metrics")
+	td, err := os.MkdirTemp(scratchDir, "cldy-metrics")
 	if err != nil {
 		log.Errorf("Unable to create temporary directory: %v", err)
 		return nil, err

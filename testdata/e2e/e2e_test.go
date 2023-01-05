@@ -1,7 +1,6 @@
 package test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -44,7 +43,7 @@ func TestMetricSample(t *testing.T) {
 				seen[toAgentFileType(ft)] = true
 				if unmarshalFn, ok := knownFileTypes[ft]; ok {
 					t.Logf("Processing: %v", n)
-					f, err := ioutil.ReadFile(path)
+					f, err := os.ReadFile(path)
 					if err != nil {
 						return err
 					}

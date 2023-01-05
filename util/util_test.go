@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -218,7 +217,7 @@ func TestCreateMetricSample(t *testing.T) {
 	})
 
 	t.Run("Only create metric sample if data directory contains files", func(t *testing.T) {
-		emptySampleDirectory, err := ioutil.TempDir(os.TempDir(), "empty_sample_directory")
+		emptySampleDirectory, err := os.MkdirTemp(os.TempDir(), "empty_sample_directory")
 		if err != nil {
 			t.Errorf("error creating temporary sample directory: %v", err)
 		}
@@ -257,7 +256,7 @@ func TestMatchOneFile(t *testing.T) {
 	dir := os.TempDir() + "/cldy-test" + strconv.FormatInt(
 		time.Now().Unix(), 10)
 	_ = os.MkdirAll(dir, 0777)
-	_ = ioutil.WriteFile(dir+"/shouldBeHere.file", []byte(nil), 0644)
+	_ = os.WriteFile(dir+"/shouldBeHere.file", []byte(nil), 0644)
 
 	t.Run("Ensure that one file is matched", func(t *testing.T) {
 
@@ -272,7 +271,7 @@ func TestMatchOneFile(t *testing.T) {
 
 	t.Run("Ensure that more than one file returns an error", func(t *testing.T) {
 
-		_ = ioutil.WriteFile(dir+"/shouldBeHere.file2", []byte(nil), 0644)
+		_ = os.WriteFile(dir+"/shouldBeHere.file2", []byte(nil), 0644)
 		pattern := "/shouldBeHere.file*"
 		file, err := MatchOneFile(dir, pattern)
 		if err == nil || file != "" {

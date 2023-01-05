@@ -2,14 +2,9 @@ package test
 
 import (
 	"crypto/rand"
-	log "github.com/sirupsen/logrus"
-	r "math/rand"
-	"time"
-)
 
-func init() {
-	r.Seed(time.Now().UTC().UnixNano())
-}
+	log "github.com/sirupsen/logrus"
+)
 
 const (
 	// 52 possibilities

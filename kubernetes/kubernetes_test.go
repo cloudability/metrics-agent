@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -220,7 +219,7 @@ func TestCollectMetrics(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error getting server version: %v", err)
 	}
-	dir, err := ioutil.TempDir("", "TestCollectMetrics")
+	dir, err := os.MkdirTemp("", "TestCollectMetrics")
 	if err != nil {
 		t.Errorf("error creating temp dir: %v", err)
 	}
