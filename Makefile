@@ -130,19 +130,18 @@ version:
 release-version:
 	@echo $(RELEASE-VERSION)
 
-# add 1.24 e2e test once kind clusters are fixed https://github.com/kubernetes/minikube/issues/14477.
+test-e2e-1.25: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.25.3,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
+
+test-e2e-1.24: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.24.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
+
 test-e2e-1.23: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.23.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
 test-e2e-1.22: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.22.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-1.21.1: container-build-single-platform install-tools
-	$(call TEST_KUBERNETES,v1.21.1,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
-
-test-e2e-1.20: container-build-single-platform install-tools
-	$(call TEST_KUBERNETES,v1.20.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
-
-test-e2e-all: test-e2e-1.23 test-e2e-1.22 test-e2e-1.21.1 test-e2e-1.20
+test-e2e-all: test-e2e-1.25 test-e2e-1.24 test-e2e-1.23 test-e2e-1.22
 
 .PHONY: test version
