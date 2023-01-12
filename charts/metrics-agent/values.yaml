@@ -67,5 +67,7 @@ affinity: {}
 
 allowPrivilegeEscalation: false
 
+openShift: false
+
 drop: 
 - all
