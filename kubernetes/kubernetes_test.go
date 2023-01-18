@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
-	"k8s.io/client-go/tools/cache"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"k8s.io/client-go/tools/cache"
 
 	fcache "k8s.io/client-go/tools/cache/testing"
 
@@ -233,7 +234,7 @@ func TestCollectMetrics(t *testing.T) {
 		t.Errorf("Error opening temp dir: %v", err)
 	}
 	// tmp dir for parseMetricsCollectionTest
-	dir2, err := ioutil.TempDir("", "TestCollectMetricsParseMetrics")
+	dir2, err := os.MkdirTemp("", "TestCollectMetricsParseMetrics")
 	if err != nil {
 		t.Errorf("error creating temp dir2: %v", err)
 	}
@@ -247,19 +248,18 @@ func TestCollectMetrics(t *testing.T) {
 			version:     1.1,
 			versionInfo: sv,
 		},
-		Clientset:             cs,
-		HTTPClient:            http.Client{},
-		msExportDirectory:     tDir,
-		UseInClusterConfig:    false,
-		ClusterHostURL:        ts.URL,
-		HeapsterURL:           ts.URL,
-		Insecure:              true,
-		BearerToken:           "",
-		BearerTokenPath:       "",
-		ForceKubeProxy:        false,
-		Informers:             mockInformers,
-		ConcurrentPollers:     10,
-		ParseMetricData:       false,
+		Clientset:          cs,
+		HTTPClient:         http.Client{},
+		msExportDirectory:  tDir,
+		UseInClusterConfig: false,
+		ClusterHostURL:     ts.URL,
+		HeapsterURL:        ts.URL,
+		Insecure:           true,
+		BearerToken:        "",
+		BearerTokenPath:    "",
+		ForceKubeProxy:     false,
+		ConcurrentPollers:  10,
+		ParseMetricData:    false,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
@@ -267,7 +267,6 @@ func TestCollectMetrics(t *testing.T) {
 	// set Direct as option as well
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 
-	ka.Informers, err = getMockInformers(ka.ClusterVersion.version)
 	stopCh := make(chan struct{})
 	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, stopCh)
 	if err != nil {
@@ -284,19 +283,19 @@ func TestCollectMetrics(t *testing.T) {
 			version:     1.22,
 			versionInfo: sv,
 		},
-		Clientset:             cs,
-		HTTPClient:            http.Client{},
-		msExportDirectory:     tDir2,
-		UseInClusterConfig:    false,
-		ClusterHostURL:        ts.URL,
-		HeapsterURL:           ts.URL,
-		Insecure:              true,
-		BearerToken:           "",
-		BearerTokenPath:       "",
-		ForceKubeProxy:        false,
-		ConcurrentPollers:     10,
-		ParseMetricData:       true,
-		Informers:             parseInformers,
+		Clientset:          cs,
+		HTTPClient:         http.Client{},
+		msExportDirectory:  tDir2,
+		UseInClusterConfig: false,
+		ClusterHostURL:     ts.URL,
+		HeapsterURL:        ts.URL,
+		Insecure:           true,
+		BearerToken:        "",
+		BearerTokenPath:    "",
+		ForceKubeProxy:     false,
+		ConcurrentPollers:  10,
+		ParseMetricData:    true,
+		Informers:          parseInformers,
 	}
 
 	wd, err := os.Getwd()
@@ -305,7 +304,7 @@ func TestCollectMetrics(t *testing.T) {
 	}
 	ka.BearerTokenPath = wd + "/testdata/mockToken"
 
-	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, ka.BearerTokenPath, 0)
+	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, ka.BearerTokenPath, 0, false)
 	fns := NewClientsetNodeSource(cs)
 
 	t.Run("Ensure that a collection occurs", func(t *testing.T) {
@@ -524,7 +523,7 @@ func NewTestServer() *httptest.Server {
 	return ts
 }
 
-//nolint: lll
+// nolint: lll
 func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
@@ -604,7 +603,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 
 	// pods is unique as we use this pod file for parseMetrics testing
 	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
-	podData, err := ioutil.ReadFile("../testdata/pods.jsonl")
+	podData, err := os.ReadFile("../testdata/pods.jsonl")
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +614,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 	}
 	pods.Add(myPod)
 	// namespace also used in testing
-	namespaceData, err := ioutil.ReadFile("../testdata/namespaces.jsonl")
+	namespaceData, err := os.ReadFile("../testdata/namespaces.jsonl")
 	if err != nil {
 		return nil, err
 	}
@@ -626,7 +625,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 	}
 	namespaces.Add(myNamespace)
 	// deployments also used in testing
-	deploymentData, err := ioutil.ReadFile("../testdata/deployments.jsonl")
+	deploymentData, err := os.ReadFile("../testdata/deployments.jsonl")
 	if err != nil {
 		return nil, err
 	}
