@@ -183,8 +183,8 @@ var knownFileTypes = map[string]UnmarshalForK8sListFn{
 	"persistentvolumeclaims.jsonl": ByRefFnInformer(func(p *ParsedK8sLists) (interface{}, interface{}) {
 		return &p.PersistentVolumeClaims, &corev1.PersistentVolumeClaim{}
 	}),
-	"stats-summary-":             AsNodeSummary(false),
-	"baseline-summary-":          AsNodeSummary(true),
+	"stats-summary-":    AsNodeSummary(false),
+	"baseline-summary-": AsNodeSummary(true),
 }
 
 var agentFileTypes = map[string]bool{
@@ -235,12 +235,12 @@ func ByRefFnInformer(refFn k8sRefFn) UnmarshalForK8sListFn {
 		reader := bytes.NewReader(fdata)
 		dec := json.NewDecoder(reader)
 
-		// assign storage to the resource list (ex: &p.Pods) that was passed in from the knownFileTypes. And get the
-		// k8s object type from knownFileTypes so the json decoder knows what type of object fields to decode
-		storage, k8sObject := refFn(parsedK8sList)
-
 		// loop reading 1 line at a time until EOF
 		for {
+
+			// assign storage to the resource list (ex: &p.Pods) that was passed in from the knownFileTypes. And get the
+			// k8s object type from knownFileTypes so the json decoder knows what type of object fields to decode
+			storage, k8sObject := refFn(parsedK8sList)
 
 			if err := dec.Decode(k8sObject); err != nil {
 				if err == io.EOF {

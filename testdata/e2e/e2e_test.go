@@ -14,6 +14,7 @@ import (
 
 func TestMetricSample(t *testing.T) {
 	const stress = "stress"
+	const metricsAgent = "metrics-agent"
 	wd := os.Getenv("WORKING_DIR")
 	kv := os.Getenv("KUBERNETES_VERSION")
 	versionParts := strings.Split(kv, ".")
@@ -104,5 +105,27 @@ func TestMetricSample(t *testing.T) {
 			}
 		}
 		t.Error("pod summary data not found in metric sample")
+	})
+
+	t.Run("ensure that a metrics sample has accurate pod label data for stress", func(t *testing.T) {
+		for _, po := range parsedK8sLists.Pods.Items {
+			if strings.HasPrefix(po.Name, metricsAgent) {
+				if po.ObjectMeta.Labels["app"] == "stress" {
+					return
+				}
+			}
+		}
+		t.Error("pod stress has incorrect labels in metric sample")
+	})
+
+	t.Run("ensure that a metrics sample has accurate pod label data for metrics-agent", func(t *testing.T) {
+		for _, po := range parsedK8sLists.Pods.Items {
+			if strings.HasPrefix(po.Name, metricsAgent) {
+				if po.ObjectMeta.Labels["app"] == "metrics-agent" {
+					return
+				}
+			}
+		}
+		t.Error("pod metrics-agent has incorrect labels in metric sample")
 	})
 }
