@@ -109,7 +109,7 @@ func TestMetricSample(t *testing.T) {
 
 	t.Run("ensure that a metrics sample has accurate pod label data for stress", func(t *testing.T) {
 		for _, po := range parsedK8sLists.Pods.Items {
-			if strings.HasPrefix(po.Name, metricsAgent) {
+			if strings.HasPrefix(po.Name, stress) {
 				if po.ObjectMeta.Labels["app"] == "stress" {
 					return
 				}
