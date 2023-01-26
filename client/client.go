@@ -223,8 +223,8 @@ func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersi
 		log.Debugf("%q", responseDump)
 		return fmt.Errorf("Request received %v response", resp.StatusCode)
 	}
-	awsRequestId := resp.Header.Get("X-Amz-Request-Id")
-	log.Debugf("Successfully uploaded to cldy s3 with X-Amzn-Requestid: " + awsRequestId)
+	awsRequestID := resp.Header.Get("X-Amz-Request-Id")
+	log.Debugf("Successfully uploaded to cldy s3 with X-Amzn-Requestid: " + awsRequestID)
 
 	return nil
 }
@@ -405,8 +405,8 @@ func (c httpMetricClient) GetUploadURL(
 		return "", d.Location, errors.New("Error retrieving upload URI: " + strconv.Itoa(resp.StatusCode) +
 			". Dumping response: " + string(responseDump))
 	}
-	awsRequestId := resp.Header.Get("X-Amzn-Requestid")
-	log.Debugf("Successfully acquired s3 url, X-Amzn-Requestid: " + awsRequestId)
+	awsRequestID := resp.Header.Get("X-Amzn-Requestid")
+	log.Debugf("Successfully acquired s3 url, X-Amzn-Requestid: " + awsRequestID)
 
 	data, err := io.ReadAll(resp.Body)
 	if err == nil && data != nil {
