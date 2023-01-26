@@ -262,6 +262,10 @@ func (c httpMetricClient) retryWithBackoff(
 
 		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
 
+		if resp == nil {
+			continue
+		}
+
 		responseDump, dumpErr := httputil.DumpResponse(resp, true)
 		if dumpErr != nil {
 			log.Errorln(dumpErr)
@@ -270,11 +274,6 @@ func (c httpMetricClient) retryWithBackoff(
 
 		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
 			time.Sleep(getSleepDuration(i))
-			log.Debugf(string(responseDump))
-			continue
-		}
-
-		if resp == nil {
 			log.Debugf(string(responseDump))
 			continue
 		}
