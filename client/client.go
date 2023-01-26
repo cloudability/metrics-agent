@@ -214,17 +214,17 @@ func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersi
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Request received %v response", resp.StatusCode)
+	responseDump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		log.Errorln(err)
 	}
 
-	if c.verbose {
-		responseDump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			log.Errorln(err)
-		}
-		log.Infof("%q", responseDump)
+	if resp.StatusCode != http.StatusOK {
+		log.Debugf("%q", responseDump)
+		return fmt.Errorf("Request received %v response", resp.StatusCode)
 	}
+	awsRequestId := resp.Header.Get("X-Amz-Request-Id")
+	log.Debugf("Successfully uploaded to cldy s3 with X-Amzn-Requestid: " + awsRequestId)
 
 	return nil
 }
@@ -262,21 +262,20 @@ func (c httpMetricClient) retryWithBackoff(
 
 		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
 
-		if c.verbose {
-			reponseDump, err := httputil.DumpResponse(resp, true)
-			if err != nil {
-				log.Errorln(err)
-				continue
-			}
-			log.Infoln(string(reponseDump))
+		responseDump, dumpErr := httputil.DumpResponse(resp, true)
+		if dumpErr != nil {
+			log.Errorln(dumpErr)
+			continue
 		}
 
 		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
 			time.Sleep(getSleepDuration(i))
+			log.Debugf(string(responseDump))
 			continue
 		}
 
 		if resp == nil {
+			log.Debugf(string(responseDump))
 			continue
 		}
 
@@ -293,6 +292,7 @@ func (c httpMetricClient) retryWithBackoff(
 		}
 		if resp.StatusCode == http.StatusInternalServerError || resp.StatusCode == http.StatusForbidden {
 			time.Sleep(getSleepDuration(i))
+			log.Debugf(string(responseDump))
 			continue
 		}
 
@@ -396,17 +396,17 @@ func (c httpMetricClient) GetUploadURL(
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
-	if c.verbose {
-		responseDump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			log.Errorln(err)
-		}
-		log.Infoln(string(responseDump))
+	responseDump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		log.Errorln(err)
 	}
 
 	if resp.StatusCode != 200 {
-		return "", d.Location, errors.New("Error retrieving upload URI: " + strconv.Itoa(resp.StatusCode))
+		return "", d.Location, errors.New("Error retrieving upload URI: " + strconv.Itoa(resp.StatusCode) +
+			". Dumping response: " + string(responseDump))
 	}
+	awsRequestId := resp.Header.Get("X-Amzn-Requestid")
+	log.Debugf("Successfully acquired s3 url, X-Amzn-Requestid: " + awsRequestId)
 
 	data, err := io.ReadAll(resp.Body)
 	if err == nil && data != nil {
