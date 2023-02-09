@@ -96,6 +96,15 @@ The following recommendation is based on number of nodes in the cluster. It's fo
 | 500-1000 | 2000m | 3000m | 16GBi | 24GBi |
 | 1000+ | 3000m |  | 24GBi |  |
 
+## Networking Requirement for Metrics Agent
+The container that hosts the metrics agent should allow HTTP requests to following endpoints:
+- metrics-collector.cloudability.com port 443
+- api.cloudability.com port 443
+- frontdoor.apptio.com  port 443
+
+The container that hosts the metrics agent should have write access to following Apptio S3 buckets:
+- cldy-cake-pipeline
+- apptio* (bucket prefixed with apptio)
 
 ## Development
 
