@@ -97,7 +97,7 @@ The following recommendation is based on number of nodes in the cluster. It's fo
 | 1000+ | 3000m |  | 24GBi |  |
 
 ## Networking Requirement for Metrics Agent
-The container that hosts the metrics agent should allow HTTP requests to following endpoints:
+The container that hosts the metrics agent should allow HTTPS requests to following endpoints:
 - metrics-collector.cloudability.com port 443
 - api.cloudability.com port 443
 - frontdoor.apptio.com  port 443
