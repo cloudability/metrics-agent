@@ -59,6 +59,9 @@ extraEnv: []
 securityContext:
   runAsUser: 1000
 
+openShiftSecurityContext:
+  runAsUser: 1001000000
+
 nodeSelector: {}
 
 tolerations: []
