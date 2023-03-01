@@ -235,7 +235,7 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 		return errors.New("failed to write in file temp.txt in connectivity test")
 	}
 
-	_, _, err = cldyMetricClient.GetUploadURL(file, metricSampleURL, cldyVersion.VERSION, ka.clusterUID)
+	_, _, err = cldyMetricClient.GetUploadURL(file, metricSampleURL, cldyVersion.VERSION, ka.clusterUID, 0)
 	if err != nil {
 		return err
 	}

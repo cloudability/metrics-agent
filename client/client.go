@@ -136,7 +136,7 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 type MetricClient interface {
 	SendMeasurement(measurements []measurement.Measurement) error
 	SendMetricSample(*os.File, string, string) error
-	GetUploadURL(*os.File, string, string, string) (string, string, error)
+	GetUploadURL(*os.File, string, string, string, int) (string, string, error)
 }
 
 type httpMetricClient struct {
@@ -214,11 +214,6 @@ func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersi
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
-	responseDump, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		log.Errorln(err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("Request received %v response", resp.StatusCode)
 	}
@@ -257,24 +252,29 @@ func (c httpMetricClient) retryWithBackoff(
 			continue
 		}
 
+		var awsRequestID string
+		var responseDump []byte
+		var dumpErr error
 		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
-		awsRequestID := resp.Header.Get("X-Amz-Request-Id")
-		reponseDump, dumpErr := httputil.DumpResponse(resp, true)
-		if dumpErr != nil {
-			log.Errorln(dumpErr)
-			continue
+		if resp != nil {
+			awsRequestID = resp.Header.Get("X-Amz-Request-Id")
+			responseDump, dumpErr = httputil.DumpResponse(resp, true)
+			if dumpErr != nil {
+				log.Errorln(dumpErr)
+				continue
+			}
 		}
 
 		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
 			time.Sleep(getSleepDuration(i))
 			log.Infof("Put S3 Retry %d: Failed to put data to S3, X-Amzn-Requestid: %s", i, awsRequestID)
-			log.Debugln(string(reponseDump))
+			log.Debugln(string(responseDump))
 			continue
 		}
 
 		if resp == nil {
 			log.Infof("Put S3 Retry %d: Failed to put data to S3, X-Amzn-Requestid: %s", i, awsRequestID)
-			log.Debugln(string(reponseDump))
+			log.Debugln(string(responseDump))
 			continue
 		}
 
@@ -292,7 +292,7 @@ func (c httpMetricClient) retryWithBackoff(
 		if resp.StatusCode == http.StatusInternalServerError || resp.StatusCode == http.StatusForbidden {
 			time.Sleep(getSleepDuration(i))
 			log.Infof("Put S3 Retry %d: Failed to put data to S3, X-Amzn-Requestid: %s", i, awsRequestID)
-			log.Debugln(string(reponseDump))
+			log.Debugln(string(responseDump))
 			continue
 		}
 		log.Infof("Put S3 Retry %d: Successfully put data to S3, X-Amzn-Requestid: %s", i, awsRequestID)
@@ -390,13 +390,19 @@ func (c httpMetricClient) GetUploadURL(
 		log.Infoln(string(requestDump))
 	}
 
+	var awsRequestID string
+	var responseDump []byte
+	var dumpErr error
+
 	resp, err := c.httpClient.Do(req)
-	awsRequestID := resp.Header.Get("X-Amzn-Requestid")
-	if err != nil {
-		responseDump, dumpErr := httputil.DumpResponse(resp, true)
+	if resp != nil {
+		awsRequestID = resp.Header.Get("X-Amzn-Requestid")
+		responseDump, dumpErr = httputil.DumpResponse(resp, true)
 		if dumpErr != nil {
 			log.Errorln(dumpErr)
 		}
+	}
+	if err != nil {
 		log.Infof("GetURL Retry %d: Failed to acquire s3 url, X-Amzn-Requestid: %s", attempt, awsRequestID)
 		log.Debugln(string(responseDump))
 		return "", "", fmt.Errorf("Unable to retrieve upload URI: %v", err)
@@ -405,10 +411,6 @@ func (c httpMetricClient) GetUploadURL(
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
 	if resp.StatusCode != 200 {
-		responseDump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			log.Errorln(err)
-		}
 		log.Infof("GetURL Retry %d: Failed to acquire s3 url, X-Amzn-Requestid: %s", attempt, awsRequestID)
 		log.Debugln(string(responseDump))
 		return "", d.Location, errors.New("Error retrieving upload URI: " + strconv.Itoa(resp.StatusCode))
