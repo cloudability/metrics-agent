@@ -24,7 +24,7 @@ pollInterval: 180
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.11.6
+  tag: 2.11.7
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -44,6 +44,7 @@ livenessProbe:
       - tmp/healthy
   initialDelaySeconds: 120
   periodSeconds: 600
+  timeoutSeconds: 5
 
 # serviceAccount.create: true is required
 serviceAccount:

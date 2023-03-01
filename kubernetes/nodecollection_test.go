@@ -4,13 +4,14 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"github.com/onsi/gomega"
