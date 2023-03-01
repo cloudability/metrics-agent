@@ -214,16 +214,13 @@ func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersi
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Request received %v response", resp.StatusCode)
+	responseDump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		log.Errorln(err)
 	}
 
-	if c.verbose {
-		responseDump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			log.Errorln(err)
-		}
-		log.Infof("%q", responseDump)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Request received %v response", resp.StatusCode)
 	}
 
 	return nil
@@ -253,7 +250,7 @@ func (c httpMetricClient) retryWithBackoff(
 	for i := 0; i < c.maxRetries; i++ {
 
 		var uploadURL, hash string
-		uploadURL, hash, err = c.GetUploadURL(metricFile, metricSampleURL, agentVersion, UID)
+		uploadURL, hash, err = c.GetUploadURL(metricFile, metricSampleURL, agentVersion, UID, i)
 		if err != nil {
 			log.Debugf("Client proxy or deployment YAML may be misconfigured.  Please check your client settings.")
 			log.Errorf("error encountered while retrieving upload location: %v", err)
@@ -261,22 +258,23 @@ func (c httpMetricClient) retryWithBackoff(
 		}
 
 		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
-
-		if c.verbose {
-			reponseDump, err := httputil.DumpResponse(resp, true)
-			if err != nil {
-				log.Errorln(err)
-				continue
-			}
-			log.Infoln(string(reponseDump))
+		awsRequestID := resp.Header.Get("X-Amz-Request-Id")
+		reponseDump, dumpErr := httputil.DumpResponse(resp, true)
+		if dumpErr != nil {
+			log.Errorln(dumpErr)
+			continue
 		}
 
 		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
 			time.Sleep(getSleepDuration(i))
+			log.Infof("Put S3 Retry %d: Failed to put data to S3, X-Amzn-Requestid: %s", i, awsRequestID)
+			log.Debugln(string(reponseDump))
 			continue
 		}
 
 		if resp == nil {
+			log.Infof("Put S3 Retry %d: Failed to put data to S3, X-Amzn-Requestid: %s", i, awsRequestID)
+			log.Debugln(string(reponseDump))
 			continue
 		}
 
@@ -293,9 +291,11 @@ func (c httpMetricClient) retryWithBackoff(
 		}
 		if resp.StatusCode == http.StatusInternalServerError || resp.StatusCode == http.StatusForbidden {
 			time.Sleep(getSleepDuration(i))
+			log.Infof("Put S3 Retry %d: Failed to put data to S3, X-Amzn-Requestid: %s", i, awsRequestID)
+			log.Debugln(string(reponseDump))
 			continue
 		}
-
+		log.Infof("Put S3 Retry %d: Successfully put data to S3, X-Amzn-Requestid: %s", i, awsRequestID)
 		break
 	}
 
@@ -358,6 +358,7 @@ func (c httpMetricClient) GetUploadURL(
 	metricSampleURL,
 	agentVersion,
 	UID string,
+	attempt int,
 ) (string, string, error) {
 	var rerr error
 	hash, err := GetB64MD5Hash(metricFile.Name())
@@ -390,21 +391,26 @@ func (c httpMetricClient) GetUploadURL(
 	}
 
 	resp, err := c.httpClient.Do(req)
+	awsRequestID := resp.Header.Get("X-Amzn-Requestid")
 	if err != nil {
+		responseDump, dumpErr := httputil.DumpResponse(resp, true)
+		if dumpErr != nil {
+			log.Errorln(dumpErr)
+		}
+		log.Infof("GetURL Retry %d: Failed to acquire s3 url, X-Amzn-Requestid: %s", attempt, awsRequestID)
+		log.Debugln(string(responseDump))
 		return "", "", fmt.Errorf("Unable to retrieve upload URI: %v", err)
 	}
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
-	if c.verbose {
+	if resp.StatusCode != 200 {
 		responseDump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
 			log.Errorln(err)
 		}
-		log.Infoln(string(responseDump))
-	}
-
-	if resp.StatusCode != 200 {
+		log.Infof("GetURL Retry %d: Failed to acquire s3 url, X-Amzn-Requestid: %s", attempt, awsRequestID)
+		log.Debugln(string(responseDump))
 		return "", d.Location, errors.New("Error retrieving upload URI: " + strconv.Itoa(resp.StatusCode))
 	}
 
@@ -413,6 +419,7 @@ func (c httpMetricClient) GetUploadURL(
 		err = json.Unmarshal(data, &d)
 	}
 
+	log.Infof("GetURL Retry %d: Successfully acquired s3 url, X-Amzn-Requestid: %s", attempt, awsRequestID)
 	return d.Location, hash, err
 }
 
