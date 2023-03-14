@@ -262,22 +262,19 @@ func (c httpMetricClient) retryWithBackoff(
 			responseDump, dumpErr = httputil.DumpResponse(resp, true)
 			if dumpErr != nil {
 				log.Errorln(dumpErr)
-				continue
 			}
 		}
 
 		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
 			time.Sleep(getSleepDuration(i))
-			log.Infof("Put S3 Retry %d: Failed to put data to S3, Status: %s X-Amzn-Requestid: %s", i,
-				statusMessage, awsRequestID)
+			log.Errorf("Put S3 Retry %d: Failed to put data to S3 due to request timeout, "+
+				"Status: %s X-Amzn-Requestid: %s", i, statusMessage, awsRequestID)
 			log.Debugln(string(responseDump))
 			continue
 		}
 
 		if resp == nil {
-			log.Infof("Put S3 Retry %d: Failed to put data to S3, Status: %s X-Amzn-Requestid: %s", i,
-				statusMessage, awsRequestID)
-			log.Debugln(string(responseDump))
+			log.Errorf("Put S3 Retry %d: Failed to put data to S3. Response is empty", i)
 			continue
 		}
 
@@ -294,7 +291,7 @@ func (c httpMetricClient) retryWithBackoff(
 		}
 		if resp.StatusCode == http.StatusInternalServerError || resp.StatusCode == http.StatusForbidden {
 			time.Sleep(getSleepDuration(i))
-			log.Infof("Put S3 Retry %d: Failed to put data to S3, Status: %s X-Amzn-Requestid: %s", i,
+			log.Errorf("Put S3 Retry %d: Failed to put data to S3, Status: %s X-Amzn-Requestid: %s", i,
 				statusMessage, awsRequestID)
 			log.Debugln(string(responseDump))
 			continue
@@ -408,7 +405,7 @@ func (c httpMetricClient) GetUploadURL(
 		}
 	}
 	if err != nil {
-		log.Infof("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
+		log.Errorf("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
 			statusMessage, awsRequestID)
 		log.Debugln(string(responseDump))
 		return "", "", fmt.Errorf("Unable to retrieve upload URI: %v", err)
@@ -417,7 +414,7 @@ func (c httpMetricClient) GetUploadURL(
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
 	if resp.StatusCode != 200 {
-		log.Infof("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
+		log.Errorf("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
 			statusMessage, awsRequestID)
 		log.Debugln(string(responseDump))
 		return "", d.Location, errors.New("Error retrieving upload URI: " + strconv.Itoa(resp.StatusCode))
