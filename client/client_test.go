@@ -601,7 +601,7 @@ func TestGetUploadURL(t *testing.T) {
 		t.Error(err)
 	}
 
-	url, _, err := c.GetUploadURL(f, ts.URL, testAgentVersion, UID)
+	url, _, err := c.GetUploadURL(f, ts.URL, testAgentVersion, UID, 0)
 	if err != nil {
 		t.Error(err)
 	}
