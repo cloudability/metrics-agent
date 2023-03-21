@@ -16,11 +16,11 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 #### 1.25 and below
 
-Kubernetes versions 1.25 and below are supported by the metrics agent on Azure cloud services (AKS).
+Kubernetes versions 1.25 and below are supported by the metrics agent on Azure cloud services (AKS) and AWS cloud service (EKS).
 
 #### 1.24 and below
 
-Kubernetes versions 1.24 and below are supported by the metrics agent on AWS cloud services (EKS) and Google Cloud Platform (GKE).
+Kubernetes versions 1.24 and below are supported by the metrics agent on Google Cloud Platform (GKE).
 
 #### Architectures
 
