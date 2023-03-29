@@ -52,6 +52,14 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- with .Values.additionalVolumeMounts }}
+          volumeMounts:
+          {{- toYaml . | nindent 12 }}
+      {{- end }}
+      {{- with .Values.additionalVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
