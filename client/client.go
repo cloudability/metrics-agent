@@ -253,9 +253,9 @@ func (c httpMetricClient) retryWithBackoff(
 		}
 
 		var awsRequestID, statusMessage string
-		var responseDump []byte
+		var responseDump, requestDump []byte
 		var dumpErr error
-		resp, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
+		resp, requestDump, err = c.buildAndDoRequest(metricFile, uploadURL, agentVersion, UID, hash)
 		if resp != nil {
 			awsRequestID = resp.Header.Get("X-Amz-Request-Id")
 			statusMessage = resp.Status
@@ -269,7 +269,7 @@ func (c httpMetricClient) retryWithBackoff(
 			time.Sleep(getSleepDuration(i))
 			log.Errorf("Put S3 Retry %d: Failed to put data to S3 due to request timeout, "+
 				"Status: %s X-Amzn-Requestid: %s", i, statusMessage, awsRequestID)
-			log.Debugln(string(responseDump))
+			log.Debugln(string(requestDump))
 			continue
 		}
 
@@ -309,44 +309,43 @@ func (c httpMetricClient) buildAndDoRequest(
 	agentVersion,
 	UID string,
 	hash string,
-) (resp *http.Response, err error) {
+) (resp *http.Response, requestDump []byte, err error) {
 
 	var (
-		req *http.Request
+		req     *http.Request
+		dumpErr error
 	)
 
 	metricFile, err = os.Open(metricFile.Name())
 	if err != nil {
 		log.Fatalf("Failed to open metric sample: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	fi, err := metricFile.Stat()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	size := fi.Size()
 
 	req, err = http.NewRequest(http.MethodPut, metricSampleURL, metricFile)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	req.Header.Set(contentTypeHeader, "multipart/form-data")
 	req.Header.Set(contentMD5, hash)
 	req.ContentLength = size
 
-	if c.verbose {
-		requestDump, err := httputil.DumpRequest(req, true)
-		if err != nil {
-			log.Error(err)
-		}
-		log.Infoln(string(requestDump))
-		log.Infof("File info : %+v", metricFile)
+	requestDump, dumpErr = httputil.DumpRequest(req, true)
+	if dumpErr != nil {
+		log.Errorln(dumpErr)
 	}
 
-	return c.httpClient.Do(req)
+	resp, respErr := c.httpClient.Do(req)
+
+	return resp, requestDump, respErr
 }
 
 func getSleepDuration(tries int) time.Duration {
