@@ -235,6 +235,7 @@ func toJSONLines(measurements []measurement.Measurement) ([]byte, error) {
 	return output, nil
 }
 
+// nolint gocyclo
 func (c httpMetricClient) retryWithBackoff(
 	metricSampleURL string,
 	metricFile *os.File,
@@ -278,6 +279,7 @@ func (c httpMetricClient) retryWithBackoff(
 
 		if resp == nil {
 			log.Errorf("Put S3 Retry %d: Failed to put data to S3. Response is empty", i)
+			log.Debugln(string(requestDump))
 			continue
 		}
 
@@ -296,6 +298,7 @@ func (c httpMetricClient) retryWithBackoff(
 			time.Sleep(getSleepDuration(i))
 			log.Errorf("Put S3 Retry %d: Failed to put data to S3, Status: %s X-Amzn-Requestid: %s", i,
 				statusMessage, awsRequestID)
+			log.Debugln(string(requestDump))
 			log.Debugln(string(responseDump))
 			continue
 		}
@@ -406,10 +409,9 @@ func (c httpMetricClient) GetUploadURL(
 	if err != nil {
 		log.Errorf("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
 			statusMessage, awsRequestID)
+		log.Debugln(string(requestDump))
 		if resp != nil {
 			log.Debugln(string(responseDump))
-		} else {
-			log.Debugln(string(requestDump))
 		}
 		return "", "", fmt.Errorf("Unable to retrieve upload URI: %v", err)
 	}
@@ -419,6 +421,7 @@ func (c httpMetricClient) GetUploadURL(
 	if resp.StatusCode != 200 {
 		log.Errorf("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
 			statusMessage, awsRequestID)
+		log.Debugln(string(requestDump))
 		log.Debugln(string(responseDump))
 		return "", d.Location, errors.New("Error retrieving upload URI: " + strconv.Itoa(resp.StatusCode))
 	}
