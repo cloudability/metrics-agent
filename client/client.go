@@ -270,6 +270,9 @@ func (c httpMetricClient) retryWithBackoff(
 			log.Errorf("Put S3 Retry %d: Failed to put data to S3 due to request timeout, "+
 				"Status: %s X-Amzn-Requestid: %s", i, statusMessage, awsRequestID)
 			log.Debugln(string(requestDump))
+			if resp != nil {
+				log.Debugln(string(responseDump))
+			}
 			continue
 		}
 
@@ -338,7 +341,7 @@ func (c httpMetricClient) buildAndDoRequest(
 	req.Header.Set(contentMD5, hash)
 	req.ContentLength = size
 
-	requestDump, dumpErr = httputil.DumpRequest(req, true)
+	requestDump, dumpErr = httputil.DumpRequest(req, false)
 	if dumpErr != nil {
 		log.Errorln(dumpErr)
 	}
@@ -382,12 +385,9 @@ func (c httpMetricClient) GetUploadURL(
 	req.Header.Set(clusterUIDHeader, UID)
 	req.Header.Set(uploadFileHash, hash)
 
-	if c.verbose {
-		requestDump, err := httputil.DumpRequest(req, true)
-		if err != nil {
-			log.Errorln(err)
-		}
-		log.Infoln(string(requestDump))
+	requestDump, requestErr := httputil.DumpRequest(req, false)
+	if requestErr != nil {
+		log.Errorln(requestErr)
 	}
 
 	var awsRequestID, statusMessage string
@@ -406,7 +406,11 @@ func (c httpMetricClient) GetUploadURL(
 	if err != nil {
 		log.Errorf("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
 			statusMessage, awsRequestID)
-		log.Debugln(string(responseDump))
+		if resp != nil {
+			log.Debugln(string(responseDump))
+		} else {
+			log.Debugln(string(requestDump))
+		}
 		return "", "", fmt.Errorf("Unable to retrieve upload URI: %v", err)
 	}
 
