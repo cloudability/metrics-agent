@@ -388,9 +388,12 @@ func (c httpMetricClient) GetUploadURL(
 	req.Header.Set(clusterUIDHeader, UID)
 	req.Header.Set(uploadFileHash, hash)
 
-	requestDump, requestErr := httputil.DumpRequest(req, false)
-	if requestErr != nil {
-		log.Errorln(requestErr)
+	if c.verbose {
+		requestDump, requestErr := httputil.DumpRequest(req, true)
+		if requestErr != nil {
+			log.Errorln(requestErr)
+		}
+		log.Infoln(string(requestDump))
 	}
 
 	var awsRequestID, statusMessage string
@@ -409,7 +412,6 @@ func (c httpMetricClient) GetUploadURL(
 	if err != nil {
 		log.Errorf("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
 			statusMessage, awsRequestID)
-		log.Debugln(string(requestDump))
 		if resp != nil {
 			log.Debugln(string(responseDump))
 		}
@@ -421,7 +423,6 @@ func (c httpMetricClient) GetUploadURL(
 	if resp.StatusCode != 200 {
 		log.Errorf("GetURL Retry %d: Failed to acquire s3 url, Status: %s X-Amzn-Requestid: %s", attempt,
 			statusMessage, awsRequestID)
-		log.Debugln(string(requestDump))
 		log.Debugln(string(responseDump))
 		return "", d.Location, errors.New("Error retrieving upload URI: " + strconv.Itoa(resp.StatusCode))
 	}
