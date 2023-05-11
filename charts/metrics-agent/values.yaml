@@ -24,7 +24,7 @@ pollInterval: 180
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.11.5
+  tag: 2.11.10
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -59,9 +59,6 @@ extraEnv: []
 securityContext:
   runAsUser: 1000
 
-openShiftSecurityContext:
-  runAsUser: 1001000000
-
 nodeSelector: {}
 
 tolerations: []
@@ -72,5 +69,8 @@ allowPrivilegeEscalation: false
 
 openShift: false
 
+seccompProfile:
+  type: RuntimeDefault
+
 drop: 
-- all
+- ALL

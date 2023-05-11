@@ -19,13 +19,16 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
       serviceAccountName: {{ include "metrics-agent.serviceAccountName" . }}
-      securityContext: {{- if .Values.openShift }} {{- toYaml .Values.openShiftSecurityContext | nindent 8 }} {{- else }} {{- toYaml .Values.securityContext | nindent 8 }} {{- end }}
+      securityContext: {{- if not .Values.openShift }} {{- toYaml .Values.securityContext | nindent 8 }} {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
           securityContext:
-            runAsUser: {{- if .Values.openShift }} {{ mul .Values.openShiftSecurityContext.runAsUser 1 }} {{- else }} {{ .Values.securityContext.runAsUser }} {{- end }}
+            runAsUser: {{- if not .Values.openShift }} {{ .Values.securityContext.runAsUser }} {{- end }}
+            runAsNonRoot: true
             allowPrivilegeEscalation: {{ .Values.allowPrivilegeEscalation }}
+            seccompProfile:
+              type: {{ .Values.seccompProfile.type }}
             capabilities:
               drop:
                 {{ .Values.drop }}
