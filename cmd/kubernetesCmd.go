@@ -109,6 +109,12 @@ func init() {
 		"Directory metrics will be written to",
 	)
 	kubernetesCmd.PersistentFlags().IntVar(
+		&config.InformerResyncInterval,
+		"informer_resync_interval",
+		24,
+		"Time (in hours) between informer resync",
+	)
+	kubernetesCmd.PersistentFlags().IntVar(
 		&config.ConcurrentPollers,
 		"number_of_concurrent_node_pollers",
 		100,
@@ -145,6 +151,7 @@ func init() {
 	_ = viper.BindPFlag("namespace", kubernetesCmd.PersistentFlags().Lookup("namespace"))
 	_ = viper.BindPFlag("collect_heapster_export", kubernetesCmd.PersistentFlags().Lookup("collect_heapster_export"))
 	_ = viper.BindPFlag("scratch_dir", kubernetesCmd.PersistentFlags().Lookup("scratch_dir"))
+	_ = viper.BindPFlag("informer_resync_interval", kubernetesCmd.PersistentFlags().Lookup("informer_resync_interval"))
 	_ = viper.BindPFlag("number_of_concurrent_node_pollers",
 		kubernetesCmd.PersistentFlags().Lookup("number_of_concurrent_node_pollers"))
 	_ = viper.BindPFlag("parse_metric_data", kubernetesCmd.PersistentFlags().Lookup("parse_metric_data"))
@@ -156,22 +163,23 @@ func init() {
 	RootCmd.AddCommand(kubernetesCmd)
 
 	config = kubernetes.KubeAgentConfig{
-		APIKey:                viper.GetString("api_key"),
-		ClusterName:           viper.GetString("cluster_name"),
-		PollInterval:          viper.GetInt("poll_interval"),
-		CollectionRetryLimit:  viper.GetUint("collection_retry_limit"),
-		OutboundProxy:         viper.GetString("outbound_proxy"),
-		OutboundProxyAuth:     viper.GetString("outbound_proxy_auth"),
-		OutboundProxyInsecure: viper.GetBool("outbound_proxy_insecure"),
-		Insecure:              viper.GetBool("insecure"),
-		Cert:                  viper.GetString("certificate_file"),
-		Key:                   viper.GetString("key_file"),
-		ConcurrentPollers:     viper.GetInt("number_of_concurrent_node_pollers"),
-		ForceKubeProxy:        viper.GetBool("force_kube_proxy"),
-		Namespace:             viper.GetString("namespace"),
-		ScratchDir:            viper.GetString("scratch_dir"),
-		ParseMetricData:       viper.GetBool("parse_metric_data"),
-		HttpsTimeout:          viper.GetInt("https_client_timeout"),
+		APIKey:                 viper.GetString("api_key"),
+		ClusterName:            viper.GetString("cluster_name"),
+		PollInterval:           viper.GetInt("poll_interval"),
+		CollectionRetryLimit:   viper.GetUint("collection_retry_limit"),
+		OutboundProxy:          viper.GetString("outbound_proxy"),
+		OutboundProxyAuth:      viper.GetString("outbound_proxy_auth"),
+		OutboundProxyInsecure:  viper.GetBool("outbound_proxy_insecure"),
+		Insecure:               viper.GetBool("insecure"),
+		Cert:                   viper.GetString("certificate_file"),
+		Key:                    viper.GetString("key_file"),
+		ConcurrentPollers:      viper.GetInt("number_of_concurrent_node_pollers"),
+		ForceKubeProxy:         viper.GetBool("force_kube_proxy"),
+		Namespace:              viper.GetString("namespace"),
+		ScratchDir:             viper.GetString("scratch_dir"),
+		InformerResyncInterval: viper.GetInt("informer_resync_interval"),
+		ParseMetricData:        viper.GetBool("parse_metric_data"),
+		HttpsTimeout:           viper.GetInt("https_client_timeout"),
 	}
 
 }

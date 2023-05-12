@@ -120,6 +120,7 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 	log.Debugln("Starting node collection loop")
 
 	var wg sync.WaitGroup
+	var m sync.Mutex
 
 	// creates a max number of concurrent goroutines that are allowed
 	limiter := make(chan struct{}, config.ConcurrentPollers)
@@ -134,8 +135,10 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 				errMessage := "Node ProviderID is not set which may be because the node is running in a " +
 					"self managed environment, and this may cause inconsistent gathering of metrics data."
 				log.Warnf(errMessage)
+				m.Lock()
 				failedNodeList[currentNode.Name] = errors.New("provider ID for node does not exist. " +
 					"If this condition persists it will cause inconsistent cluster allocation")
+				m.Unlock()
 			}
 
 			nd := nodeFetchData{
@@ -147,7 +150,9 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 			}
 			err := retrieveNodeData(nd, config, nodeSource, currentNode)
 			if err != nil {
+				m.Lock()
 				failedNodeList[currentNode.Name] = fmt.Errorf("node metrics retrieval problem occurred: %v", err)
+				m.Unlock()
 			}
 			<-limiter
 			wg.Done()
