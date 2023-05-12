@@ -78,6 +78,7 @@ type KubeAgentConfig struct {
 	ScratchDir            string
 	NodeMetrics           EndpointMask
 	ParseMetricData       bool
+	HttpsTimeout          int
 }
 
 const uploadInterval time.Duration = 10
@@ -200,6 +201,7 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 		ProxyURL:      ka.OutboundProxyURL,
 		ProxyAuth:     ka.OutboundProxyAuth,
 		ProxyInsecure: ka.OutboundProxyInsecure,
+		Timeout:       time.Duration(ka.HttpsTimeout) * time.Second,
 	})
 	if err != nil {
 		return errors.New("error creating Cloudability Metric client in connectivity test")
@@ -378,6 +380,7 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 		ProxyURL:      ka.OutboundProxyURL,
 		ProxyAuth:     ka.OutboundProxyAuth,
 		ProxyInsecure: ka.OutboundProxyInsecure,
+		Timeout:       time.Duration(ka.HttpsTimeout) * time.Second,
 	})
 
 	if err != nil {
@@ -718,6 +721,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	m.Values["number_of_concurrent_node_pollers"] = strconv.Itoa(config.ConcurrentPollers)
 	m.Values["parse_metric_data"] = strconv.FormatBool(config.ParseMetricData)
+	m.Values["https_client_timeout"] = strconv.Itoa(config.HttpsTimeout)
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {

@@ -120,6 +120,12 @@ func init() {
 		false,
 		"When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: False",
 	)
+	kubernetesCmd.PersistentFlags().IntVar(
+		&config.ConcurrentPollers,
+		"https_client_timeout",
+		60,
+		"Amount (in seconds) of time the https client has before timing out requests. Default 60",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -142,6 +148,7 @@ func init() {
 	_ = viper.BindPFlag("number_of_concurrent_node_pollers",
 		kubernetesCmd.PersistentFlags().Lookup("number_of_concurrent_node_pollers"))
 	_ = viper.BindPFlag("parse_metric_data", kubernetesCmd.PersistentFlags().Lookup("parse_metric_data"))
+	_ = viper.BindPFlag("https_client_timeout", kubernetesCmd.PersistentFlags().Lookup("https_client_timeout"))
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
@@ -164,6 +171,7 @@ func init() {
 		Namespace:             viper.GetString("namespace"),
 		ScratchDir:            viper.GetString("scratch_dir"),
 		ParseMetricData:       viper.GetBool("parse_metric_data"),
+		HttpsTimeout:          viper.GetInt("https_client_timeout"),
 	}
 
 }
