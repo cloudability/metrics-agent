@@ -85,8 +85,8 @@ Flags:
       --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
-      --number_of_concurrent_node_pollers int    The number of goroutines that are created to poll node metrics in parallel. (default `100`)
       --informer_resync_interval int             The amount of time, in hours, between informer resyncs. (default 24)
+      --number_of_concurrent_node_pollers int    The number of goroutines that are created to poll node metrics in parallel. (default `100`)
       --parse_metric_data bool                   When true, core files will be parsed and non-relevant data will be removed prior to upload. (default `false`)
       --https_client_timeout int                 Amount (in seconds) of time the https client has before timing out requests. (default `60`)
 Global Flags:
