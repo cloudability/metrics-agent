@@ -179,7 +179,7 @@ func init() {
 		ScratchDir:             viper.GetString("scratch_dir"),
 		InformerResyncInterval: viper.GetInt("informer_resync_interval"),
 		ParseMetricData:        viper.GetBool("parse_metric_data"),
-		HttpsTimeout:           viper.GetInt("https_client_timeout"),
+		HTTPSTimeout:           viper.GetInt("https_client_timeout"),
 	}
 
 }
