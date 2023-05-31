@@ -127,7 +127,7 @@ func init() {
 		"When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: False",
 	)
 	kubernetesCmd.PersistentFlags().IntVar(
-		&config.ConcurrentPollers,
+		&config.HTTPSTimeout,
 		"https_client_timeout",
 		60,
 		"Amount (in seconds) of time the https client has before timing out requests. Default 60",

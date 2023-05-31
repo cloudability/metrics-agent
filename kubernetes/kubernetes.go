@@ -218,7 +218,7 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 		ProxyURL:      ka.OutboundProxyURL,
 		ProxyAuth:     ka.OutboundProxyAuth,
 		ProxyInsecure: ka.OutboundProxyInsecure,
-		Timeout:       time.Duration(ka.HTTPSTimeout) * time.Second,
+		Timeout:       time.Duration(ka.HTTPSTimeout) * time.Microsecond,
 	})
 	if err != nil {
 		return errors.New("error creating Cloudability Metric client in connectivity test")
