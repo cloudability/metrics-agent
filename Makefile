@@ -82,7 +82,7 @@ container-build-single-repository:
 	--build-arg golang_version=$(GOLANG_VERSION) \
 	--build-arg package=$(PKG) \
 	--build-arg application=$(APPLICATION) \
-	-t $$REPOSITORY/metrics-agent:$(VERSION)-TestHTTPSConfig -f deploy/docker/Dockerfile . --push
+	-t $$REPOSITORY/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --push
 
 # Specify the repository you would like to send the multi-architectural image to after building.
 container-build-repository:
