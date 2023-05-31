@@ -32,7 +32,7 @@ Instructions for deploying the metrics-agent using Helm can be found [here](http
 
 ### Unsupported Configurations
 
-Cloudability Metrics Agent currently does not support Openshift, Rancher or On Prem clusters.
+Cloudability Metrics Agent currently does not support OpenShift, Rancher or On Prem clusters.
 
 ### Configuration Options
 
