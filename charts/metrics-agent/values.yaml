@@ -68,10 +68,5 @@ affinity: {}
 
 allowPrivilegeEscalation: false
 
-openShift: false
-
-seccompProfile:
-  type: RuntimeDefault
-
 drop: 
-- ALL
+- all
