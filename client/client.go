@@ -61,9 +61,6 @@ type Configuration struct {
 // NewHTTPMetricClient will configure a new instance of a Cloudability client.
 func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 
-	if cfg.Timeout.Seconds() > 60 {
-		return nil, errors.New("A valid timeout is required (between 1s and 60s")
-	}
 	if !validToken.MatchString(cfg.Token) {
 		return nil, errors.New("Token format is invalid (only alphanumeric are allowed)")
 	}

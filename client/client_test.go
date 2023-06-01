@@ -36,18 +36,6 @@ func TestClientCreation(t *testing.T) {
 			t.Error("Expected client to successfully create")
 		}
 	})
-
-	t.Run("timeout greater than 60s rejected", func(t *testing.T) {
-		_, err := client.NewHTTPMetricClient(client.Configuration{
-			Timeout:    61 * time.Second,
-			Token:      test.SecureRandomAlphaString(20),
-			BaseURL:    "https://cloudability.com",
-			MaxRetries: 2,
-		})
-		if err == nil {
-			t.Error("Expected error when passing timeout of 61s")
-		}
-	})
 }
 
 func TestSendMeasurement(t *testing.T) {
