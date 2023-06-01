@@ -30,7 +30,7 @@ import (
 
 //nolint gosec
 
-const defaultBaseURL = "https://metrics-collector.cloudability.com"
+const defaultBaseURL = "https://metrics-collector-akp.cloudability.com"
 const defaultTimeout = 1 * time.Minute
 const defaultMaxRetries = 5
 
@@ -43,6 +43,7 @@ const userAgentHeader = "User-Agent"
 const uploadFileHash = "x-upload-file"
 const contentMD5 = "Content-MD5"
 const proxyAuthHeader = "Proxy-Authorization"
+const akpMigrationTest = "AKP-Migration-Test"
 
 var /* const */ validToken = regexp.MustCompile(`^\w+$`)
 
@@ -384,6 +385,7 @@ func (c httpMetricClient) GetUploadURL(
 	req.Header.Set(agentVersionHeader, agentVersion)
 	req.Header.Set(clusterUIDHeader, UID)
 	req.Header.Set(uploadFileHash, hash)
+	req.Header.Set(akpMigrationTest, "true")
 
 	if c.verbose {
 		requestDump, requestErr := httputil.DumpRequest(req, true)
