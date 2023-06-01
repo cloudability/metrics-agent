@@ -67,6 +67,15 @@ container-build-beta:
 	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION)-beta \
 	-t $(PREFIX)/metrics-agent:beta-latest -f deploy/docker/Dockerfile . --push
 
+# Build a container image and push to DockerHub akp-test with correct version tags
+container-build-akp-test:
+	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $(PREFIX)/metrics-agent:$(RELEASE-VERSION)-akp-test \
+	-t $(PREFIX)/metrics-agent:akp-test-latest -f deploy/docker/Dockerfile . --push
+
 # Build a local container image with the linux AMD architecture
 container-build-single-platform:
 	docker build --platform $(PLATFORM) \
