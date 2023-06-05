@@ -385,7 +385,7 @@ func (c httpMetricClient) GetUploadURL(
 	req.Header.Set(agentVersionHeader, agentVersion)
 	req.Header.Set(clusterUIDHeader, UID)
 	req.Header.Set(uploadFileHash, hash)
-	req.Header.Set(akpMigrationTest, "true")
+	req.Header.Set(akpMigrationTest, "True")
 
 	if c.verbose {
 		requestDump, requestErr := httputil.DumpRequest(req, true)
