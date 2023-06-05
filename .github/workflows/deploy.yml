@@ -7,8 +7,8 @@ on:
 jobs:
   deploy:
     name: Build and Deploy
-    # only build/deploy for beta and master branches
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta'
+    # only build/deploy for beta, migrationAgentRelease, and master branches
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta' || github.ref == 'refs/heads/migrationAgentRelease'
     runs-on: ubuntu-22.04
     steps:
       - name: Login to DockerHub
@@ -32,6 +32,11 @@ jobs:
         # in docker-hub with the new beta makefile command
         if: github.ref == 'refs/heads/beta'
         run: make container-build-beta
+      - name: Docker Build AKP-Test and Push
+        # If pushing to the migrationAgentRelease branch, we want to correctly tag the builds
+        # in docker-hub with the new migrationAgentRelease makefile command
+        if: github.ref == 'refs/heads/migrationAgentRelease'
+        run: make container-build-akp-test
 
   helmRelease:
     name: Cut Helm Release when Updated
