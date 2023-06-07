@@ -12,7 +12,9 @@ By default, the agent runs in a namespace named "cloudability" (see options belo
 
 Every 10 minutes the metrics agent creates a tarball of the gathered metrics and uploads to an Amazon Web Service S3 bucket. This process requires outbound connections to https://metrics-collector.cloudability.com/, to obtain a pre-signed URL, and https://cldy-cake-pipeline.s3.amazonaws.com/ to upload the data. If the metrics agent is deployed behind a firewall, these addresses should be added to the outbound allow list.
 
-### Supported Versions
+## Supported Versions
+
+### Kubernetes Versions
 
 #### 1.25 and below
 
@@ -21,6 +23,10 @@ Kubernetes versions 1.25 and below are supported by the metrics agent on Azure c
 #### 1.24 and below
 
 Kubernetes versions 1.24 and below are supported by the metrics agent on Google Cloud Platform (GKE).
+
+### Openshift Versions
+
+Openshift versions 4.12, 4.11, and 4.10 are supported by the metrics agent on ROSA.
 
 #### Architectures
 
@@ -32,7 +38,7 @@ Instructions for deploying the metrics-agent using Helm can be found [here](http
 
 ### Unsupported Configurations
 
-Cloudability Metrics Agent currently does not support OpenShift, Rancher or On Prem clusters.
+Cloudability Metrics Agent currently does not support Rancher or On Prem clusters.
 
 ### Configuration Options
 
