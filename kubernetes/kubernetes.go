@@ -586,7 +586,7 @@ func getClusterVersion(clientset kubernetes.Interface) (cv ClusterVersion, err e
 	return cv, err
 }
 
-// returns the provisioningID (SHA1 value) generated from a given string.
+// returns the provisioningID (SHA1 value) generated from a given string
 func getProvisioningID(s string) (string, error) {
 	//nolint gosec
 	h := sha1.New()
