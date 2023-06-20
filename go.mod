@@ -222,6 +222,8 @@ require (
 
 //Some of our dependencies have not updated their dependency imports
 replace (
+	github.com/docker/docker => github.com/docker/docker v20.10.24+incompatible
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.5
 	golang.org/x/net => golang.org/x/net v0.7.0
+	google.golang.org/protobuf => google.golang.org/protobuf v1.29.1
 )
