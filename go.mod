@@ -221,4 +221,7 @@ require (
 )
 
 //Some of our dependencies have not updated their dependency imports
-replace golang.org/x/net => golang.org/x/net v0.7.0
+replace (
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.5
+	golang.org/x/net => golang.org/x/net v0.7.0
+)
