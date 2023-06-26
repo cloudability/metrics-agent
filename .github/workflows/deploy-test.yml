@@ -5,6 +5,10 @@ on: [push, pull_request]
 env:
   HARBOR_PROJECT: metrics-agent
   DIR_PATH: snapshots
+  GOLANG_VERSION: 1.19
+  PKG: github.com/cloudability/metrics-agent
+  APPLICATION: metrics-agent
+  PLATFORM: linux/amd64
 
 jobs:
   deploy-test:
@@ -36,7 +40,7 @@ jobs:
       - name: Build
         run: |
           cp -R . "${TMPDIR}"
-          docker build -f deploy/docker/Dockerfile --network=host -t ${{ secrets.REGISTRY_URL }}/${HARBOR_PROJECT}/metrics-agent/${DIR_PATH}/metrics-agent:${VERSION} --build-arg AKP=true "${TMPDIR}"
+          docker build --platform ${PLATFORM} -f deploy/docker/Dockerfile --network=host -t ${{ secrets.REGISTRY_URL }}/${HARBOR_PROJECT}/metrics-agent/${DIR_PATH}/metrics-agent:${VERSION} --build-arg AKP=true --build-arg golang_version=${GOLANG_VERSION} --build-arg package=${PKG} --build-arg application=${APPLICATION} "${TMPDIR}"
           rm -rf "${TMPDIR}"
           rm -rf temp-akp
           docker image list
