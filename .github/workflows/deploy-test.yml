@@ -17,11 +17,12 @@ jobs:
           echo "EPOCH=${EPOCH}" >> $GITHUB_ENV
           echo "VERSION=${GITHUB_SHA:0:8}-${EPOCH}" >> $GITHUB_ENV
           echo "TMPDIR=$(mktemp -d /tmp/metrics-agent.XXXXXXXX)" >> $GITHUB_ENV
+          echo pwd
       - name: Build
-        working-directory: /..
+        working-directory: ./metrics-agent
         run: |
+          echo pwd
           cp -R . "${TMPDIR}"
-
           docker build -f deploy/docker/Dockerfile --network=host -t ${{ secrets.REGISTRY_URL }}/${HARBOR_PROJECT}/metrics-agent/${DIR_PATH}/metrics-agent:${VERSION} --build-arg AKP=true "${TMPDIR}"
           rm -rf "${TMPDIR}"
           rm -rf temp-akp
