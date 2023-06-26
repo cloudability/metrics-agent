@@ -11,17 +11,39 @@ jobs:
     name: Build and Push Test Image
     runs-on: ubuntu-22.04
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Set ENV Vars
         run: |
           EPOCH=$(date '+%s')
           echo "EPOCH=${EPOCH}" >> $GITHUB_ENV
           echo "VERSION=${GITHUB_SHA:0:8}-${EPOCH}" >> $GITHUB_ENV
           echo "TMPDIR=$(mktemp -d /tmp/metrics-agent.XXXXXXXX)" >> $GITHUB_ENV
-          echo pwd
-      - name: Build
-        working-directory: ./metrics-agent
+          echo $PWD
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.19.x
+      - name: Install Tools
         run: |
-          echo pwd
+          mkdir $PWD\golangtools
+          cd $PWD\golangtools
+          GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.21.0
+          GO111MODULE=on go get github.com/onsi/ginkgo/ginkgo@v1.10.1
+          GO111MODULE=on go get golang.org/x/tools/cmd/goimports
+          echo "$PWD\golangtools" >> $GITHUB_PATH
+      - name: Go build
+        run: |
+          mkdir temp-akp
+          GOOS=linux CGO_ENABLED=0 go build -ldflags "-X main.Time=`date -u +'%Y-%m-%dT%H:%M:%SZ'` -X main.Version=${{ env.VERSION }}"
+          cp metrics-agent temp-akp/
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+
+      - name: Build
+        run: |
+          echo $PWD
           cp -R . "${TMPDIR}"
           docker build -f deploy/docker/Dockerfile --network=host -t ${{ secrets.REGISTRY_URL }}/${HARBOR_PROJECT}/metrics-agent/${DIR_PATH}/metrics-agent:${VERSION} --build-arg AKP=true "${TMPDIR}"
           rm -rf "${TMPDIR}"
