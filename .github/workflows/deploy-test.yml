@@ -45,7 +45,7 @@ jobs:
           rm -rf temp-akp
           docker image list
       - name: Harbor Login
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ${{ secrets.REGISTRY_URL }}
           username: ${{ secrets.HARBOR_USER }}
