@@ -18,7 +18,7 @@ jobs:
           echo "VERSION=${GITHUB_SHA:0:8}-${EPOCH}" >> $GITHUB_ENV
           echo "TMPDIR=$(mktemp -d /tmp/metrics-agent.XXXXXXXX)" >> $GITHUB_ENV
       - name: Build
-        working-directory: ./metrics-agent
+        working-directory: metrics-agent
         run: |
           cp -R . "${TMPDIR}"
 
