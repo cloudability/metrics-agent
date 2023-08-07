@@ -2,7 +2,7 @@
 version: v1.25.0
 # ignores vulnerabilities until expiry date; change duration by modifying expiry date
 ignore:
-  CWE-295:
+  'CWE-295':
     - '*':
         reason: >-
           The Improper Certificate Validation does not apply to the
