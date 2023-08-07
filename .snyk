@@ -1,0 +1,23 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  'SNYK:LIC:GOLANG:GITHUB.COM:LEONKLINGELE:GROUPER:(AGPL-3.0_OR_AGPL-3.0-ONLY)':
+    - '*':
+        reason: >-
+          We are ignoring this Dual license: AGPL-3.0-only vulnerability as our
+          metrics-agent repository is open-source.
+        expires: 2100-01-01T00:00:00.000Z
+        created: 2023-08-07T19:11:55.892Z
+  CWE-295:
+    - '*':
+        reason: >-
+          The Improper Certificate Validation does not apply to the
+          metrics-agents default configuration. The reason we have this
+          vulnerability is we allow the agent to run in an insecure mode (not
+          recommended) which is explicitly designed to avoid cert validation.
+          This vulnerability does not apply as long as CLOUDABILITY_INSECURE is
+          false (default behaivor)
+        expires: 2100-01-01T00:00:00.000Z
+        created: 2023-08-07T19:22:08.171Z
+patch: {}
