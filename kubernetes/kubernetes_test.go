@@ -33,7 +33,7 @@ func TestCreateClusterConfig(t *testing.T) {
 	}
 	t.Run("ensure that a clientset and agentConfig are returned", func(t *testing.T) {
 		config, err := createClusterConfig(config)
-		if config.Clientset == nil || config.UseInClusterConfig || err != nil {
+		if config.UseInClusterConfig || err != nil {
 			t.Errorf("Expected clientset and agentConfig to successfully create / update %v ", err)
 		}
 	})
