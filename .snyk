@@ -20,4 +20,9 @@ ignore:
           false (default behaivor)
         expires: 2100-01-01T00:00:00.000Z
         created: 2023-08-07T19:22:08.171Z
+  SNYK-GOLANG-GITHUBCOMCYPHARFILEPATHSECUREJOIN-5889602:
+    - '*':
+        reason: Vulnerability is only exploitable on windows OS
+        expires: 2100-01-01T00:00:00.000Z
+        created: 2023-09-13T19:06:05.786Z
 patch: {}

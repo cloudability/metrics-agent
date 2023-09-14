@@ -38,5 +38,4 @@ rules:
   verbs:
   - "get"
   - "list"
-  - "create"
 {{- end }}
