@@ -82,6 +82,7 @@ type KubeAgentConfig struct {
 	InformerResyncInterval int
 	ParseMetricData        bool
 	HTTPSTimeout           int
+	UploadRegion           string
 }
 
 const uploadInterval time.Duration = 10
@@ -96,8 +97,6 @@ const unreachable = "unreachable"
 
 const kbTroubleShootingURL string = "https://help.apptio.com/en-us/cloudability/product/k8s-metrics-agent.htm"
 const kbProvisionURL string = "https://help.apptio.com/en-us/cloudability/product/k8s-cluster-provisioning.htm"
-const apiEndpoint string = "https://metrics-collector.cloudability.com"
-
 const forbiddenError string = uploadURIError + ": 403"
 const uploadURIError string = "Error retrieving upload URI"
 
@@ -219,12 +218,13 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 		ProxyAuth:     ka.OutboundProxyAuth,
 		ProxyInsecure: ka.OutboundProxyInsecure,
 		Timeout:       time.Duration(ka.HTTPSTimeout) * time.Second,
+		Region:        ka.UploadRegion,
 	})
 	if err != nil {
 		return errors.New("error creating Cloudability Metric client in connectivity test")
 	}
 
-	metricSampleURL := apiEndpoint + "/metricsample"
+	metricSampleURL := client.GetUploadURL(ka.UploadRegion) + "/metricsample"
 
 	file, err := os.Create("/tmp/temp.txt")
 	if err != nil {
@@ -397,6 +397,7 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 		ProxyAuth:     ka.OutboundProxyAuth,
 		ProxyInsecure: ka.OutboundProxyInsecure,
 		Timeout:       time.Duration(ka.HTTPSTimeout) * time.Second,
+		Region:        ka.UploadRegion,
 	})
 
 	if err != nil {
@@ -416,7 +417,7 @@ func handleError(err error) string {
 	if err.Error() == forbiddenError {
 		return fmt.Sprintf(apiKeyError, kbProvisionURL)
 	} else if strings.Contains(err.Error(), uploadURIError) {
-		return fmt.Sprintf(transportError, apiEndpoint)
+		return fmt.Sprintf(transportError, client.DefaultBaseURL)
 	}
 	return ""
 }

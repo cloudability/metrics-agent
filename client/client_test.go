@@ -31,6 +31,7 @@ func TestClientCreation(t *testing.T) {
 			Token:      test.SecureRandomAlphaString(20),
 			BaseURL:    "https://cloudability.com",
 			MaxRetries: 2,
+			Region:     "us-west-2",
 		})
 		if c == nil || err != nil {
 			t.Error("Expected client to successfully create")
@@ -82,6 +83,7 @@ func TestSendMeasurement(t *testing.T) {
 		Token:      token,
 		BaseURL:    ts.URL,
 		MaxRetries: 2,
+		Region:     "us-west-2",
 	})
 	if err != nil {
 		t.Error(err)
@@ -110,6 +112,7 @@ func TestSendMeasurement_ErrorState(t *testing.T) {
 			Token:      test.SecureRandomAlphaString(20),
 			BaseURL:    ts.URL,
 			MaxRetries: 2,
+			Region:     "us-west-2",
 		})
 		if err != nil {
 			t.Error(err)
@@ -257,6 +260,7 @@ func TestSendMetricSample(t *testing.T) {
 		Token:      token,
 		MaxRetries: 2,
 		BaseURL:    ts.URL,
+		Region:     "us-west-2",
 	})
 	if err != nil {
 		t.Error(err)
@@ -298,6 +302,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 			Token:      test.SecureRandomAlphaString(20),
 			BaseURL:    ts.URL,
 			MaxRetries: 2,
+			Region:     "us-west-2",
 		})
 		if err != nil {
 			t.Error(err)
@@ -346,6 +351,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 			Token:      test.SecureRandomAlphaString(20),
 			BaseURL:    ts.URL,
 			MaxRetries: 2,
+			Region:     "us-west-2",
 		})
 		if err != nil {
 			t.Error(err)
@@ -399,6 +405,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 			Token:      test.SecureRandomAlphaString(20),
 			MaxRetries: 2,
 			BaseURL:    ts.URL,
+			Region:     "us-west-2",
 		})
 		if err != nil {
 			t.Error(err)
@@ -449,6 +456,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 			Token:      test.SecureRandomAlphaString(20),
 			MaxRetries: 2,
 			BaseURL:    ts.URL,
+			Region:     "us-west-2",
 		})
 		if err != nil {
 			t.Error(err)
@@ -502,6 +510,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 			Token:      test.SecureRandomAlphaString(20),
 			BaseURL:    ts.URL,
 			MaxRetries: 2,
+			Region:     "us-west-2",
 		})
 		if err != nil {
 			t.Error(err)
@@ -584,6 +593,7 @@ func TestGetUploadURL(t *testing.T) {
 		Token:      token,
 		MaxRetries: 2,
 		BaseURL:    ts.URL,
+		Region:     "us-west-2",
 	})
 	if err != nil {
 		t.Error(err)
@@ -613,4 +623,22 @@ func Test_getB64MD5Hash(t *testing.T) {
 		t.Error("hash not was not correctly calculated")
 	}
 
+}
+
+func Test_getUploadURL(t *testing.T) {
+	// us-west-2 url generation
+	uploadURL := client.GetUploadURL("us-west-2")
+	if uploadURL != client.DefaultBaseURL {
+		t.Error("US URL was not generated correctly")
+	}
+	// eu-central-1 url generation
+	uploadURL = client.GetUploadURL("eu-central-1")
+	if uploadURL != client.EUBaseURL {
+		t.Error("EU URL was not generated correctly")
+	}
+	// unsupported region should default to us-west-2 url generation
+	uploadURL = client.GetUploadURL("my-unsupported-region-1")
+	if uploadURL != client.DefaultBaseURL {
+		t.Error("Unsupported region default to US URL was not generated correctly")
+	}
 }

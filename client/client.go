@@ -30,7 +30,8 @@ import (
 
 //nolint gosec
 
-const defaultBaseURL = "https://metrics-collector.cloudability.com"
+const DefaultBaseURL = "https://metrics-collector.cloudability.com"
+const EUBaseURL string = "https://metrics-collector-eu.cloudability.com"
 const defaultTimeout = 1 * time.Minute
 const defaultMaxRetries = 5
 
@@ -56,6 +57,7 @@ type Configuration struct {
 	ProxyAuth     string
 	ProxyInsecure bool
 	Verbose       bool
+	Region        string
 }
 
 // NewHTTPMetricClient will configure a new instance of a Cloudability client.
@@ -74,9 +76,9 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 	}
 	if len(strings.TrimSpace(cfg.BaseURL)) == 0 {
 		if cfg.Verbose {
-			log.Infof("Using default baseURL of %v", defaultBaseURL)
+			log.Infof("Using default baseURL of %v", DefaultBaseURL)
 		}
-		cfg.BaseURL = defaultBaseURL
+		cfg.BaseURL = GetUploadURL(cfg.Region)
 	}
 	if cfg.MaxRetries <= 0 {
 		if cfg.Verbose {
@@ -451,4 +453,18 @@ func GetB64MD5Hash(name string) (b64Hash string, rerr error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(h.Sum(nil)), err
+}
+
+// GetUploadURL returns the correct base url depending on the env variable CLOUDABILITY_UPLOAD_REGION. If value is not
+// supported, default to us-west-2 (original) URL
+func GetUploadURL(region string) string {
+	switch region {
+	case "eu-central-1":
+		return EUBaseURL
+	case "us-west-2":
+		return DefaultBaseURL
+	default:
+		log.Warnf("Region %s is not supported. Defaulting to us-west-2 region.", region)
+		return DefaultBaseURL
+	}
 }
