@@ -45,46 +45,48 @@ type ClusterVersion struct {
 
 // KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                 string
-	BearerToken            string
-	BearerTokenPath        string
-	Cert                   string
-	ClusterName            string
-	ClusterHostURL         string
-	clusterUID             string
-	HeapsterURL            string
-	Key                    string
-	OutboundProxyAuth      string
-	OutboundProxy          string
-	provisioningID         string
-	ForceKubeProxy         bool
-	Insecure               bool
-	OutboundProxyInsecure  bool
-	UseInClusterConfig     bool
-	PollInterval           int
-	ConcurrentPollers      int
-	CollectionRetryLimit   uint
-	failedNodeList         map[string]error
-	AgentStartTime         time.Time
-	Clientset              kubernetes.Interface
-	ClusterVersion         ClusterVersion
-	HeapsterProxyURL       url.URL
-	OutboundProxyURL       url.URL
-	HTTPClient             http.Client
-	NodeClient             raw.Client
-	InClusterClient        raw.Client
-	msExportDirectory      *os.File
-	TLSClientConfig        rest.TLSClientConfig
-	Namespace              string
-	ScratchDir             string
-	NodeMetrics            EndpointMask
-	Informers              map[string]*cache.SharedIndexInformer
-	InformerResyncInterval int
-	ParseMetricData        bool
-	HTTPSTimeout           int
+	APIKey                   string
+	BearerToken              string
+	BearerTokenPath          string
+	Cert                     string
+	ClusterName              string
+	ClusterHostURL           string
+	clusterUID               string
+	HeapsterURL              string
+	Key                      string
+	OutboundProxyAuth        string
+	OutboundProxy            string
+	provisioningID           string
+	ForceKubeProxy           bool
+	Insecure                 bool
+	OutboundProxyInsecure    bool
+	UseInClusterConfig       bool
+	PollInterval             int
+	ConcurrentPollers        int
+	CollectionRetryLimit     uint
+	failedNodeList           map[string]error
+	AgentStartTime           time.Time
+	Clientset                kubernetes.Interface
+	ClusterVersion           ClusterVersion
+	HeapsterProxyURL         url.URL
+	OutboundProxyURL         url.URL
+	HTTPClient               http.Client
+	NodeClient               raw.Client
+	InClusterClient          raw.Client
+	msExportDirectory        *os.File
+	TLSClientConfig          rest.TLSClientConfig
+	Namespace                string
+	ScratchDir               string
+	NodeMetrics              EndpointMask
+	Informers                map[string]*cache.SharedIndexInformer
+	InformerResyncInterval   int
+	ParseMetricData          bool
+	HTTPSTimeout             int
+	FilesInDisasterDirectory bool
+	TESTSendAttempts         int
 }
 
-const uploadInterval time.Duration = 10
+const uploadInterval time.Duration = 4
 const retryCount uint = 10
 const DefaultCollectionRetry = 1
 const DefaultInformerResync = 24
@@ -97,6 +99,7 @@ const unreachable = "unreachable"
 const kbTroubleShootingURL string = "https://help.apptio.com/en-us/cloudability/product/k8s-metrics-agent.htm"
 const kbProvisionURL string = "https://help.apptio.com/en-us/cloudability/product/k8s-cluster-provisioning.htm"
 const apiEndpoint string = "https://metrics-collector.cloudability.com"
+const disasterRecoveryDirectory string = "/disaster-recovery"
 
 const forbiddenError string = uploadURIError + ": 403"
 const uploadURIError string = "Error retrieving upload URI"
@@ -173,6 +176,9 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	}
 
 	log.Info("Cloudability Metrics Agent successfully started.")
+	// intially no files are in the DR counter
+	kubeAgent.FilesInDisasterDirectory = false
+	kubeAgent.TESTSendAttempts = 0
 
 	for {
 		select {
@@ -192,7 +198,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				}
 			}
 			// Send metric sample
-			log.Info("Uploading Metrics")
+			kubeAgent.TESTSendAttempts++
+			log.Infof("Uploading Metrics. Send attempt %d", kubeAgent.TESTSendAttempts)
 			go kubeAgent.sendMetrics(metricSample)
 
 		case <-pollChan.C:
@@ -403,12 +410,33 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 		log.Fatalf("error creating Cloudability Metric client: %v ", err)
 	}
 
-	err = SendData(metricSample, ka.clusterUID, cldyMetricClient)
+	err = SendData(metricSample, ka.clusterUID, cldyMetricClient, ka)
 	if err != nil {
 		if warnErr := handleError(err); warnErr != "" {
 			log.Warnf(warnErr)
 		}
-		log.Fatalf("error sending metrics: %v", err)
+		log.Warnf("TYPICALLY FATAL.. BUT NOT FOR ME: error sending metrics: %v", err)
+	}
+	if ka.FilesInDisasterDirectory {
+		filesToSend, readDirErr := os.ReadDir("/tmp" + disasterRecoveryDirectory)
+		if readDirErr != nil {
+			log.Fatalf("Can't read from DR directory")
+		}
+		if len(filesToSend) == 0 {
+			log.Infof("There are no longer files in the DR state - exiting Disaster Recover Protocol")
+			ka.FilesInDisasterDirectory = false
+		} else {
+			for _, fileInfo := range filesToSend {
+				fileToRecover, fileErr := os.Open(fileInfo.Name())
+				if fileErr != nil {
+					log.Fatalf("RIP - cannot open file when trying to prep recovery file for sending")
+				}
+				err = SendData(fileToRecover, ka.clusterUID, cldyMetricClient, ka)
+				if err != nil {
+					log.Warnf("Attempted to Recover file, but looks like connection is still down. Keeping file in DR")
+				}
+			}
+		}
 	}
 }
 
@@ -422,10 +450,21 @@ func handleError(err error) string {
 }
 
 // SendData takes Cloudability metric sample and sends data to Cloudability via go client
-func SendData(ms *os.File, uid string, mc client.MetricClient) (err error) {
-	err = mc.SendMetricSample(ms, cldyVersion.VERSION, uid)
+func SendData(ms *os.File, uid string, mc client.MetricClient, ka KubeAgentConfig) (err error) {
+	err = mc.SendMetricSample(ms, cldyVersion.VERSION, uid, ka.TESTSendAttempts)
 	if err != nil {
 		log.Warnf("cloudability write failed: %v", err)
+		log.Infof("Initiate Disaster Recover Protocol")
+		ka.FilesInDisasterDirectory = true
+		log.Infof("Copying .tgz to DR zone %s", ms.Name())
+		// perform storage of this file in EBS
+		pathParts := strings.Split(ms.Name(), "/")
+		destinationPath := "/tmp" + disasterRecoveryDirectory + "/" + pathParts[2]
+		writeErr := util.CopyFileContents(destinationPath, ms.Name())
+		if writeErr != nil {
+			log.Warnf("Could not copy file contents! %s", writeErr)
+			return err
+		}
 	} else {
 		sn := strings.Split(ms.Name(), "/")
 		log.Infof("Exported metric sample %s to cloudability", strings.TrimSuffix(sn[len(sn)-1], ".tgz"))
@@ -433,7 +472,6 @@ func SendData(ms *os.File, uid string, mc client.MetricClient) (err error) {
 		if err != nil {
 			log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
 		}
-
 	}
 	return err
 }

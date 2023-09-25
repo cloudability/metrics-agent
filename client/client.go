@@ -43,6 +43,7 @@ const userAgentHeader = "User-Agent"
 const uploadFileHash = "x-upload-file"
 const contentMD5 = "Content-MD5"
 const proxyAuthHeader = "Proxy-Authorization"
+const disasterRecoveryDirectory string = "/disaster-recovery"
 
 var /* const */ validToken = regexp.MustCompile(`^\w+$`)
 
@@ -132,7 +133,7 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 // MetricClient represents a interface to send a cloudability measurement or metrics sample to an endpoint.
 type MetricClient interface {
 	SendMeasurement(measurements []measurement.Measurement) error
-	SendMetricSample(*os.File, string, string) error
+	SendMetricSample(*os.File, string, string, int) error
 	GetUploadURL(*os.File, string, string, string, int) (string, string, error)
 }
 
@@ -198,7 +199,15 @@ func (c httpMetricClient) SendMeasurement(measurements []measurement.Measurement
 }
 
 // SendMetricSample uploads a file at a given path to the metrics endpoint.
-func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersion string, UID string) (rerr error) {
+func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersion string, UID string, sendAttempts int) (rerr error) {
+	//
+	// INTENTIONALLY BREAK EVERYTHING
+	//
+	if sendAttempts < 2 {
+		return errors.New("BIG ERROR")
+	}
+	log.Infof("3 sending cycle, going forward and attempting recovery")
+
 	metricSampleURL := c.baseURL + "/metricsample"
 
 	resp, err := c.retryWithBackoff(metricSampleURL, metricSampleFile, agentVersion, UID)
