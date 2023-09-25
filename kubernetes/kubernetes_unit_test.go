@@ -2,9 +2,11 @@ package kubernetes
 
 import (
 	"fmt"
+	"testing"
+
+	"github.com/cloudability/metrics-agent/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 func TestKubernetes(t *testing.T) {
@@ -17,7 +19,7 @@ var _ = Describe("Kubernetes", func() {
 	Describe("error validation", func() {
 		It("should return an error if metrics-agent receives a 500 error getting upload URI", func() {
 			errorStr := handleError(fmt.Errorf("Error retrieving upload URI: 500"))
-			Expect(errorStr).To(Equal(fmt.Sprintf(transportError, apiEndpoint)))
+			Expect(errorStr).To(Equal(fmt.Sprintf(transportError, client.DefaultBaseURL)))
 		})
 
 		It("should return an error if metrics-agent receives a 403 error getting upload URI", func() {
