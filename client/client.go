@@ -461,7 +461,11 @@ func GetUploadURL(region string) string {
 	switch region {
 	case "eu-central-1":
 		return EUBaseURL
+	case "eu-west-1":
+		return EUBaseURL
 	case "us-west-2":
+		return DefaultBaseURL
+	case "us-east-1":
 		return DefaultBaseURL
 	default:
 		log.Warnf("Region %s is not supported. Defaulting to us-west-2 region.", region)
