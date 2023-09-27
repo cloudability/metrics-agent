@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"io"
 	"math/rand"
 	"net"
 	"net/http"
@@ -18,8 +17,9 @@ import (
 	"github.com/cloudability/metrics-agent/client"
 	"github.com/cloudability/metrics-agent/measurement"
 	"github.com/cloudability/metrics-agent/test"
-	"github.com/cloudability/metrics-agent/version"
 )
+
+const metricsSuffix string = "/metricsample"
 
 // nolint: dupl
 func TestClientCreation(t *testing.T) {
@@ -35,97 +35,6 @@ func TestClientCreation(t *testing.T) {
 		})
 		if c == nil || err != nil {
 			t.Error("Expected client to successfully create")
-		}
-	})
-}
-
-func TestSendMeasurement(t *testing.T) {
-	t.Parallel()
-
-	token := test.SecureRandomAlphaString(20)
-
-	tags := make(map[string]string)
-	tags["host"] = "macbookpro.Local.abc123"
-	tags["cat"] = "dog"
-
-	measure := measurement.Measurement{
-		Name:      "ametric",
-		Value:     1243.00,
-		Timestamp: time.Now().Unix(),
-		Tags:      tags,
-	}
-	m := []measurement.Measurement{measure}
-	jsonBytes, _ := client.ToJSONLines(m)
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Error("Expected to be a POST")
-		}
-		if !strings.Contains(r.UserAgent(), version.VERSION) {
-			t.Error("Expected version to be present in user agent")
-		}
-		if r.Header.Get(client.AuthHeader) != token {
-			t.Error("Expected token to be set on request")
-		}
-		if r.Header.Get(client.APIKeyHeader) != token {
-			t.Error("Expected token to be set on request")
-		}
-		bodyBytes, _ := io.ReadAll(r.Body)
-		if !bytes.Equal(jsonBytes, bodyBytes) {
-			t.Errorf("Did not receive expect json.  Got %v, expected %v", string(bodyBytes), string(jsonBytes))
-		}
-		w.WriteHeader(200)
-	}))
-	defer ts.Close()
-
-	c, err := client.NewHTTPMetricClient(client.Configuration{
-		Timeout:    10 * time.Second,
-		Token:      token,
-		BaseURL:    ts.URL,
-		MaxRetries: 2,
-		Region:     "us-west-2",
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	err = c.SendMeasurement(m)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func TestSendMeasurement_ErrorState(t *testing.T) {
-	t.Parallel()
-
-	t.Run("404 Not Found", func(t *testing.T) {
-		t.Parallel()
-
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(404)
-		}))
-		//nolint errcheck
-		defer ts.Close()
-
-		c, err := client.NewHTTPMetricClient(client.Configuration{
-			Timeout:    10 * time.Second,
-			Token:      test.SecureRandomAlphaString(20),
-			BaseURL:    ts.URL,
-			MaxRetries: 2,
-			Region:     "us-west-2",
-		})
-		if err != nil {
-			t.Error(err)
-		}
-		m := []measurement.Measurement{{}}
-
-		err = c.SendMeasurement(m)
-		if err == nil {
-			t.Errorf("Expected to receive an error")
-		}
-		if !strings.Contains(err.Error(), "404") {
-			t.Logf("Error message: %v", err.Error())
-			t.Errorf("Expected 404 status code in response")
 		}
 	})
 }
@@ -259,7 +168,7 @@ func TestSendMetricSample(t *testing.T) {
 		Timeout:    10 * time.Second,
 		Token:      token,
 		MaxRetries: 2,
-		BaseURL:    ts.URL,
+		BaseURL:    ts.URL + metricsSuffix,
 		Region:     "us-west-2",
 	})
 	if err != nil {
@@ -349,7 +258,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 		c, err := client.NewHTTPMetricClient(client.Configuration{
 			Timeout:    10 * time.Second,
 			Token:      test.SecureRandomAlphaString(20),
-			BaseURL:    ts.URL,
+			BaseURL:    ts.URL + "/metricsample",
 			MaxRetries: 2,
 			Region:     "us-west-2",
 		})
@@ -508,7 +417,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 		c, err := client.NewHTTPMetricClient(client.Configuration{
 			Timeout:    10 * time.Second,
 			Token:      test.SecureRandomAlphaString(20),
-			BaseURL:    ts.URL,
+			BaseURL:    ts.URL + metricsSuffix,
 			MaxRetries: 2,
 			Region:     "us-west-2",
 		})
@@ -625,19 +534,19 @@ func Test_getB64MD5Hash(t *testing.T) {
 
 }
 
-func Test_getUploadURL(t *testing.T) {
+func Test_getUploadURLRegion(t *testing.T) {
 	// us-west-2 url generation
-	uploadURL := client.GetUploadURL("us-west-2")
+	uploadURL := client.GetUploadURLRegion("us-west-2")
 	if uploadURL != client.DefaultBaseURL {
 		t.Error("US URL was not generated correctly")
 	}
 	// eu-central-1 url generation
-	uploadURL = client.GetUploadURL("eu-central-1")
+	uploadURL = client.GetUploadURLRegion("eu-central-1")
 	if uploadURL != client.EUBaseURL {
 		t.Error("EU URL was not generated correctly")
 	}
 	// unsupported region should default to us-west-2 url generation
-	uploadURL = client.GetUploadURL("my-unsupported-region-1")
+	uploadURL = client.GetUploadURLRegion("my-unsupported-region-1")
 	if uploadURL != client.DefaultBaseURL {
 		t.Error("Unsupported region default to US URL was not generated correctly")
 	}
