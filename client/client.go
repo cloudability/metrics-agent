@@ -407,8 +407,8 @@ func GetB64MD5Hash(name string) (b64Hash string, rerr error) {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil)), err
 }
 
-// GetUploadURLRegion returns the correct base url depending on the env variable CLOUDABILITY_UPLOAD_REGION. If value is not
-// supported, default to us-west-2 (original) URL
+// GetUploadURLRegion returns the correct base url depending on the env variable CLOUDABILITY_UPLOAD_REGION.
+// If value is not supported, default to us-west-2 (original) URL
 func GetUploadURLRegion(region string) string {
 	switch region {
 	case "eu-central-1":
