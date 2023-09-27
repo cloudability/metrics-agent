@@ -30,7 +30,7 @@ import (
 
 //nolint gosec
 
-const DefaultBaseURL = "https://metrics-collector.cloudability.com"
+const DefaultBaseURL string = "https://metrics-collector.cloudability.com"
 const EUBaseURL string = "https://metrics-collector-eu.cloudability.com"
 const defaultTimeout = 1 * time.Minute
 const defaultMaxRetries = 5
@@ -461,11 +461,7 @@ func GetUploadURL(region string) string {
 	switch region {
 	case "eu-central-1":
 		return EUBaseURL
-	case "eu-west-1":
-		return EUBaseURL
 	case "us-west-2":
-		return DefaultBaseURL
-	case "us-east-1":
 		return DefaultBaseURL
 	default:
 		log.Warnf("Region %s is not supported. Defaulting to us-west-2 region.", region)
