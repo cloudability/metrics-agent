@@ -258,7 +258,7 @@ func TestSendMetricSample_ErrorState(t *testing.T) {
 		c, err := client.NewHTTPMetricClient(client.Configuration{
 			Timeout:    10 * time.Second,
 			Token:      test.SecureRandomAlphaString(20),
-			BaseURL:    ts.URL + "/metricsample",
+			BaseURL:    ts.URL + metricsSuffix,
 			MaxRetries: 2,
 			Region:     "us-west-2",
 		})
