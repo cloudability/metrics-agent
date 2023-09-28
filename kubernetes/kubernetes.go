@@ -224,7 +224,7 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 		return errors.New("error creating Cloudability Metric client in connectivity test")
 	}
 
-	metricSampleURL := client.GetUploadURLRegion(ka.UploadRegion)
+	metricSampleURL := client.GetUploadURLByRegion(ka.UploadRegion)
 
 	file, err := os.Create("/tmp/temp.txt")
 	if err != nil {

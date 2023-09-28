@@ -534,19 +534,19 @@ func Test_getB64MD5Hash(t *testing.T) {
 
 }
 
-func Test_getUploadURLRegion(t *testing.T) {
+func Test_getUploadURLByRegion(t *testing.T) {
 	// us-west-2 url generation
-	uploadURL := client.GetUploadURLRegion("us-west-2")
+	uploadURL := client.GetUploadURLByRegion("us-west-2")
 	if uploadURL != client.DefaultBaseURL {
 		t.Error("US URL was not generated correctly")
 	}
 	// eu-central-1 url generation
-	uploadURL = client.GetUploadURLRegion("eu-central-1")
+	uploadURL = client.GetUploadURLByRegion("eu-central-1")
 	if uploadURL != client.EUBaseURL {
 		t.Error("EU URL was not generated correctly")
 	}
 	// unsupported region should default to us-west-2 url generation
-	uploadURL = client.GetUploadURLRegion("my-unsupported-region-1")
+	uploadURL = client.GetUploadURLByRegion("my-unsupported-region-1")
 	if uploadURL != client.DefaultBaseURL {
 		t.Error("Unsupported region default to US URL was not generated correctly")
 	}

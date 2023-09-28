@@ -78,7 +78,7 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 		if cfg.Verbose {
 			log.Infof("Using default baseURL of %v", DefaultBaseURL)
 		}
-		cfg.BaseURL = GetUploadURLRegion(cfg.Region)
+		cfg.BaseURL = GetUploadURLByRegion(cfg.Region)
 	}
 	if cfg.MaxRetries <= 0 {
 		if cfg.Verbose {
@@ -407,9 +407,9 @@ func GetB64MD5Hash(name string) (b64Hash string, rerr error) {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil)), err
 }
 
-// GetUploadURLRegion returns the correct base url depending on the env variable CLOUDABILITY_UPLOAD_REGION.
+// GetUploadURLByRegion returns the correct base url depending on the env variable CLOUDABILITY_UPLOAD_REGION.
 // If value is not supported, default to us-west-2 (original) URL
-func GetUploadURLRegion(region string) string {
+func GetUploadURLByRegion(region string) string {
 	switch region {
 	case "eu-central-1":
 		return EUBaseURL
