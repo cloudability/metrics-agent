@@ -61,7 +61,7 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 | CLOUDABILITY_INFORMER_RESYNC_INTERVAL          |                      Optional: Period of time (in hours) that the informers will fully resync the list of running resources. Default: 24 hours. Can be set to 0 to never resync                      |
 | CLOUDABILITY_PARSE_METRIC_DATA                 |                                        Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                        |
 | CLOUDABILITY_HTTPS_CLIENT_TIMEOUT              |                   Optional: Amount (in seconds) of time the http client has before timing out requests. Might need to be increased to clusters with large payloads. Default: `60`                    |
-| CLOUDABILITY_UPLOAD_REGION                     |                                   Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2` & `eu-central-1`                                    |
+| CLOUDABILITY_UPLOAD_REGION                     |                                            Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2`                                            |
 
 ```sh
 
