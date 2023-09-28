@@ -406,18 +406,18 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 
 	err = SendData(metricSample, ka.clusterUID, cldyMetricClient)
 	if err != nil {
-		if warnErr := handleError(err); warnErr != "" {
+		if warnErr := handleError(err, ka.UploadRegion); warnErr != "" {
 			log.Warnf(warnErr)
 		}
 		log.Fatalf("error sending metrics: %v", err)
 	}
 }
 
-func handleError(err error) string {
+func handleError(err error, region string) string {
 	if err.Error() == forbiddenError {
 		return fmt.Sprintf(apiKeyError, kbProvisionURL)
 	} else if strings.Contains(err.Error(), uploadURIError) {
-		return fmt.Sprintf(transportError, client.DefaultBaseURL)
+		return fmt.Sprintf(transportError, client.GetUploadURLByRegion(region))
 	}
 	return ""
 }

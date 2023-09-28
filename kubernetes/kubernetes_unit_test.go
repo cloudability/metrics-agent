@@ -18,17 +18,17 @@ var _ = Describe("Kubernetes", func() {
 
 	Describe("error validation", func() {
 		It("should return an error if metrics-agent receives a 500 error getting upload URI", func() {
-			errorStr := handleError(fmt.Errorf("Error retrieving upload URI: 500"))
+			errorStr := handleError(fmt.Errorf("Error retrieving upload URI: 500"), "us-west-2")
 			Expect(errorStr).To(Equal(fmt.Sprintf(transportError, client.DefaultBaseURL)))
 		})
 
 		It("should return an error if metrics-agent receives a 403 error getting upload URI", func() {
-			errorStr := handleError(fmt.Errorf(forbiddenError))
+			errorStr := handleError(fmt.Errorf(forbiddenError), "us-west-2")
 			Expect(errorStr).To(Equal(fmt.Sprintf(apiKeyError, kbProvisionURL)))
 		})
 
 		It("should not return an error if the metrics-agent receives any other error", func() {
-			errorStr := handleError(fmt.Errorf("test error"))
+			errorStr := handleError(fmt.Errorf("test error"), "us-west-2")
 			Expect(errorStr).To(Equal(""))
 		})
 
