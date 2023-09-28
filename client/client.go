@@ -30,7 +30,8 @@ import (
 
 //nolint gosec
 
-const defaultBaseURL = "https://metrics-collector.cloudability.com"
+const DefaultBaseURL string = "https://metrics-collector.cloudability.com/metricsample"
+const EUBaseURL string = "https://metrics-collector-eu.cloudability.com/metricsample"
 const defaultTimeout = 1 * time.Minute
 const defaultMaxRetries = 5
 
@@ -56,6 +57,7 @@ type Configuration struct {
 	ProxyAuth     string
 	ProxyInsecure bool
 	Verbose       bool
+	Region        string
 }
 
 // NewHTTPMetricClient will configure a new instance of a Cloudability client.
@@ -74,9 +76,9 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 	}
 	if len(strings.TrimSpace(cfg.BaseURL)) == 0 {
 		if cfg.Verbose {
-			log.Infof("Using default baseURL of %v", defaultBaseURL)
+			log.Infof("Using default baseURL of %v", DefaultBaseURL)
 		}
-		cfg.BaseURL = defaultBaseURL
+		cfg.BaseURL = GetUploadURLByRegion(cfg.Region)
 	}
 	if cfg.MaxRetries <= 0 {
 		if cfg.Verbose {
@@ -131,7 +133,6 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 
 // MetricClient represents a interface to send a cloudability measurement or metrics sample to an endpoint.
 type MetricClient interface {
-	SendMeasurement(measurements []measurement.Measurement) error
 	SendMetricSample(*os.File, string, string) error
 	GetUploadURL(*os.File, string, string, string, int) (string, string, error)
 }
@@ -150,56 +151,9 @@ type MetricSampleResponse struct {
 	Location string `json:"location"`
 }
 
-func (c httpMetricClient) SendMeasurement(measurements []measurement.Measurement) error {
-
-	measurementURL := c.baseURL + "/metrics"
-
-	b, err := toJSONLines(measurements)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, measurementURL, bytes.NewBuffer(b))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(authHeader, c.token)
-	req.Header.Set(apiKeyHeader, c.token)
-	req.Header.Set(userAgentHeader, c.userAgent)
-
-	if c.verbose {
-		requestDump, err := httputil.DumpRequest(req, true)
-		if err != nil {
-			log.Errorln(err)
-		}
-		log.Infoln(string(requestDump))
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Request received %v response", resp.StatusCode)
-	}
-
-	if c.verbose {
-		responseDump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			log.Errorln(err)
-		}
-		log.Infoln(string(responseDump))
-	}
-
-	return nil
-}
-
 // SendMetricSample uploads a file at a given path to the metrics endpoint.
 func (c httpMetricClient) SendMetricSample(metricSampleFile *os.File, agentVersion string, UID string) (rerr error) {
-	metricSampleURL := c.baseURL + "/metricsample"
+	metricSampleURL := c.baseURL
 
 	resp, err := c.retryWithBackoff(metricSampleURL, metricSampleFile, agentVersion, UID)
 	if err != nil {
@@ -451,4 +405,18 @@ func GetB64MD5Hash(name string) (b64Hash string, rerr error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(h.Sum(nil)), err
+}
+
+// GetUploadURLByRegion returns the correct base url depending on the env variable CLOUDABILITY_UPLOAD_REGION.
+// If value is not supported, default to us-west-2 (original) URL
+func GetUploadURLByRegion(region string) string {
+	switch region {
+	case "eu-central-1":
+		return EUBaseURL
+	case "us-west-2":
+		return DefaultBaseURL
+	default:
+		log.Warnf("Region %s is not supported. Defaulting to us-west-2 region.", region)
+		return DefaultBaseURL
+	}
 }

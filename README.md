@@ -58,9 +58,10 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 | CLOUDABILITY_LOG_LEVEL                         |                                                           Optional: Log level to run the agent at (INFO,WARN,DEBUG,TRACE). Default: `INFO`                                                           |
 | CLOUDABILITY_SCRATCH_DIR                       |  Optional: Temporary directory that metrics will be written to. If set, must assure that the directory exists and that the user agent UID 1000 has read/write access to the folder. Default: `/tmp`  |
 | CLOUDABILITY_NUMBER_OF_CONCURRENT_NODE_POLLERS |                                                   Optional: Number of goroutines that are created to poll node metrics in parallel. Default: `100`                                                   |
-| CLOUDABILITY_INFORMER_RESYNC_INTERVAL |                      Optional: Period of time (in hours) that the informers will fully resync the list of running resources. Default: 24 hours. Can be set to 0 to never resync                      |
+| CLOUDABILITY_INFORMER_RESYNC_INTERVAL          |                      Optional: Period of time (in hours) that the informers will fully resync the list of running resources. Default: 24 hours. Can be set to 0 to never resync                      |
 | CLOUDABILITY_PARSE_METRIC_DATA                 |                                        Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                        |
 | CLOUDABILITY_HTTPS_CLIENT_TIMEOUT              |                   Optional: Amount (in seconds) of time the http client has before timing out requests. Might need to be increased to clusters with large payloads. Default: `60`                    |
+| CLOUDABILITY_UPLOAD_REGION                     |                                            Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2`                                            |
 
 ```sh
 

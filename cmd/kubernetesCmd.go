@@ -132,6 +132,12 @@ func init() {
 		60,
 		"Amount (in seconds) of time the https client has before timing out requests. Default 60",
 	)
+	kubernetesCmd.PersistentFlags().StringVar(
+		&config.UploadRegion,
+		"upload_region",
+		"us-west-2",
+		"The region the metrics-agent will upload data to. Default us-west-2",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -156,6 +162,7 @@ func init() {
 		kubernetesCmd.PersistentFlags().Lookup("number_of_concurrent_node_pollers"))
 	_ = viper.BindPFlag("parse_metric_data", kubernetesCmd.PersistentFlags().Lookup("parse_metric_data"))
 	_ = viper.BindPFlag("https_client_timeout", kubernetesCmd.PersistentFlags().Lookup("https_client_timeout"))
+	_ = viper.BindPFlag("upload_region", kubernetesCmd.PersistentFlags().Lookup("upload_region"))
 
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
@@ -180,6 +187,7 @@ func init() {
 		InformerResyncInterval: viper.GetInt("informer_resync_interval"),
 		ParseMetricData:        viper.GetBool("parse_metric_data"),
 		HTTPSTimeout:           viper.GetInt("https_client_timeout"),
+		UploadRegion:           viper.GetString("upload_region"),
 	}
 
 }
