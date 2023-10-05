@@ -133,11 +133,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	// Create k8s agent
 	kubeAgent := newKubeAgent(ctx, config)
 
-	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
-	if customS3Mode {
-		log.Infof("Detected custom S3 bucket location. "+
-			"Will upload collected metrics to %s", kubeAgent.CustomS3UploadBucket)
-	}
+	customS3Mode := isCustomS3UploadEnvSet(&kubeAgent)
 
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
@@ -176,12 +172,10 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	if !customS3Mode {
-		err = performConnectionChecks(&kubeAgent)
-		if err != nil {
-			log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
-				"upload metrics to Cloudability with error: %v", err)
-		}
+	err = performConnectionChecks(&kubeAgent, customS3Mode)
+	if err != nil {
+		log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
+			"upload metrics to Cloudability with error: %v", err)
 	}
 
 	log.Info("Cloudability Metrics Agent successfully started.")
@@ -190,7 +184,6 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		select {
 
 		case <-sendChan.C:
-
 			// Bundle raw metrics
 			metricSample, err := util.CreateMetricSample(
 				*kubeAgent.msExportDirectory, kubeAgent.clusterUID, true, kubeAgent.ScratchDir)
@@ -204,13 +197,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				}
 			}
 			// Send metric sample
-			if !customS3Mode {
-				log.Info("Uploading Metrics")
-				go kubeAgent.sendMetrics(metricSample)
-			} else {
-				log.Infof("Uploading Metrics to Custom S3 Bucket %s", kubeAgent.CustomS3UploadBucket)
-				go kubeAgent.sendMetricsToCustomS3(metricSample)
-			}
+			kubeAgent.sendMetricsBasedOnUploadMode(customS3Mode, metricSample)
 
 		case <-pollChan.C:
 			err := kubeAgent.collectMetrics(ctx, kubeAgent, kubeAgent.Clientset, clientSetNodeSource)
@@ -226,15 +213,21 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-// isCustomS3UploadEnvsSet checks to see if the agent has a custom s3 location to upload to
-func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
+// isCustomS3UploadEnvSet checks to see if the agent has a custom s3 location to upload to
+func isCustomS3UploadEnvSet(ka *KubeAgentConfig) bool {
 	if ka.CustomS3UploadBucket == "" {
 		return false
 	}
+	log.Infof("Detected custom S3 bucket location. "+
+		"Will upload collected metrics to %s", ka.CustomS3UploadBucket)
 	return true
 }
 
-func performConnectionChecks(ka *KubeAgentConfig) error {
+func performConnectionChecks(ka *KubeAgentConfig, customS3Mode bool) error {
+	if customS3Mode {
+		return nil
+	}
+
 	log.Info("Performing connectivity checks. Checking that the agent can retrieve S3 URL")
 
 	cldyMetricClient, err := client.NewHTTPMetricClient(client.Configuration{
@@ -436,6 +429,16 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 			log.Warnf(warnErr)
 		}
 		log.Fatalf("error sending metrics: %v", err)
+	}
+}
+
+func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, metricSample *os.File) {
+	if customS3Mode {
+		log.Info("Uploading Metrics")
+		go ka.sendMetrics(metricSample)
+	} else {
+		log.Infof("Uploading Metrics to Custom S3 Bucket %s", ka.CustomS3UploadBucket)
+		go ka.sendMetricsToCustomS3(metricSample)
 	}
 }
 
