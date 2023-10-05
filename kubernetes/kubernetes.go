@@ -2,6 +2,7 @@
 package kubernetes
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"crypto/tls"
@@ -21,6 +22,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/cloudability/metrics-agent/client"
 	"github.com/cloudability/metrics-agent/measurement"
 	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"
@@ -83,6 +87,7 @@ type KubeAgentConfig struct {
 	ParseMetricData        bool
 	HTTPSTimeout           int
 	UploadRegion           string
+	CustomS3UploadBucket   string
 }
 
 const uploadInterval time.Duration = 10
@@ -128,6 +133,12 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	// Create k8s agent
 	kubeAgent := newKubeAgent(ctx, config)
 
+	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
+	if customS3Mode {
+		log.Infof("Detected custom S3 bucket location. "+
+			"Will upload collected metrics to %s", kubeAgent.CustomS3UploadBucket)
+	}
+
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
 
@@ -165,10 +176,12 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	err = performConnectionChecks(&kubeAgent)
-	if err != nil {
-		log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
-			"upload metrics to Cloudability with error: %v", err)
+	if !customS3Mode {
+		err = performConnectionChecks(&kubeAgent)
+		if err != nil {
+			log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
+				"upload metrics to Cloudability with error: %v", err)
+		}
 	}
 
 	log.Info("Cloudability Metrics Agent successfully started.")
@@ -191,8 +204,13 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				}
 			}
 			// Send metric sample
-			log.Info("Uploading Metrics")
-			go kubeAgent.sendMetrics(metricSample)
+			if !customS3Mode {
+				log.Info("Uploading Metrics")
+				go kubeAgent.sendMetrics(metricSample)
+			} else {
+				log.Infof("Uploading Metrics to Custom S3 Bucket %s", kubeAgent.CustomS3UploadBucket)
+				go kubeAgent.sendMetricsToCustomS3(metricSample)
+			}
 
 		case <-pollChan.C:
 			err := kubeAgent.collectMetrics(ctx, kubeAgent, kubeAgent.Clientset, clientSetNodeSource)
@@ -206,6 +224,14 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		}
 	}
 
+}
+
+// isCustomS3UploadEnvsSet checks to see if the agent has a custom s3 location to upload to
+func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
+	if ka.CustomS3UploadBucket == "" {
+		return false
+	}
+	return true
 }
 
 func performConnectionChecks(ka *KubeAgentConfig) error {
@@ -411,6 +437,69 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 		}
 		log.Fatalf("error sending metrics: %v", err)
 	}
+}
+
+func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-west-2")},
+	)
+	if err != nil {
+		log.Fatalf("Could not establish AWS Session, "+
+			"ensure AWS environment variables are set correctly: %s", err)
+	}
+	svc := s3.New(sess)
+
+	key := generateSampleKey(ka.clusterUID)
+
+	metricFile, err := os.Open(metricSample.Name())
+	if err != nil {
+		log.Fatalf("Failed to open metric sample file: %v", err)
+	}
+	defer metricFile.Close()
+
+	fileInfo, err := metricFile.Stat()
+	if err != nil {
+		log.Fatalf("Failed to get metric sample file statistics: %v", err)
+	}
+	fileSize := fileInfo.Size()
+	fileBuffer := make([]byte, fileSize)
+	_, err = metricFile.Read(fileBuffer)
+	if err != nil {
+		log.Fatalf("Failed to read metric sample file: %v", err)
+	}
+
+	_, err = svc.PutObject(&s3.PutObjectInput{
+		Bucket:        aws.String(ka.CustomS3UploadBucket),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(fileBuffer),
+		ContentLength: aws.Int64(fileSize),
+		ContentType:   aws.String(http.DetectContentType(fileBuffer))})
+	if err != nil {
+		log.Fatalf("Failed to put Object to custom S3 with error: %s", err)
+	} else {
+		sn := strings.Split(metricSample.Name(), "/")
+		log.Infof("Exported metric sample %s to custom S3 bucket: %s",
+			strings.TrimSuffix(sn[len(sn)-1], ".tgz"), ka.CustomS3UploadBucket)
+	}
+	err = os.Remove(metricSample.Name())
+	if err != nil {
+		log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
+	}
+}
+
+// generateSampleKey creates a key (location) for s3 to upload the sample to. Example of s3 location format
+// <S3_BUCKET>/production/data/metrics-agent/<YYYY>/<MM>/<DD>/<CLUSTER_UID>/<CLUSTER_UID>-<YYYYMMDD>-<HH>-<MM>.tgz
+func generateSampleKey(clusterUID string) string {
+	fileKey := "/production/data/metrics-agent/"
+	currentTime := time.Now()
+	year, month, day := currentTime.Date()
+	hour := currentTime.Hour()
+	minute := currentTime.Minute()
+	fileKey += strconv.Itoa(year) + "/" + fmt.Sprintf("%02d", int(month)) + "/" +
+		fmt.Sprintf("%02d", day) + "/" + clusterUID + "/" + clusterUID + "-" +
+		currentTime.Format("20060102") + "-" + fmt.Sprintf("%02d", hour) + "-" +
+		fmt.Sprintf("%02d", minute) + ".tgz"
+	return fileKey
 }
 
 func handleError(err error, region string) string {
@@ -740,6 +829,8 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["number_of_concurrent_node_pollers"] = strconv.Itoa(config.ConcurrentPollers)
 	m.Values["parse_metric_data"] = strconv.FormatBool(config.ParseMetricData)
 	m.Values["https_client_timeout"] = strconv.Itoa(config.HTTPSTimeout)
+	m.Values["upload_region"] = config.UploadRegion
+	m.Values["custom_s3_bucket"] = config.CustomS3UploadBucket
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {

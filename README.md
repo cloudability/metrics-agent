@@ -62,6 +62,7 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 | CLOUDABILITY_PARSE_METRIC_DATA                 |                                        Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                        |
 | CLOUDABILITY_HTTPS_CLIENT_TIMEOUT              |                   Optional: Amount (in seconds) of time the http client has before timing out requests. Might need to be increased to clusters with large payloads. Default: `60`                    |
 | CLOUDABILITY_UPLOAD_REGION                     |                                            Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2`                                            |
+| CLOUDABILITY_CUSTOM_S3_BUCKET                  |                               Optional: A custom S3 bucket the metrics-agent will upload data to. If set, the metrics-agent will ONLY upload to this custom location.                                |
 
 ```sh
 
@@ -90,6 +91,8 @@ Flags:
       --number_of_concurrent_node_pollers int    The number of goroutines that are created to poll node metrics in parallel. (default `100`)
       --parse_metric_data bool                   When true, core files will be parsed and non-relevant data will be removed prior to upload. (default `false`)
       --https_client_timeout int                 Amount (in seconds) of time the https client has before timing out requests. (default `60`)
+      --upload_region                            The region the metrics-agent will upload data to. (default `us-west-2`)
+      --custom_s3_bucket string                  A custom S3 bucket the metrics-agent will upload data to. - Optional
 Global Flags:
       --log_format string   Format for log output (JSON,PLAIN) (default "PLAIN")
       --log_level string    Log level to run the agent at (INFO,WARN,DEBUG) (default "INFO")
