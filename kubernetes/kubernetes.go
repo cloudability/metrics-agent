@@ -88,6 +88,7 @@ type KubeAgentConfig struct {
 	HTTPSTimeout           int
 	UploadRegion           string
 	CustomS3UploadBucket   string
+	CustomS3Region         string
 }
 
 const uploadInterval time.Duration = 10
@@ -133,7 +134,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	// Create k8s agent
 	kubeAgent := newKubeAgent(ctx, config)
 
-	customS3Mode := isCustomS3UploadEnvSet(&kubeAgent)
+	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
 
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
@@ -213,13 +214,20 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-// isCustomS3UploadEnvSet checks to see if the agent has a custom s3 location to upload to
-func isCustomS3UploadEnvSet(ka *KubeAgentConfig) bool {
-	if ka.CustomS3UploadBucket == "" {
+// isCustomS3UploadEnvsSet checks to see if the agent has a custom S3 location and S3 region to upload to
+// if both these variables are not set, default upload to Apptio S3
+func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
+	if ka.CustomS3Region == "" && ka.CustomS3UploadBucket == "" {
 		return false
 	}
-	log.Infof("Detected custom S3 bucket location. "+
-		"Will upload collected metrics to %s", ka.CustomS3UploadBucket)
+	if ka.CustomS3UploadBucket == "" || ka.CustomS3Region == "" {
+		log.Warnf("Detected only one of the two required environment variables to run in custom S3 upload"+
+			" mode. CLOUDABILITY_CUSTOM_S3_BUCKET is set to %s and CLOUDABILITY_CUSTOM_S3_REGION is set to %s. "+
+			"Defaulting upload to Apptio S3", ka.CustomS3UploadBucket, ka.CustomS3Region)
+		return false
+	}
+	log.Infof("Detected custom S3 bucket location and S3 bucket aws region "+
+		"Will upload collected metrics to %s in the aws region %s", ka.CustomS3UploadBucket, ka.CustomS3Region)
 	return true
 }
 
@@ -444,7 +452,7 @@ func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, metric
 
 func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-west-2")},
+		Region: aws.String(ka.CustomS3Region)},
 	)
 	if err != nil {
 		log.Fatalf("Could not establish AWS Session, "+
@@ -834,6 +842,7 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["https_client_timeout"] = strconv.Itoa(config.HTTPSTimeout)
 	m.Values["upload_region"] = config.UploadRegion
 	m.Values["custom_s3_bucket"] = config.CustomS3UploadBucket
+	m.Values["custom_s3_region"] = config.CustomS3Region
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {
