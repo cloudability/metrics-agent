@@ -442,11 +442,11 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 
 func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, metricSample *os.File) {
 	if customS3Mode {
-		log.Info("Uploading Metrics")
-		go ka.sendMetrics(metricSample)
-	} else {
 		log.Infof("Uploading Metrics to Custom S3 Bucket %s", ka.CustomS3UploadBucket)
 		go ka.sendMetricsToCustomS3(metricSample)
+	} else {
+		log.Info("Uploading Metrics")
+		go ka.sendMetrics(metricSample)
 	}
 }
 
