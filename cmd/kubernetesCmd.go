@@ -146,7 +146,7 @@ func init() {
 			"to custom s3 location",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
-		&config.CustomS3UploadBucket,
+		&config.CustomS3Region,
 		"custom_s3_region",
 		"",
 		"The AWS region that the custom s3 bucket is in",
