@@ -2,7 +2,6 @@
 package kubernetes
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha1"
 	"crypto/tls"
@@ -25,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/cloudability/metrics-agent/client"
 	"github.com/cloudability/metrics-agent/measurement"
 	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"
@@ -221,12 +221,12 @@ func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 		return false
 	}
 	if ka.CustomS3UploadBucket == "" || ka.CustomS3Region == "" {
-		log.Warnf("Detected only one of the two required environment variables to run in custom S3 upload"+
-			" mode. CLOUDABILITY_CUSTOM_S3_BUCKET is set to %s and CLOUDABILITY_CUSTOM_S3_REGION is set to %s. "+
-			"Defaulting upload to Apptio S3", ka.CustomS3UploadBucket, ka.CustomS3Region)
+		log.Fatalf("Invalid agent configuration. Detected only one of the two required environment variables "+
+			"to run in custom S3 upload mode. CLOUDABILITY_CUSTOM_S3_BUCKET is set to %s and "+
+			"CLOUDABILITY_CUSTOM_S3_REGION is set to %s.", ka.CustomS3UploadBucket, ka.CustomS3Region)
 		return false
 	}
-	log.Infof("Detected custom S3 bucket location and S3 bucket aws region "+
+	log.Infof("Detected custom S3 bucket location and S3 bucket region. "+
 		"Will upload collected metrics to %s in the aws region %s", ka.CustomS3UploadBucket, ka.CustomS3Region)
 	return true
 }
@@ -459,32 +459,22 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 			"ensure AWS environment variables are set correctly: %s", err)
 	}
 	svc := s3.New(sess)
+	uploader := s3manager.NewUploaderWithClient(svc)
+
+	fileReader, err := os.Open(metricSample.Name())
+	if err != nil {
+		log.Fatalf("Unable to open metric sample file %v", err)
+	}
+	defer fileReader.Close()
 
 	key := generateSampleKey(ka.clusterUID)
-
-	metricFile, err := os.Open(metricSample.Name())
-	if err != nil {
-		log.Fatalf("Failed to open metric sample file: %v", err)
-	}
-	defer metricFile.Close()
-
-	fileInfo, err := metricFile.Stat()
-	if err != nil {
-		log.Fatalf("Failed to get metric sample file statistics: %v", err)
-	}
-	fileSize := fileInfo.Size()
-	fileBuffer := make([]byte, fileSize)
-	_, err = metricFile.Read(fileBuffer)
-	if err != nil {
-		log.Fatalf("Failed to read metric sample file: %v", err)
+	sampleToUpload := &s3manager.UploadInput{
+		Bucket: aws.String(ka.CustomS3UploadBucket),
+		Key:    aws.String(key),
+		Body:   fileReader,
 	}
 
-	_, err = svc.PutObject(&s3.PutObjectInput{
-		Bucket:        aws.String(ka.CustomS3UploadBucket),
-		Key:           aws.String(key),
-		Body:          bytes.NewReader(fileBuffer),
-		ContentLength: aws.Int64(fileSize),
-		ContentType:   aws.String(http.DetectContentType(fileBuffer))})
+	_, err = uploader.Upload(sampleToUpload)
 	if err != nil {
 		log.Fatalf("Failed to put Object to custom S3 with error: %s", err)
 	} else {
@@ -499,18 +489,14 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 }
 
 // generateSampleKey creates a key (location) for s3 to upload the sample to. Example of s3 location format
-// <S3_BUCKET>/production/data/metrics-agent/<YYYY>/<MM>/<DD>/<CLUSTER_UID>/<CLUSTER_UID>-<YYYYMMDD>-<HH>-<MM>.tgz
+// /production/data/metrics-agent/<YYYY>/<MM>/<DD>/<CLUSTER_UID>/<CLUSTER_UID>-<YYYYMMDD>-<HH>-<MM>.tgz
 func generateSampleKey(clusterUID string) string {
-	fileKey := "/production/data/metrics-agent/"
 	currentTime := time.Now()
 	year, month, day := currentTime.Date()
 	hour := currentTime.Hour()
 	minute := currentTime.Minute()
-	fileKey += strconv.Itoa(year) + "/" + fmt.Sprintf("%02d", int(month)) + "/" +
-		fmt.Sprintf("%02d", day) + "/" + clusterUID + "/" + clusterUID + "-" +
-		currentTime.Format("20060102") + "-" + fmt.Sprintf("%02d", hour) + "-" +
-		fmt.Sprintf("%02d", minute) + ".tgz"
-	return fileKey
+	return fmt.Sprintf("/production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
+		int(month), day, clusterUID, clusterUID, currentTime.Format("20060102"), hour, minute)
 }
 
 func handleError(err error, region string) string {
