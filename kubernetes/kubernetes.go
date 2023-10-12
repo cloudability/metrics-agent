@@ -121,6 +121,7 @@ const rbacError string = `RBAC role in the Cloudability namespace may need to be
 	***IMPORTANT*** If the cluster is managed by GKE - there are special instructions for provisioning.`
 
 // CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
+// nolint: gocyclo
 func CollectKubeMetrics(config KubeAgentConfig) {
 
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
@@ -173,10 +174,12 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	err = performConnectionChecks(&kubeAgent, customS3Mode)
-	if err != nil {
-		log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
-			"upload metrics to Cloudability with error: %v", err)
+	if !customS3Mode {
+		err = performConnectionChecks(&kubeAgent)
+		if err != nil {
+			log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
+				"upload metrics to Cloudability with error: %v", err)
+		}
 	}
 
 	log.Info("Cloudability Metrics Agent successfully started.")
@@ -231,10 +234,7 @@ func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 	return true
 }
 
-func performConnectionChecks(ka *KubeAgentConfig, customS3Mode bool) error {
-	if customS3Mode {
-		return nil
-	}
+func performConnectionChecks(ka *KubeAgentConfig) error {
 
 	log.Info("Performing connectivity checks. Checking that the agent can retrieve S3 URL")
 
@@ -452,7 +452,8 @@ func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, metric
 
 func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(ka.CustomS3Region)},
+		Region:     aws.String(ka.CustomS3Region),
+		MaxRetries: aws.Int(3)},
 	)
 	if err != nil {
 		log.Fatalf("Could not establish AWS Session, "+
