@@ -227,7 +227,6 @@ func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 		log.Fatalf("Invalid agent configuration. Detected only one of the two required environment variables "+
 			"to run in custom S3 upload mode. CLOUDABILITY_CUSTOM_S3_BUCKET is set to %s and "+
 			"CLOUDABILITY_CUSTOM_S3_REGION is set to %s.", ka.CustomS3UploadBucket, ka.CustomS3Region)
-		return false
 	}
 	log.Infof("Detected custom S3 bucket location and S3 bucket region. "+
 		"Will upload collected metrics to %s in the aws region %s", ka.CustomS3UploadBucket, ka.CustomS3Region)
