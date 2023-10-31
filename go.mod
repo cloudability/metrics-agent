@@ -86,10 +86,12 @@ require (
 
 //Some of our dependencies have not updated their dependency imports
 replace (
+	github.com/docker/distribution => github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker => github.com/docker/docker v20.10.24+incompatible
 
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.15
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.5
+	golang.org/x/image => golang.org/x/image v0.10.0
 	golang.org/x/net => golang.org/x/net v0.17.0
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 	google.golang.org/protobuf => google.golang.org/protobuf v1.29.1
