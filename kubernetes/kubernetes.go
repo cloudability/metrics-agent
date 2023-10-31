@@ -221,6 +221,10 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 // if both these variables are not set, default upload to Apptio S3
 func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 	if ka.CustomS3Region == "" && ka.CustomS3UploadBucket == "" {
+		if ka.APIKey == "" {
+			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
+				"when not using CLOUDABILITY_CUSTOM_S3_BUCKET & CLOUDABILITY_CUSTOM_S3_REGION")
+		}
 		return false
 	}
 	if ka.CustomS3UploadBucket == "" || ka.CustomS3Region == "" {

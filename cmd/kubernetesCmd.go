@@ -11,7 +11,6 @@ import (
 var (
 	config       kubernetes.KubeAgentConfig
 	requiredArgs = []string{
-		"api_key",
 		"cluster_name",
 	}
 	kubernetesCmd = &cobra.Command{
