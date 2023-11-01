@@ -10,7 +10,7 @@ require (
 	github.com/onsi/gomega v1.27.4
 	github.com/prometheus/common v0.38.0
 	github.com/prometheus/prom2json v1.3.0
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/viper v1.13.0
 	k8s.io/api v0.27.4
@@ -24,7 +24,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
+	github.com/emicklei/go-restful/v3 v3.10.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
