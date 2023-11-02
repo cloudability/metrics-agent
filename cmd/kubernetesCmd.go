@@ -11,7 +11,6 @@ import (
 var (
 	config       kubernetes.KubeAgentConfig
 	requiredArgs = []string{
-		"api_key",
 		"cluster_name",
 	}
 	kubernetesCmd = &cobra.Command{
@@ -138,6 +137,19 @@ func init() {
 		"us-west-2",
 		"The region the metrics-agent will upload data to. Default us-west-2",
 	)
+	kubernetesCmd.PersistentFlags().StringVar(
+		&config.CustomS3UploadBucket,
+		"custom_s3_bucket",
+		"",
+		"The S3 bucket the metrics-agent will upload data to. Default is an empty string which will not upload "+
+			"to custom s3 location",
+	)
+	kubernetesCmd.PersistentFlags().StringVar(
+		&config.CustomS3Region,
+		"custom_s3_region",
+		"",
+		"The AWS region that the custom s3 bucket is in",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -163,7 +175,8 @@ func init() {
 	_ = viper.BindPFlag("parse_metric_data", kubernetesCmd.PersistentFlags().Lookup("parse_metric_data"))
 	_ = viper.BindPFlag("https_client_timeout", kubernetesCmd.PersistentFlags().Lookup("https_client_timeout"))
 	_ = viper.BindPFlag("upload_region", kubernetesCmd.PersistentFlags().Lookup("upload_region"))
-
+	_ = viper.BindPFlag("custom_s3_bucket", kubernetesCmd.PersistentFlags().Lookup("custom_s3_bucket"))
+	_ = viper.BindPFlag("custom_s3_region", kubernetesCmd.PersistentFlags().Lookup("custom_s3_region"))
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
 
@@ -188,6 +201,8 @@ func init() {
 		ParseMetricData:        viper.GetBool("parse_metric_data"),
 		HTTPSTimeout:           viper.GetInt("https_client_timeout"),
 		UploadRegion:           viper.GetString("upload_region"),
+		CustomS3UploadBucket:   viper.GetString("custom_s3_bucket"),
+		CustomS3Region:         viper.GetString("custom_s3_region"),
 	}
 
 }

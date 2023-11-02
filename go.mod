@@ -3,13 +3,14 @@ module github.com/cloudability/metrics-agent
 go 1.19
 
 require (
+	github.com/aws/aws-sdk-go v1.35.24
 	github.com/google/cadvisor v0.47.0
 	github.com/googleapis/gnostic v0.5.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.4
 	github.com/prometheus/common v0.38.0
 	github.com/prometheus/prom2json v1.3.0
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/viper v1.13.0
 	k8s.io/api v0.27.4
@@ -23,7 +24,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
+	github.com/emicklei/go-restful/v3 v3.10.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
@@ -41,6 +42,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
@@ -61,14 +63,14 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
-	golang.org/x/net v0.13.0 // indirect
-	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/term v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
-	golang.org/x/time v0.0.0-20220920022843-2ce7c2934d45 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/oauth2 v0.7.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
@@ -84,10 +86,13 @@ require (
 
 //Some of our dependencies have not updated their dependency imports
 replace (
+	github.com/docker/distribution => github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker => github.com/docker/docker v20.10.24+incompatible
 
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.15
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.5
-	golang.org/x/net => golang.org/x/net v0.13.0
+	golang.org/x/image => golang.org/x/image v0.10.0
+	golang.org/x/net => golang.org/x/net v0.17.0
+	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 	google.golang.org/protobuf => google.golang.org/protobuf v1.29.1
 )
