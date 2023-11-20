@@ -20,9 +20,9 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 Kubernetes versions 1.28 and below are supported by the metrics agent on AWS cloud service (EKS).
 
-#### 1.26 and below
+#### 1.27 and below
 
-Kubernetes versions 1.26 and below are supported by the metrics agent on Google Cloud Platform (GKE) and Azure cloud services (AKS).
+Kubernetes versions 1.27 and below are supported by the metrics agent on Google Cloud Platform (GKE) and Azure cloud services (AKS).
 
 ### Openshift Versions
 
