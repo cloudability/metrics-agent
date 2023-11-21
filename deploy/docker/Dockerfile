@@ -11,9 +11,10 @@ WORKDIR /go/src/${package}/
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 COPY . /go/src/${package}
+RUN go mod tidy
 RUN go build
 
-FROM alpine:3.16
+FROM alpine:3.18
 ARG package
 ARG application
 
