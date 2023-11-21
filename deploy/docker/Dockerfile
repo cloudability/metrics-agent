@@ -11,7 +11,6 @@ WORKDIR /go/src/${package}/
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 COPY . /go/src/${package}
-RUN go mod tidy
 RUN go build
 
 FROM alpine:3.18
