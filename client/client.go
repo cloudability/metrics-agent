@@ -64,7 +64,9 @@ type Configuration struct {
 func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 
 	if !validToken.MatchString(cfg.Token) {
-		return nil, errors.New("Token format is invalid (only alphanumeric are allowed)")
+		return nil, errors.New("token format is invalid (only alphanumeric are allowed). Please check you " +
+			"are using your Containers Insights API Key (not Frontdoor). This can be found in the YAML after " +
+			"provisioning in the 'Insights -> Containers' UI under the CLOUDABILITY_API_KEY environment variable")
 	}
 
 	// Use defaults
