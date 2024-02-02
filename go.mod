@@ -90,7 +90,7 @@ replace (
 	github.com/docker/docker => github.com/docker/docker v20.10.24+incompatible
 
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.18
-	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.5
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.12
 	golang.org/x/crypto => golang.org/x/crypto v0.17.0
 	golang.org/x/image => golang.org/x/image v0.10.0
 	golang.org/x/net => golang.org/x/net v0.20.0
