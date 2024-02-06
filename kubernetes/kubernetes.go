@@ -251,7 +251,7 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 		Region:        ka.UploadRegion,
 	})
 	if err != nil {
-		return errors.New("error creating Cloudability Metric client in connectivity test")
+		return err
 	}
 
 	metricSampleURL := client.GetUploadURLByRegion(ka.UploadRegion)

@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/aws/aws-sdk-go v1.35.24
-	github.com/google/cadvisor v0.47.0
+	github.com/google/cadvisor v0.48.1
 	github.com/googleapis/gnostic v0.5.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.4
@@ -63,22 +63,22 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/term v0.15.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/term v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/klog/v2 v2.90.1 // indirect
+	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
-	k8s.io/utils v0.0.0-20230209194617-a36077c30491 // indirect
+	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
@@ -90,10 +90,10 @@ replace (
 	github.com/docker/docker => github.com/docker/docker v20.10.24+incompatible
 
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.18
-	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.5
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.12
 	golang.org/x/crypto => golang.org/x/crypto v0.17.0
 	golang.org/x/image => golang.org/x/image v0.10.0
-	golang.org/x/net => golang.org/x/net v0.17.0
+	golang.org/x/net => golang.org/x/net v0.20.0
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 	google.golang.org/protobuf => google.golang.org/protobuf v1.32.0
 )
