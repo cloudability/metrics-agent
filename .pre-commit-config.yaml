@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: add-header
+        name: add-header
+        entry: ./headerScript.sh
+        language: script
+        files: \.

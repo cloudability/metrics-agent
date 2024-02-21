@@ -1,3 +1,5 @@
+// © Copyright Apptio, an IBM Corp. 2024, 2025
+
 //go:build tools
 // +build tools
 

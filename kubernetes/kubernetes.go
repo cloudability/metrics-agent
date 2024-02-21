@@ -1,3 +1,5 @@
+// © Copyright Apptio, an IBM Corp. 2024, 2025
+
 //nolint:gosec
 package kubernetes
 
