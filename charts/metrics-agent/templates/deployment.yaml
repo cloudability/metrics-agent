@@ -12,7 +12,10 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "metrics-agent.selectorLabels" . | nindent 8 }}
+        {{- include "metrics-agent.labels" . | nindent 8 }}
+        {{- if .Values.additionalPodLabels }}
+        {{ toYaml .Values.additionalPodLabels }}
+        {{- end }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

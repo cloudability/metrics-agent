@@ -37,6 +37,12 @@ resources:
     cpu: "1.0"
     memory: "4Gi"
 
+# Extra labels to add to the pod only.
+additionalPodLabels: {}
+
+# Extra labels to add to all resources, including pods.
+additionalLabels: {}
+
 livenessProbe:
   exec:
     command:
@@ -73,5 +79,5 @@ openShift: false
 seccompProfile:
   type: RuntimeDefault
 
-drop: 
+drop:
 - ALL
