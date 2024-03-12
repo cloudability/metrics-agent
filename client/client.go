@@ -32,6 +32,7 @@ import (
 
 const DefaultBaseURL string = "https://metrics-collector.cloudability.com/metricsample"
 const EUBaseURL string = "https://metrics-collector-eu.cloudability.com/metricsample"
+const AUBaseURL string = "https://metrics-collector-au.cloudability.com/metricsample"
 const defaultTimeout = 1 * time.Minute
 const defaultMaxRetries = 5
 
@@ -415,6 +416,8 @@ func GetUploadURLByRegion(region string) string {
 	switch region {
 	case "eu-central-1":
 		return EUBaseURL
+	case "ap-southeast-2":
+		return AUBaseURL
 	case "us-west-2":
 		return DefaultBaseURL
 	default:
