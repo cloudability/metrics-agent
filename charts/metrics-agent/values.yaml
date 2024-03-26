@@ -24,7 +24,7 @@ pollInterval: 180
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.11.22
+  tag: 2.11.23
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -72,6 +72,23 @@ openShift: false
 
 seccompProfile:
   type: RuntimeDefault
+
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+# Extra labels to add to the pod only.
+podLabels: {}
+
+# Extra labels to add to all resources, including pods.
+additionalLabels: {}
 
 drop: 
 - ALL
