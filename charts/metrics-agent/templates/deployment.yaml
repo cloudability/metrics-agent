@@ -12,7 +12,8 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "metrics-agent.selectorLabels" . | nindent 8 }}
+        {{- include "metrics-agent.labels" . | nindent 8 }}
+        {{- if .Values.podLabels }}{{ toYaml .Values.podLabels | nindent 8 }}{{- end }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -52,6 +53,14 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
