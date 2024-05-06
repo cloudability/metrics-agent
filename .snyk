@@ -25,4 +25,9 @@ ignore:
         reason: Vulnerability is only exploitable on windows OS
         expires: 2100-01-01T00:00:00.000Z
         created: 2023-09-13T19:06:05.786Z
+  SNYK-GOLANG-GITHUBCOMOPENCONTAINERSRUNCLIBCONTAINER-6672882:
+    - '*':
+        reason: 'No fix available yet'
+        expires: 2024-08-06T00:00:00.000Z
+        created: 2024-05-06T00:00:00.275Z
 patch: {}
