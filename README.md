@@ -16,7 +16,7 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 ### Kubernetes Versions
 
-Kubernetes versions 1.28 and below are supported by the metrics agent on AWS cloud service (EKS), Google Cloud Platform (GKE), Azure cloud services (AKS), and Oracle Cloud (OKE).
+Kubernetes versions 1.29 and below are supported by the metrics agent on AWS cloud service (EKS), Google Cloud Platform (GKE), Azure cloud services (AKS), and Oracle Cloud (OKE).
 
 ### OpenShift Versions
 
@@ -109,11 +109,8 @@ The following recommendation is based on number of nodes in the cluster. It's fo
 ## Networking Requirement for Metrics Agent
 The container that hosts the metrics agent should allow HTTPS requests to following endpoints:
 - metrics-collector.cloudability.com port 443
-- api.cloudability.com port 443
-- frontdoor.apptio.com  port 443
 
 The container that hosts the metrics agent should have write access to following Apptio S3 buckets:
-- cldy-cake-pipeline
 - apptio* (bucket prefixed with apptio)
 
 ## Development

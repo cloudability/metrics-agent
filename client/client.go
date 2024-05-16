@@ -32,6 +32,7 @@ import (
 
 const DefaultBaseURL string = "https://metrics-collector.cloudability.com/metricsample"
 const EUBaseURL string = "https://metrics-collector-eu.cloudability.com/metricsample"
+const AUBaseURL string = "https://metrics-collector-au.cloudability.com/metricsample"
 const defaultTimeout = 1 * time.Minute
 const defaultMaxRetries = 5
 
@@ -64,7 +65,9 @@ type Configuration struct {
 func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 
 	if !validToken.MatchString(cfg.Token) {
-		return nil, errors.New("Token format is invalid (only alphanumeric are allowed)")
+		return nil, errors.New("token format is invalid (only alphanumeric are allowed). Please check you " +
+			"are using your Containers Insights API Key (not Frontdoor). This can be found in the YAML after " +
+			"provisioning in the 'Insights -> Containers' UI under the CLOUDABILITY_API_KEY environment variable")
 	}
 
 	// Use defaults
@@ -413,6 +416,8 @@ func GetUploadURLByRegion(region string) string {
 	switch region {
 	case "eu-central-1":
 		return EUBaseURL
+	case "ap-southeast-2":
+		return AUBaseURL
 	case "us-west-2":
 		return DefaultBaseURL
 	default:
