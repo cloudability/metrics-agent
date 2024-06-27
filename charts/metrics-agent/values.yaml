@@ -90,5 +90,10 @@ podLabels: {}
 # Extra labels to add to all resources, including pods.
 additionalLabels: {}
 
+# Extra annotations to add to the pod only.
+podAnnotations: {}
+
+readOnlyRootFilesystem: false
+
 drop: 
 - ALL
