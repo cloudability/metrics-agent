@@ -24,7 +24,7 @@ pollInterval: 180
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.11.26
+  tag: 2.11.27
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -89,6 +89,11 @@ podLabels: {}
 
 # Extra labels to add to all resources, including pods.
 additionalLabels: {}
+
+# Extra annotations to add to the pod only.
+podAnnotations: {}
+
+readOnlyRootFilesystem: false
 
 drop: 
 - ALL
