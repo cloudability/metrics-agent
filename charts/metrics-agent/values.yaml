@@ -93,7 +93,5 @@ additionalLabels: {}
 # Extra annotations to add to the pod only.
 podAnnotations: {}
 
-readOnlyRootFilesystem: false
-
 drop: 
 - ALL
