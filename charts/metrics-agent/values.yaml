@@ -93,7 +93,17 @@ additionalLabels: {}
 # Extra annotations to add to the pod only.
 podAnnotations: {}
 
-# when toggling to true, the proper volumeMount must be configured correctly otherwise the agent will crash
+# when setting readOnlyRootFilesystem to true, the proper volume/volumeMount must be
+# configured correctly otherwise the agent will crash
+# the following volumes: and volumeMounts: sections below
+# will allow the agent to run successfully with readOnlyRootFilesystem set to true
+#volumeMounts:
+#  - mountPath: /tmp
+#    name: tmp
+#
+#volumes:
+#  - emptyDir: {}
+#    name: tmp
 readOnlyRootFilesystem: false
 
 drop: 
