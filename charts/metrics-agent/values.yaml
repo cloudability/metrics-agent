@@ -93,5 +93,8 @@ additionalLabels: {}
 # Extra annotations to add to the pod only.
 podAnnotations: {}
 
+# when toggling to true, the proper volumeMount must be configured correctly otherwise the agent will crash
+readOnlyRootFilesystem: false
+
 drop: 
 - ALL

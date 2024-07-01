@@ -35,6 +35,7 @@ spec:
             capabilities:
               drop:
                 {{ .Values.drop }}
+            readOnlyRootFilesystem: {{ .Values.readOnlyRootFilesystem }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
           - 'kubernetes'
