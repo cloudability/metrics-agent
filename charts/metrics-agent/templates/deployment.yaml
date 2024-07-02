@@ -14,6 +14,8 @@ spec:
       labels:
         {{- include "metrics-agent.labels" . | nindent 8 }}
         {{- if .Values.podLabels }}{{ toYaml .Values.podLabels | nindent 8 }}{{- end }}
+      annotations:
+        {{- if .Values.podAnnotations }}{{ toYaml .Values.podAnnotations | nindent 8 }}{{- end }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -33,6 +35,7 @@ spec:
             capabilities:
               drop:
                 {{ .Values.drop }}
+            readOnlyRootFilesystem: {{ .Values.readOnlyRootFilesystem }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
           - 'kubernetes'
