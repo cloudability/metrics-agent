@@ -84,6 +84,16 @@ container-build-single-repository:
 	--build-arg application=$(APPLICATION) \
 	-t $$REPOSITORY/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile . --push
 
+# Specify the repository you would like to send the single-architecture image to after building
+container-build-single-repository-podman:
+	@read -p "Enter the repository name you want to send this image to: " REPOSITORY; \
+	podman buildx build --platform $(PLATFORM) \
+	--build-arg golang_version=$(GOLANG_VERSION) \
+	--build-arg package=$(PKG) \
+	--build-arg application=$(APPLICATION) \
+	-t $$REPOSITORY/metrics-agent:$(VERSION) -f deploy/docker/Dockerfile .; \
+	podman image push $$REPOSITORY/metrics-agent:$(VERSION)
+
 # Specify the repository you would like to send the multi-architectural image to after building.
 container-build-repository:
 	@read -p "Enter the repository name you want to send this image to: " REPOSITORY; \
