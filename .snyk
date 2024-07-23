@@ -42,8 +42,8 @@ ignore:
           version 1.22+. However Go 1.22+ versions currently have 5 critical
           vulnerabilities and therefore we can not upgrade the go version until
           a patch version is released. Ignoring for 90 days.
-        expires: 2024-10-18T00:00:00.000Z
-        created: 2024-07-18T22:38:30.693Z
+        expires: 2024-10-22T00:00:00.000Z
+        created: 2024-07-23T00:41:35.050Z
   SNYK-GOLANG-K8SIOCLIENTGOUTILJSONPATH-7540854:
     - '*':
         reason: >-
@@ -51,8 +51,8 @@ ignore:
           version 1.22+. However Go 1.22+ versions currently have 5 critical
           vulnerabilities and therefore we can not upgrade the go version until
           a patch version is released. Ignoring for 90 days.
-        expires: 2024-10-18T00:00:00.000Z
-        created: 2024-07-18T22:39:07.126Z
+        expires: 2024-10-22T00:00:00.000Z
+        created: 2024-07-23T00:42:14.222Z
   SNYK-GOLANG-K8SIOAPISERVERPLUGINPKGAUTHENTICATORTOKENOIDC-7459774:
     - '*':
         reason: >-
@@ -60,14 +60,14 @@ ignore:
           version 1.22+. However Go 1.22+ versions currently have 5 critical
           vulnerabilities and therefore we can not upgrade the go version until
           a patch version is released. Ignoring for 90 days.
-        expires: 2024-10-18T00:00:00.000Z
-        created: 2024-07-18T22:39:41.861Z
+        expires: 2024-10-22T00:00:00.000Z
+        created: 2024-07-23T00:42:33.848Z
   SNYK-CC-K8S-8:
     - '*':
         reason: >-
           Permanently ignore as this configuration is supported via the Helm
           Chart. Users can set readOnlyRootFilesystem to true and add the proper
           volume/volumeMount to their deployment
-        expires: 2300-01-01T00:00:00.000Z
-        created: 2024-07-23T00:17:31.153Z
+        expires: 2200-01-01T00:00:00.000Z
+        created: 2024-07-23T00:43:23.074Z
 patch: {}
