@@ -13,7 +13,7 @@ ENV GOOS=linux
 COPY . /go/src/${package}
 RUN go build
 
-FROM alpine:3.20
+FROM alpine:3
 ARG package
 ARG application
 
@@ -24,13 +24,13 @@ RUN apk --update upgrade && apk add ca-certificates && apk add curl
 # Remove unnecessary netcat tool
 RUN apk del netcat-openbsd && apk del netcat-openbsd-doc && rm /var/cache/apk/* && rm /usr/bin/nc
 
-RUN addgroup -g 1000 agent && \
-    adduser agent -S -u 1000 -s /bin/nologin -g metrics-agent -H -G agent
+RUN addgroup -g 10000 agent && \
+    adduser agent -S -u 10000 -s /bin/nologin -g metrics-agent -H -G agent
 
 WORKDIR /
 
 COPY --from=build-env /go/src/${package}/${application} /${application}
 
-USER 1000
+USER 10000
 
 ENTRYPOINT ["/metrics-agent"]

@@ -35,33 +35,6 @@ ignore:
         reason: No fix available yet
         expires: 2024-10-11T00:00:00.000Z
         created: 2024-07-11T23:07:11.176Z
-  SNYK-GOLANG-K8SIOCLIENTGOTRANSPORT-7538822:
-    - '*':
-        reason: >-
-          To bump the k8s.io package to fix this vulnerability requires go
-          version 1.22+. However Go 1.22+ versions currently have 5 critical
-          vulnerabilities and therefore we can not upgrade the go version until
-          a patch version is released. Ignoring for 90 days.
-        expires: 2024-10-22T00:00:00.000Z
-        created: 2024-07-23T00:41:35.050Z
-  SNYK-GOLANG-K8SIOCLIENTGOUTILJSONPATH-7540854:
-    - '*':
-        reason: >-
-          To bump the k8s.io package to fix this vulnerability requires go
-          version 1.22+. However Go 1.22+ versions currently have 5 critical
-          vulnerabilities and therefore we can not upgrade the go version until
-          a patch version is released. Ignoring for 90 days.
-        expires: 2024-10-22T00:00:00.000Z
-        created: 2024-07-23T00:42:14.222Z
-  SNYK-GOLANG-K8SIOAPISERVERPLUGINPKGAUTHENTICATORTOKENOIDC-7459774:
-    - '*':
-        reason: >-
-          To bump the k8s.io package to fix this vulnerability requires go
-          version 1.22+. However Go 1.22+ versions currently have 5 critical
-          vulnerabilities and therefore we can not upgrade the go version until
-          a patch version is released. Ignoring for 90 days.
-        expires: 2024-10-22T00:00:00.000Z
-        created: 2024-07-23T00:42:33.848Z
   SNYK-CC-K8S-8:
     - '*':
         reason: >-
