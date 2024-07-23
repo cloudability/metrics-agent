@@ -113,7 +113,7 @@ spec:
         - image: cloudability/metrics-agent:latest
           imagePullPolicy: Always
           securityContext:
-            runAsUser: 1000
+            runAsUser: 10000
             runAsNonRoot: true
             capabilities:
               drop:
