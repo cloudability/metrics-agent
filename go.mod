@@ -7,7 +7,7 @@ require (
 	github.com/google/cadvisor v0.48.1
 	github.com/googleapis/gnostic v0.5.5
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.31.0
+	github.com/onsi/gomega v1.27.4
 	github.com/prometheus/common v0.38.0
 	github.com/prometheus/prom2json v1.3.0
 	github.com/sirupsen/logrus v1.9.3
@@ -24,13 +24,13 @@ require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
+	github.com/emicklei/go-restful/v3 v3.10.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
-	github.com/go-openapi/jsonreference v0.20.2 // indirect
+	github.com/go-openapi/jsonreference v0.20.1 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
