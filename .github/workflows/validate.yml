@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.21'
+          go-version: '1.22'
       - uses: snyk/actions/setup@master
       - uses: actions/checkout@v2
       - name: Snyk Test
@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.21'
+          go-version: '1.22'
       - uses: actions/checkout@v2
       - name: Install tools
         run: |
@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.21'
+          go-version: '1.22'
       - uses: actions/checkout@v2
       - name: run e2e AMD tests
         run: make test-e2e-all
