@@ -1,8 +1,6 @@
 module github.com/cloudability/metrics-agent
 
-go 1.22.0
-
-toolchain go1.22.3
+go 1.22
 
 require (
 	github.com/aws/aws-sdk-go v1.35.24
@@ -15,9 +13,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/viper v1.13.0
-	k8s.io/api v0.30.3
-	k8s.io/apimachinery v0.30.3
-	k8s.io/client-go v0.30.3
+	k8s.io/api v0.27.4
+	k8s.io/apimachinery v0.27.4
+	k8s.io/client-go v0.27.4
 	k8s.io/kubelet v0.27.4
 	sigs.k8s.io/kind v0.17.0
 )
@@ -36,6 +34,7 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
