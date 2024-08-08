@@ -108,3 +108,18 @@ readOnlyRootFilesystem: false
 
 drop: 
 - ALL
+
+# Extra K8s manifests to deploy
+extraObjects: []
+# - apiVersion: external-secrets.io/v1beta1
+#   kind: SecretStore
+#   metadata:
+#     name: aws-store-cloudability
+#     annotations:     
+#       argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true  
+#       argocd.argoproj.io/sync-wave: "99"
+#   spec:
+#     provider:
+#       aws:
+#         service: SecretsManager
+#         region: us-west-2
