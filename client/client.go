@@ -34,7 +34,7 @@ const DefaultBaseURL string = "https://metrics-collector.cloudability.com/metric
 const EUBaseURL string = "https://metrics-collector-eu.cloudability.com/metricsample"
 const AUBaseURL string = "https://metrics-collector-au.cloudability.com/metricsample"
 const MEBaseURL string = "https://metrics-collector-me.cloudability.com/metricsample"
-const UsGovEngBaseURL string = "https://metrics-collector-gov-eng.cloudability.com"
+const UsGovEngBaseURL string = "https://metrics-collector-gov-eng.cloudability.com/metricsample"
 const defaultTimeout = 1 * time.Minute
 const defaultMaxRetries = 5
 
