@@ -24,7 +24,7 @@ pollInterval: 180
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.11.29
+  tag: 2.11.30
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -108,3 +108,21 @@ readOnlyRootFilesystem: false
 
 drop: 
 - ALL
+
+# Extra K8s manifests to deploy,
+# NOTE: not all various extraObject deployment configurations are tested/supported. When adding extra resources
+# to the metrics-agent deployment, Cloudability may not be able to assist in deployment troubleshooting
+extraObjects: []
+# Example extra manifest
+# - apiVersion: external-secrets.io/v1beta1
+#   kind: SecretStore
+#   metadata:
+#     name: aws-store-xxxxx
+#     annotations:
+#       argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+#       argocd.argoproj.io/sync-wave: "99"
+#   spec:
+#     provider:
+#       aws:
+#         service: SecretsManager
+#         region: us-west-2
