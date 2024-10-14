@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -49,46 +51,51 @@ type ClusterVersion struct {
 
 // KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                 string
-	BearerToken            string
-	BearerTokenPath        string
-	Cert                   string
-	ClusterName            string
-	ClusterHostURL         string
-	clusterUID             string
-	HeapsterURL            string
-	Key                    string
-	OutboundProxyAuth      string
-	OutboundProxy          string
-	provisioningID         string
-	ForceKubeProxy         bool
-	Insecure               bool
-	OutboundProxyInsecure  bool
-	UseInClusterConfig     bool
-	PollInterval           int
-	ConcurrentPollers      int
-	CollectionRetryLimit   uint
-	failedNodeList         map[string]error
-	AgentStartTime         time.Time
-	Clientset              kubernetes.Interface
-	ClusterVersion         ClusterVersion
-	HeapsterProxyURL       url.URL
-	OutboundProxyURL       url.URL
-	HTTPClient             http.Client
-	NodeClient             raw.Client
-	InClusterClient        raw.Client
-	msExportDirectory      *os.File
-	TLSClientConfig        rest.TLSClientConfig
-	Namespace              string
-	ScratchDir             string
-	NodeMetrics            EndpointMask
-	Informers              map[string]*cache.SharedIndexInformer
-	InformerResyncInterval int
-	ParseMetricData        bool
-	HTTPSTimeout           int
-	UploadRegion           string
-	CustomS3UploadBucket   string
-	CustomS3Region         string
+	APIKey                             string
+	BearerToken                        string
+	BearerTokenPath                    string
+	Cert                               string
+	ClusterName                        string
+	ClusterHostURL                     string
+	clusterUID                         string
+	HeapsterURL                        string
+	Key                                string
+	OutboundProxyAuth                  string
+	OutboundProxy                      string
+	provisioningID                     string
+	ForceKubeProxy                     bool
+	Insecure                           bool
+	OutboundProxyInsecure              bool
+	UseInClusterConfig                 bool
+	PollInterval                       int
+	ConcurrentPollers                  int
+	CollectionRetryLimit               uint
+	failedNodeList                     map[string]error
+	AgentStartTime                     time.Time
+	Clientset                          kubernetes.Interface
+	ClusterVersion                     ClusterVersion
+	HeapsterProxyURL                   url.URL
+	OutboundProxyURL                   url.URL
+	HTTPClient                         http.Client
+	NodeClient                         raw.Client
+	InClusterClient                    raw.Client
+	msExportDirectory                  *os.File
+	TLSClientConfig                    rest.TLSClientConfig
+	Namespace                          string
+	ScratchDir                         string
+	NodeMetrics                        EndpointMask
+	Informers                          map[string]*cache.SharedIndexInformer
+	InformerResyncInterval             int
+	ParseMetricData                    bool
+	HTTPSTimeout                       int
+	UploadRegion                       string
+	CustomS3UploadBucket               string
+	CustomS3Region                     string
+	CustomAzureUploadBlobContainerName string
+	CustomAzureBlobUrl                 string
+	CustomAzureTenantId                string
+	CustomAzureClientId                string
+	CustomAzureClientSecret            string
 }
 
 const uploadInterval time.Duration = 10
@@ -136,6 +143,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	kubeAgent := newKubeAgent(ctx, config)
 
 	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
+	customAzureMode := isCustomAzureUploadEnvsSet(&kubeAgent)
 
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
@@ -174,7 +182,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	if !customS3Mode {
+	if !customS3Mode && !customAzureMode {
 		err = performConnectionChecks(&kubeAgent)
 		if err != nil {
 			log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
@@ -201,7 +209,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				}
 			}
 			// Send metric sample
-			kubeAgent.sendMetricsBasedOnUploadMode(customS3Mode, metricSample)
+			kubeAgent.sendMetricsBasedOnUploadMode(customS3Mode, customAzureMode, metricSample)
 
 		case <-pollChan.C:
 			err := kubeAgent.collectMetrics(ctx, kubeAgent, kubeAgent.Clientset, clientSetNodeSource)
@@ -234,6 +242,29 @@ func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 	}
 	log.Infof("Detected custom S3 bucket location and S3 bucket region. "+
 		"Will upload collected metrics to %s in the aws region %s", ka.CustomS3UploadBucket, ka.CustomS3Region)
+	return true
+}
+
+func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) bool {
+	if ka.CustomAzureUploadBlobContainerName == "" && ka.CustomAzureBlobUrl == "" && ka.CustomAzureClientId == "" &&
+		ka.CustomAzureClientSecret == "" && ka.CustomAzureTenantId == "" {
+		if ka.APIKey == "" {
+			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
+				"when not using CLOUDABILITY_CUSTOM_AZURE_BLOB env vars.")
+		}
+		return false
+	}
+	if ka.CustomAzureUploadBlobContainerName == "" || ka.CustomAzureBlobUrl == "" || ka.CustomAzureClientId == "" ||
+		ka.CustomAzureClientSecret == "" || ka.CustomAzureTenantId == "" {
+		log.Fatalf("Invalid agent configuration. Detected only one of the six required environment variables "+
+			"to run in custom Azure upload mode. CLOUDABILITY_CUSTOM_AZURE_BLOB_CONTAINER_NAME is set to %s. "+
+			"CLOUDABILITY_CUSTOM_AZURE_BLOB_URL is set to %s CLOUDABILITY_CUSTOM_AZURE_TENANT_ID is set to %s. "+
+			"CLOUDABILITY_CUSTOM_AZURE_CLIENT_ID is set to %s. CLOUDABILITY_CUSTOM_AZURE_CLIENT_SECRET is set to %s.",
+			ka.CustomAzureUploadBlobContainerName, ka.CustomAzureBlobUrl, ka.CustomAzureClientId, ka.CustomAzureTenantId,
+			ka.CustomAzureClientSecret)
+	}
+	log.Infof("Detected custom Azure blob configuration, "+
+		"Will upload collected metrics to %s", ka.CustomAzureUploadBlobContainerName)
 	return true
 }
 
@@ -443,10 +474,13 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 	}
 }
 
-func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, metricSample *os.File) {
+func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, customAzureMode bool, metricSample *os.File) {
 	if customS3Mode {
 		log.Infof("Uploading Metrics to Custom S3 Bucket %s", ka.CustomS3UploadBucket)
 		go ka.sendMetricsToCustomS3(metricSample)
+	} else if customAzureMode {
+		log.Infof("Uploading Metrics to Custom Azure Blob %s", ka.CustomAzureUploadBlobContainerName)
+		go ka.sendMetricsToCustomBlob(metricSample)
 	} else {
 		log.Info("Uploading Metrics")
 		go ka.sendMetrics(metricSample)
@@ -471,7 +505,7 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	}
 	defer fileReader.Close()
 
-	key := generateSampleKey(ka.clusterUID)
+	key := generateSampleKey(ka.clusterUID, "aws")
 	sampleToUpload := &s3manager.UploadInput{
 		Bucket: aws.String(ka.CustomS3UploadBucket),
 		Key:    aws.String(key),
@@ -492,13 +526,61 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	}
 }
 
-// generateSampleKey creates a key (location) for s3 to upload the sample to. Example of s3 location format
+func (ka KubeAgentConfig) sendMetricsToCustomBlob(metricSample *os.File) {
+	os.Setenv("AZURE_TENANT_ID", ka.CustomAzureTenantId)
+	os.Setenv("AZURE_CLIENT_ID", ka.CustomAzureClientId)
+	os.Setenv("AZURE_CLIENT_SECRET", ka.CustomAzureClientSecret)
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		log.Fatalf("Could not establish Azure credentials, "+
+			"ensure Azure environment variables are set correctly: %s", err)
+	}
+	azureClient, err := azblob.NewClient(ka.CustomAzureBlobUrl, cred, nil)
+	if err != nil {
+		log.Fatalf("Could not establish Azure Client, "+
+			"ensure Azure environment variables are set correctly: %s", err)
+	}
+	ka.uploadBlob(azureClient, metricSample)
+}
+
+func (ka KubeAgentConfig) uploadBlob(client *azblob.Client, metricSample *os.File) {
+	file, err := os.Open(metricSample.Name())
+	if err != nil {
+		log.Fatalf("Unable to open metric sample file %v", err)
+	}
+	defer file.Close()
+	key := generateSampleKey(ka.clusterUID, "azure")
+	_, err = client.UploadFile(context.Background(), ka.CustomAzureUploadBlobContainerName, key, file, nil)
+	if err != nil {
+		log.Fatalf("Failed to put Object to custom Azure blob with error: %s", err)
+	} else {
+		sn := strings.Split(metricSample.Name(), "/")
+		log.Infof("Exported metric sample %s to custom Azure blob: %s",
+			strings.TrimSuffix(sn[len(sn)-1], ".tgz"), ka.CustomAzureUploadBlobContainerName)
+	}
+	err = os.Remove(metricSample.Name())
+	if err != nil {
+		log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
+	}
+}
+
+// generateSampleKey creates a key (location) for s3 or azure to upload the sample to. Example of s3 location format
 // /production/data/metrics-agent/<YYYY>/<MM>/<DD>/<CLUSTER_UID>/<CLUSTER_UID>-<YYYYMMDD>-<HH>-<MM>.tgz
-func generateSampleKey(clusterUID string) string {
+// example of azure location format
+// production/data/metrics-agent/<YYYY>/<MM>/<DD>/<CLUSTER_UID>/<CLUSTER_UID>-<YYYYMMDD>-<HH>-<MM>.tgz
+func generateSampleKey(clusterUID, provider string) string {
 	currentTime := time.Now()
 	year, month, day := currentTime.Date()
 	hour := currentTime.Hour()
 	minute := currentTime.Minute()
+	if provider == "aws" {
+		return fmt.Sprintf("/production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
+			int(month), day, clusterUID, clusterUID, currentTime.Format("20060102"), hour, minute)
+	}
+	if provider == "azure" {
+		return fmt.Sprintf("production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
+			int(month), day, clusterUID, clusterUID, currentTime.Format("20060102"), hour, minute)
+	}
 	return fmt.Sprintf("/production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
 		int(month), day, clusterUID, clusterUID, currentTime.Format("20060102"), hour, minute)
 }
@@ -833,6 +915,11 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["upload_region"] = config.UploadRegion
 	m.Values["custom_s3_bucket"] = config.CustomS3UploadBucket
 	m.Values["custom_s3_region"] = config.CustomS3Region
+	m.Values["custom_azure_blob_container_name"] = config.CustomAzureUploadBlobContainerName
+	m.Values["custom_azure_blob_url"] = config.CustomAzureBlobUrl
+	m.Values["custom_azure_tenant_id"] = config.CustomAzureTenantId
+	m.Values["custom_azure_client_id"] = config.CustomAzureClientId
+	m.Values["custom_azure_client_secret"] = config.CustomAzureClientSecret
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {
