@@ -182,7 +182,7 @@ func init() {
 		"The Azure client secret the metrics-agent uses when connecting to the azure blob.",
 	)
 
-	//nolint gas, lll
+	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
 	_ = viper.BindPFlag("cluster_name", kubernetesCmd.PersistentFlags().Lookup("cluster_name"))
 	_ = viper.BindPFlag("heapster_override_url", kubernetesCmd.PersistentFlags().Lookup("heapster_override_url"))
@@ -208,7 +208,8 @@ func init() {
 	_ = viper.BindPFlag("upload_region", kubernetesCmd.PersistentFlags().Lookup("upload_region"))
 	_ = viper.BindPFlag("custom_s3_bucket", kubernetesCmd.PersistentFlags().Lookup("custom_s3_bucket"))
 	_ = viper.BindPFlag("custom_s3_region", kubernetesCmd.PersistentFlags().Lookup("custom_s3_region"))
-	_ = viper.BindPFlag("custom_azure_blob_container_name", kubernetesCmd.PersistentFlags().Lookup("custom_azure_blob_container_name"))
+	_ = viper.BindPFlag("custom_azure_blob_container_name", kubernetesCmd.PersistentFlags().Lookup(
+		"custom_azure_blob_container_name"))
 	_ = viper.BindPFlag("custom_azure_blob_url", kubernetesCmd.PersistentFlags().Lookup("custom_azure_blob_url"))
 	_ = viper.BindPFlag("custom_azure_tenant_id", kubernetesCmd.PersistentFlags().Lookup("custom_azure_tenant_id"))
 	_ = viper.BindPFlag("custom_azure_client_id", kubernetesCmd.PersistentFlags().Lookup("custom_azure_client_id"))
