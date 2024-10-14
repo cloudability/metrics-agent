@@ -154,8 +154,8 @@ func init() {
 		&config.CustomAzureUploadBlobContainerName,
 		"custom_azure_blob_container_name",
 		"",
-		"The Azure blob container name the metrics-agent will upload data to. Default is an empty string which will not upload "+
-			"to custom azure location",
+		"The Azure blob container name the metrics-agent will upload data to. Default is an empty string "+
+			"which will not upload to custom azure location",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.CustomAzureBlobURL,
@@ -182,7 +182,7 @@ func init() {
 		"The Azure client secret the metrics-agent uses when connecting to the azure blob.",
 	)
 
-	//nolint gas
+	//nolint gas, lll
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
 	_ = viper.BindPFlag("cluster_name", kubernetesCmd.PersistentFlags().Lookup("cluster_name"))
 	_ = viper.BindPFlag("heapster_override_url", kubernetesCmd.PersistentFlags().Lookup("heapster_override_url"))
