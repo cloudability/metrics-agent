@@ -158,19 +158,19 @@ func init() {
 			"to custom azure location",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
-		&config.CustomAzureBlobUrl,
+		&config.CustomAzureBlobURL,
 		"custom_azure_blob_url",
 		"",
 		"The Azure blob url the metrics-agent will upload data to.",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
-		&config.CustomAzureTenantId,
+		&config.CustomAzureTenantID,
 		"custom_azure_tenant_id",
 		"",
 		"The Azure tenant id the metrics-agent uses when connecting to the azure blob.",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
-		&config.CustomAzureClientId,
+		&config.CustomAzureClientID,
 		"custom_azure_client_id",
 		"",
 		"The Azure client id the metrics-agent uses when connecting to the azure blob.",
@@ -240,9 +240,9 @@ func init() {
 		CustomS3UploadBucket:               viper.GetString("custom_s3_bucket"),
 		CustomS3Region:                     viper.GetString("custom_s3_region"),
 		CustomAzureUploadBlobContainerName: viper.GetString("custom_azure_blob_container_name"),
-		CustomAzureBlobUrl:                 viper.GetString("custom_azure_blob_url"),
-		CustomAzureTenantId:                viper.GetString("custom_azure_tenant_id"),
-		CustomAzureClientId:                viper.GetString("custom_azure_client_id"),
+		CustomAzureBlobURL:                 viper.GetString("custom_azure_blob_url"),
+		CustomAzureTenantID:                viper.GetString("custom_azure_tenant_id"),
+		CustomAzureClientID:                viper.GetString("custom_azure_client_id"),
 		CustomAzureClientSecret:            viper.GetString("custom_azure_client_secret"),
 	}
 

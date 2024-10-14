@@ -92,9 +92,9 @@ type KubeAgentConfig struct {
 	CustomS3UploadBucket               string
 	CustomS3Region                     string
 	CustomAzureUploadBlobContainerName string
-	CustomAzureBlobUrl                 string
-	CustomAzureTenantId                string
-	CustomAzureClientId                string
+	CustomAzureBlobURL                 string
+	CustomAzureTenantID                string
+	CustomAzureClientID                string
 	CustomAzureClientSecret            string
 }
 
@@ -246,21 +246,21 @@ func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 }
 
 func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) bool {
-	if ka.CustomAzureUploadBlobContainerName == "" && ka.CustomAzureBlobUrl == "" && ka.CustomAzureClientId == "" &&
-		ka.CustomAzureClientSecret == "" && ka.CustomAzureTenantId == "" {
+	if ka.CustomAzureUploadBlobContainerName == "" && ka.CustomAzureBlobURL == "" && ka.CustomAzureClientID == "" &&
+		ka.CustomAzureClientSecret == "" && ka.CustomAzureTenantID == "" {
 		if ka.APIKey == "" {
 			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
 				"when not using CLOUDABILITY_CUSTOM_AZURE_BLOB env vars.")
 		}
 		return false
 	}
-	if ka.CustomAzureUploadBlobContainerName == "" || ka.CustomAzureBlobUrl == "" || ka.CustomAzureClientId == "" ||
-		ka.CustomAzureClientSecret == "" || ka.CustomAzureTenantId == "" {
+	if ka.CustomAzureUploadBlobContainerName == "" || ka.CustomAzureBlobURL == "" || ka.CustomAzureClientID == "" ||
+		ka.CustomAzureClientSecret == "" || ka.CustomAzureTenantID == "" {
 		log.Fatalf("Invalid agent configuration. Detected only one of the six required environment variables "+
 			"to run in custom Azure upload mode. CLOUDABILITY_CUSTOM_AZURE_BLOB_CONTAINER_NAME is set to %s. "+
 			"CLOUDABILITY_CUSTOM_AZURE_BLOB_URL is set to %s CLOUDABILITY_CUSTOM_AZURE_TENANT_ID is set to %s. "+
 			"CLOUDABILITY_CUSTOM_AZURE_CLIENT_ID is set to %s. CLOUDABILITY_CUSTOM_AZURE_CLIENT_SECRET is set to %s.",
-			ka.CustomAzureUploadBlobContainerName, ka.CustomAzureBlobUrl, ka.CustomAzureClientId, ka.CustomAzureTenantId,
+			ka.CustomAzureUploadBlobContainerName, ka.CustomAzureBlobURL, ka.CustomAzureClientID, ka.CustomAzureTenantID,
 			ka.CustomAzureClientSecret)
 	}
 	log.Infof("Detected custom Azure blob configuration, "+
@@ -527,15 +527,15 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 }
 
 func (ka KubeAgentConfig) sendMetricsToCustomBlob(metricSample *os.File) {
-	os.Setenv("AZURE_TENANT_ID", ka.CustomAzureTenantId)
-	os.Setenv("AZURE_CLIENT_ID", ka.CustomAzureClientId)
+	os.Setenv("AZURE_TENANT_ID", ka.CustomAzureTenantID)
+	os.Setenv("AZURE_CLIENT_ID", ka.CustomAzureClientID)
 	os.Setenv("AZURE_CLIENT_SECRET", ka.CustomAzureClientSecret)
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		log.Fatalf("Could not establish Azure credentials, "+
 			"ensure Azure environment variables are set correctly: %s", err)
 	}
-	azureClient, err := azblob.NewClient(ka.CustomAzureBlobUrl, cred, nil)
+	azureClient, err := azblob.NewClient(ka.CustomAzureBlobURL, cred, nil)
 	if err != nil {
 		log.Fatalf("Could not establish Azure Client, "+
 			"ensure Azure environment variables are set correctly: %s", err)
@@ -916,9 +916,9 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["custom_s3_bucket"] = config.CustomS3UploadBucket
 	m.Values["custom_s3_region"] = config.CustomS3Region
 	m.Values["custom_azure_blob_container_name"] = config.CustomAzureUploadBlobContainerName
-	m.Values["custom_azure_blob_url"] = config.CustomAzureBlobUrl
-	m.Values["custom_azure_tenant_id"] = config.CustomAzureTenantId
-	m.Values["custom_azure_client_id"] = config.CustomAzureClientId
+	m.Values["custom_azure_blob_url"] = config.CustomAzureBlobURL
+	m.Values["custom_azure_tenant_id"] = config.CustomAzureTenantID
+	m.Values["custom_azure_client_id"] = config.CustomAzureClientID
 	m.Values["custom_azure_client_secret"] = config.CustomAzureClientSecret
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
