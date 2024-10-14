@@ -141,9 +141,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 	// Create k8s agent
 	kubeAgent := newKubeAgent(ctx, config)
-
-	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
-	customAzureMode := isCustomAzureUploadEnvsSet(&kubeAgent)
+	customMode, agentProvider := isCustomUploadEnvsSet(&kubeAgent)
 
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
@@ -182,7 +180,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Non-fatal error occurred retrieving baseline metrics: %s", err)
 	}
 
-	if !customS3Mode && !customAzureMode {
+	if !customMode {
 		err = performConnectionChecks(&kubeAgent)
 		if err != nil {
 			log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
@@ -209,7 +207,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				}
 			}
 			// Send metric sample
-			kubeAgent.sendMetricsBasedOnUploadMode(customS3Mode, customAzureMode, metricSample)
+			kubeAgent.sendMetricsBasedOnUploadMode(agentProvider, metricSample)
 
 		case <-pollChan.C:
 			err := kubeAgent.collectMetrics(ctx, kubeAgent, kubeAgent.Clientset, clientSetNodeSource)
@@ -225,15 +223,25 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
+// isCustomUploadEnvsSet checks the KubeAgentConfig for custom upload ENVs and returns true/false and the provider mode
+// Currently supported: AWS and Azure, the goal is to add more support with this function later
+func isCustomUploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
+	var isCustomUpload bool
+	var agentMode string
+	isCustomUpload, agentMode = isCustomS3UploadEnvsSet(ka)
+	isCustomUpload, agentMode = isCustomAzureUploadEnvsSet(ka)
+	return isCustomUpload, agentMode
+}
+
 // isCustomS3UploadEnvsSet checks to see if the agent has a custom S3 location and S3 region to upload to
 // if both these variables are not set, default upload to Apptio S3
-func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
+func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
 	if ka.CustomS3Region == "" && ka.CustomS3UploadBucket == "" {
 		if ka.APIKey == "" {
 			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
 				"when not using CLOUDABILITY_CUSTOM_S3_BUCKET & CLOUDABILITY_CUSTOM_S3_REGION")
 		}
-		return false
+		return false, ""
 	}
 	if ka.CustomS3UploadBucket == "" || ka.CustomS3Region == "" {
 		log.Fatalf("Invalid agent configuration. Detected only one of the two required environment variables "+
@@ -242,17 +250,19 @@ func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 	}
 	log.Infof("Detected custom S3 bucket location and S3 bucket region. "+
 		"Will upload collected metrics to %s in the aws region %s", ka.CustomS3UploadBucket, ka.CustomS3Region)
-	return true
+	return true, "aws"
 }
 
-func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) bool {
+// isCustomAzureUploadEnvsSet checks to see if the agent has custom Azure credentials needed for uploads
+// if these vars are found, set the env vars needed for the azure client. If not set, default upload to Apptio S3
+func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
 	if ka.CustomAzureUploadBlobContainerName == "" && ka.CustomAzureBlobURL == "" && ka.CustomAzureClientID == "" &&
 		ka.CustomAzureClientSecret == "" && ka.CustomAzureTenantID == "" {
 		if ka.APIKey == "" {
 			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
 				"when not using CLOUDABILITY_CUSTOM_AZURE_BLOB env vars.")
 		}
-		return false
+		return false, ""
 	}
 	if ka.CustomAzureUploadBlobContainerName == "" || ka.CustomAzureBlobURL == "" || ka.CustomAzureClientID == "" ||
 		ka.CustomAzureClientSecret == "" || ka.CustomAzureTenantID == "" {
@@ -263,9 +273,12 @@ func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) bool {
 			ka.CustomAzureUploadBlobContainerName, ka.CustomAzureBlobURL, ka.CustomAzureClientID, ka.CustomAzureTenantID,
 			ka.CustomAzureClientSecret)
 	}
+	os.Setenv("AZURE_TENANT_ID", ka.CustomAzureTenantID)
+	os.Setenv("AZURE_CLIENT_ID", ka.CustomAzureClientID)
+	os.Setenv("AZURE_CLIENT_SECRET", ka.CustomAzureClientSecret)
 	log.Infof("Detected custom Azure blob configuration, "+
 		"Will upload collected metrics to %s", ka.CustomAzureUploadBlobContainerName)
-	return true
+	return true, "azure"
 }
 
 func performConnectionChecks(ka *KubeAgentConfig) error {
@@ -474,14 +487,17 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 	}
 }
 
-func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, customAzureMode bool, metricSample *os.File) {
-	if customS3Mode {
+// sendMetricsBasedOnUploadMode checks the agentProvider for a custom upload config. If none are found it will use the
+// default upload mode. This will allow for more custom provider upload options in the future.
+func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(agentProvider string, metricSample *os.File) {
+	switch agentProvider {
+	case "s3":
 		log.Infof("Uploading Metrics to Custom S3 Bucket %s", ka.CustomS3UploadBucket)
 		go ka.sendMetricsToCustomS3(metricSample)
-	} else if customAzureMode {
+	case "azure":
 		log.Infof("Uploading Metrics to Custom Azure Blob %s", ka.CustomAzureUploadBlobContainerName)
 		go ka.sendMetricsToCustomBlob(metricSample)
-	} else {
+	default:
 		log.Info("Uploading Metrics")
 		go ka.sendMetrics(metricSample)
 	}
@@ -527,9 +543,6 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 }
 
 func (ka KubeAgentConfig) sendMetricsToCustomBlob(metricSample *os.File) {
-	os.Setenv("AZURE_TENANT_ID", ka.CustomAzureTenantID)
-	os.Setenv("AZURE_CLIENT_ID", ka.CustomAzureClientID)
-	os.Setenv("AZURE_CLIENT_SECRET", ka.CustomAzureClientSecret)
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		log.Fatalf("Could not establish Azure credentials, "+
@@ -573,10 +586,6 @@ func generateSampleKey(clusterUID, provider string) string {
 	year, month, day := currentTime.Date()
 	hour := currentTime.Hour()
 	minute := currentTime.Minute()
-	if provider == "aws" {
-		return fmt.Sprintf("/production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
-			int(month), day, clusterUID, clusterUID, currentTime.Format("20060102"), hour, minute)
-	}
 	if provider == "azure" {
 		return fmt.Sprintf("production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
 			int(month), day, clusterUID, clusterUID, currentTime.Format("20060102"), hour, minute)
