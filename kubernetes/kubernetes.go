@@ -279,9 +279,6 @@ func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
 			ka.CustomAzureUploadBlobContainerName, ka.CustomAzureBlobURL, ka.CustomAzureClientID, ka.CustomAzureTenantID,
 			ka.CustomAzureClientSecret)
 	}
-	os.Setenv("AZURE_TENANT_ID", ka.CustomAzureTenantID)
-	os.Setenv("AZURE_CLIENT_ID", ka.CustomAzureClientID)
-	os.Setenv("AZURE_CLIENT_SECRET", ka.CustomAzureClientSecret)
 	log.Infof("Detected custom Azure blob configuration, "+
 		"Will upload collected metrics to %s", ka.CustomAzureUploadBlobContainerName)
 	return true, azure
@@ -549,7 +546,8 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 }
 
 func (ka KubeAgentConfig) sendMetricsToCustomBlob(metricSample *os.File) {
-	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	cred, err := azidentity.NewClientSecretCredential(ka.CustomAzureTenantID, ka.CustomAzureClientID,
+		ka.CustomAzureClientSecret, nil)
 	if err != nil {
 		log.Fatalf("Could not establish Azure credentials, "+
 			"ensure Azure environment variables are set correctly: %s", err)
