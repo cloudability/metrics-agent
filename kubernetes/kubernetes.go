@@ -103,6 +103,9 @@ const retryCount uint = 10
 const DefaultCollectionRetry = 1
 const DefaultInformerResync = 24
 
+// azure const created for linter error: string `azure` has 3 occurrences, make it a constant (goconst)
+const azure = "azure"
+
 // node connection methods
 const proxy = "proxy"
 const direct = "direct"
@@ -229,6 +232,9 @@ func isCustomUploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
 	var isCustomUpload bool
 	var agentMode string
 	isCustomUpload, agentMode = isCustomS3UploadEnvsSet(ka)
+	if isCustomUpload {
+		return isCustomUpload, agentMode
+	}
 	isCustomUpload, agentMode = isCustomAzureUploadEnvsSet(ka)
 	return isCustomUpload, agentMode
 }
@@ -278,7 +284,7 @@ func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
 	os.Setenv("AZURE_CLIENT_SECRET", ka.CustomAzureClientSecret)
 	log.Infof("Detected custom Azure blob configuration, "+
 		"Will upload collected metrics to %s", ka.CustomAzureUploadBlobContainerName)
-	return true, "azure"
+	return true, azure
 }
 
 func performConnectionChecks(ka *KubeAgentConfig) error {
@@ -494,7 +500,7 @@ func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(agentProvider string, met
 	case "s3":
 		log.Infof("Uploading Metrics to Custom S3 Bucket %s", ka.CustomS3UploadBucket)
 		go ka.sendMetricsToCustomS3(metricSample)
-	case "azure":
+	case azure:
 		log.Infof("Uploading Metrics to Custom Azure Blob %s", ka.CustomAzureUploadBlobContainerName)
 		go ka.sendMetricsToCustomBlob(metricSample)
 	default:
@@ -562,7 +568,7 @@ func (ka KubeAgentConfig) uploadBlob(client *azblob.Client, metricSample *os.Fil
 		log.Fatalf("Unable to open metric sample file %v", err)
 	}
 	defer file.Close()
-	key := generateSampleKey(ka.clusterUID, "azure")
+	key := generateSampleKey(ka.clusterUID, azure)
 	_, err = client.UploadFile(context.Background(), ka.CustomAzureUploadBlobContainerName, key, file, nil)
 	if err != nil {
 		log.Fatalf("Failed to put Object to custom Azure blob with error: %s", err)
