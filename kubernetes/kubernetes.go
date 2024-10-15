@@ -10,6 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/aws/aws-sdk-go/aws"
 	"io"
 	"net/http"
 	"net/url"
@@ -23,7 +26,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -103,8 +105,10 @@ const retryCount uint = 10
 const DefaultCollectionRetry = 1
 const DefaultInformerResync = 24
 
-// azure const created for linter error: string `azure` has 3 occurrences, make it a constant (goconst)
-const azure = "azure"
+const (
+	azureProvider = "azure"
+	awsProvider   = "aws"
+)
 
 // node connection methods
 const proxy = "proxy"
@@ -210,7 +214,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 				}
 			}
 			// Send metric sample
-			kubeAgent.sendMetricsBasedOnUploadMode(agentProvider, metricSample)
+			kubeAgent.sendMetricsBasedOnUploadMode(ctx, agentProvider, metricSample)
 
 		case <-pollChan.C:
 			err := kubeAgent.collectMetrics(ctx, kubeAgent, kubeAgent.Clientset, clientSetNodeSource)
@@ -229,25 +233,26 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 // isCustomUploadEnvsSet checks the KubeAgentConfig for custom upload ENVs and returns true/false and the provider mode
 // Currently supported: AWS and Azure, the goal is to add more support with this function later
 func isCustomUploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
-	var isCustomUpload bool
-	var agentMode string
-	isCustomUpload, agentMode = isCustomS3UploadEnvsSet(ka)
-	if isCustomUpload {
-		return isCustomUpload, agentMode
+	isCustomS3Upload := isCustomS3UploadEnvsSet(ka)
+	if isCustomS3Upload {
+		return isCustomS3Upload, awsProvider
 	}
-	isCustomUpload, agentMode = isCustomAzureUploadEnvsSet(ka)
-	return isCustomUpload, agentMode
+	isCustomBlobUpload := isCustomAzureUploadEnvsSet(ka)
+	if isCustomBlobUpload {
+		return isCustomBlobUpload, azureProvider
+	}
+	return false, ""
 }
 
 // isCustomS3UploadEnvsSet checks to see if the agent has a custom S3 location and S3 region to upload to
 // if both these variables are not set, default upload to Apptio S3
-func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
+func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 	if ka.CustomS3Region == "" && ka.CustomS3UploadBucket == "" {
 		if ka.APIKey == "" {
 			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
 				"when not using CLOUDABILITY_CUSTOM_S3_BUCKET & CLOUDABILITY_CUSTOM_S3_REGION")
 		}
-		return false, ""
+		return false
 	}
 	if ka.CustomS3UploadBucket == "" || ka.CustomS3Region == "" {
 		log.Fatalf("Invalid agent configuration. Detected only one of the two required environment variables "+
@@ -256,32 +261,37 @@ func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
 	}
 	log.Infof("Detected custom S3 bucket location and S3 bucket region. "+
 		"Will upload collected metrics to %s in the aws region %s", ka.CustomS3UploadBucket, ka.CustomS3Region)
-	return true, "aws"
+	return true
 }
 
 // isCustomAzureUploadEnvsSet checks to see if the agent has custom Azure credentials needed for uploads
 // if these vars are found, set the env vars needed for the azure client. If not set, default upload to Apptio S3
-func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) (bool, string) {
+func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) bool {
 	if ka.CustomAzureUploadBlobContainerName == "" && ka.CustomAzureBlobURL == "" && ka.CustomAzureClientID == "" &&
 		ka.CustomAzureClientSecret == "" && ka.CustomAzureTenantID == "" {
 		if ka.APIKey == "" {
 			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
 				"when not using CLOUDABILITY_CUSTOM_AZURE_BLOB env vars.")
 		}
-		return false, ""
+		return false
 	}
-	if ka.CustomAzureUploadBlobContainerName == "" || ka.CustomAzureBlobURL == "" || ka.CustomAzureClientID == "" ||
-		ka.CustomAzureClientSecret == "" || ka.CustomAzureTenantID == "" {
-		log.Fatalf("Invalid agent configuration. Detected only one of the six required environment variables "+
-			"to run in custom Azure upload mode. CLOUDABILITY_CUSTOM_AZURE_BLOB_CONTAINER_NAME is set to %s. "+
-			"CLOUDABILITY_CUSTOM_AZURE_BLOB_URL is set to %s CLOUDABILITY_CUSTOM_AZURE_TENANT_ID is set to %s. "+
-			"CLOUDABILITY_CUSTOM_AZURE_CLIENT_ID is set to %s. CLOUDABILITY_CUSTOM_AZURE_CLIENT_SECRET is set to %s.",
-			ka.CustomAzureUploadBlobContainerName, ka.CustomAzureBlobURL, ka.CustomAzureClientID, ka.CustomAzureTenantID,
-			ka.CustomAzureClientSecret)
+	if ka.CustomAzureTenantID == "" {
+		log.Fatalf("Invalid agent configuration. CLOUDABILITY_CUSTOM_AZURE_TENANT_ID is not set.")
+	}
+	if ka.CustomAzureClientID == "" {
+		log.Fatalf("Invalid agent configuration. CLOUDABILITY_CUSTOM_AZURE_CLIENT_ID is not set.")
+	}
+	if ka.CustomAzureClientSecret == "" {
+		log.Fatalf("Invalid agent configuration. CLOUDABILITY_CUSTOM_AZURE_CLIENT_SECRET is not set.")
+	}
+	if ka.CustomAzureUploadBlobContainerName == "" || ka.CustomAzureBlobURL == "" {
+		log.Fatalf("Invalid agent configuration. CLOUDABILITY_CUSTOM_AZURE_BLOB_CONTAINER_NAME is set to %s. "+
+			"CLOUDABILITY_CUSTOM_AZURE_BLOB_URL is set to %s.", ka.CustomAzureUploadBlobContainerName,
+			ka.CustomAzureBlobURL)
 	}
 	log.Infof("Detected custom Azure blob configuration, "+
 		"Will upload collected metrics to %s", ka.CustomAzureUploadBlobContainerName)
-	return true, azure
+	return true
 }
 
 func performConnectionChecks(ka *KubeAgentConfig) error {
@@ -492,14 +502,15 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 
 // sendMetricsBasedOnUploadMode checks the agentProvider for a custom upload config. If none are found it will use the
 // default upload mode. This will allow for more custom provider upload options in the future.
-func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(agentProvider string, metricSample *os.File) {
+func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(ctx context.Context, agentProvider string,
+	metricSample *os.File) {
 	switch agentProvider {
-	case "s3":
+	case awsProvider:
 		log.Infof("Uploading Metrics to Custom S3 Bucket %s", ka.CustomS3UploadBucket)
 		go ka.sendMetricsToCustomS3(metricSample)
-	case azure:
+	case azureProvider:
 		log.Infof("Uploading Metrics to Custom Azure Blob %s", ka.CustomAzureUploadBlobContainerName)
-		go ka.sendMetricsToCustomBlob(metricSample)
+		go ka.sendMetricsToCustomBlob(ctx, metricSample)
 	default:
 		log.Info("Uploading Metrics")
 		go ka.sendMetrics(metricSample)
@@ -524,7 +535,7 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	}
 	defer fileReader.Close()
 
-	key := generateSampleKey(ka.clusterUID, "aws")
+	key := generateSampleKey(ka.clusterUID, awsProvider)
 	sampleToUpload := &s3manager.UploadInput{
 		Bucket: aws.String(ka.CustomS3UploadBucket),
 		Key:    aws.String(key),
@@ -545,40 +556,50 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	}
 }
 
-func (ka KubeAgentConfig) sendMetricsToCustomBlob(metricSample *os.File) {
+func (ka KubeAgentConfig) sendMetricsToCustomBlob(ctx context.Context, metricSample *os.File) {
 	cred, err := azidentity.NewClientSecretCredential(ka.CustomAzureTenantID, ka.CustomAzureClientID,
 		ka.CustomAzureClientSecret, nil)
 	if err != nil {
 		log.Fatalf("Could not establish Azure credentials, "+
 			"ensure Azure environment variables are set correctly: %s", err)
 	}
-	azureClient, err := azblob.NewClient(ka.CustomAzureBlobURL, cred, nil)
+	retryConfig := azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Retry: policy.RetryOptions{
+				MaxRetries: 3,
+			},
+		},
+	}
+	azureClient, err := azblob.NewClient(ka.CustomAzureBlobURL, cred, &retryConfig)
 	if err != nil {
 		log.Fatalf("Could not establish Azure Client, "+
 			"ensure Azure environment variables are set correctly: %s", err)
 	}
-	ka.uploadBlob(azureClient, metricSample)
+	ka.uploadBlob(ctx, azureClient, metricSample)
 }
 
-func (ka KubeAgentConfig) uploadBlob(client *azblob.Client, metricSample *os.File) {
+func (ka KubeAgentConfig) uploadBlob(ctx context.Context, client *azblob.Client, metricSample *os.File) {
 	file, err := os.Open(metricSample.Name())
 	if err != nil {
 		log.Fatalf("Unable to open metric sample file %v", err)
 	}
 	defer file.Close()
-	key := generateSampleKey(ka.clusterUID, azure)
-	_, err = client.UploadFile(context.Background(), ka.CustomAzureUploadBlobContainerName, key, file, nil)
+	key := generateSampleKey(ka.clusterUID, azureProvider)
+	_, err = client.UploadFile(ctx, ka.CustomAzureUploadBlobContainerName, key, file, nil)
 	if err != nil {
 		log.Fatalf("Failed to put Object to custom Azure blob with error: %s", err)
-	} else {
-		sn := strings.Split(metricSample.Name(), "/")
-		log.Infof("Exported metric sample %s to custom Azure blob: %s",
-			strings.TrimSuffix(sn[len(sn)-1], ".tgz"), ka.CustomAzureUploadBlobContainerName)
 	}
-	err = os.Remove(metricSample.Name())
-	if err != nil {
-		log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
-	}
+
+	sn := strings.Split(metricSample.Name(), "/")
+	log.Infof("Exported metric sample %s to custom Azure blob: %s",
+		strings.TrimSuffix(sn[len(sn)-1], ".tgz"), ka.CustomAzureUploadBlobContainerName)
+
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
+		}
+	}(metricSample.Name())
 }
 
 // generateSampleKey creates a key (location) for s3 or azure to upload the sample to. Example of s3 location format
@@ -586,16 +607,16 @@ func (ka KubeAgentConfig) uploadBlob(client *azblob.Client, metricSample *os.Fil
 // example of azure location format
 // production/data/metrics-agent/<YYYY>/<MM>/<DD>/<CLUSTER_UID>/<CLUSTER_UID>-<YYYYMMDD>-<HH>-<MM>.tgz
 func generateSampleKey(clusterUID, provider string) string {
-	currentTime := time.Now()
+	currentTime := time.Now().UTC()
 	year, month, day := currentTime.Date()
 	hour := currentTime.Hour()
 	minute := currentTime.Minute()
-	if provider == "azure" {
-		return fmt.Sprintf("production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
-			int(month), day, clusterUID, clusterUID, currentTime.Format("20060102"), hour, minute)
-	}
-	return fmt.Sprintf("/production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
+	key := fmt.Sprintf("production/data/metrics-agent/%d/%02d/%02d/%s/%s-%s-%02d-%02d.tgz", year,
 		int(month), day, clusterUID, clusterUID, currentTime.Format("20060102"), hour, minute)
+	if provider == azureProvider {
+		return key
+	}
+	return "/" + key
 }
 
 func handleError(err error, region string) string {
@@ -929,10 +950,6 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["custom_s3_bucket"] = config.CustomS3UploadBucket
 	m.Values["custom_s3_region"] = config.CustomS3Region
 	m.Values["custom_azure_blob_container_name"] = config.CustomAzureUploadBlobContainerName
-	m.Values["custom_azure_blob_url"] = config.CustomAzureBlobURL
-	m.Values["custom_azure_tenant_id"] = config.CustomAzureTenantID
-	m.Values["custom_azure_client_id"] = config.CustomAzureClientID
-	m.Values["custom_azure_client_secret"] = config.CustomAzureClientSecret
 	if len(config.OutboundProxyAuth) > 0 {
 		m.Values["outbound_proxy_auth"] = "true"
 	} else {

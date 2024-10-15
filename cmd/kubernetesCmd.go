@@ -154,8 +154,7 @@ func init() {
 		&config.CustomAzureUploadBlobContainerName,
 		"custom_azure_blob_container_name",
 		"",
-		"The Azure blob container name the metrics-agent will upload data to. Default is an empty string "+
-			"which will not upload to custom azure location",
+		"The Azure blob container name the metrics-agent will upload data to.",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.CustomAzureBlobURL,
