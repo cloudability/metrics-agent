@@ -544,7 +544,7 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 		log.Infof("Exported metric sample %s to custom S3 bucket: %s",
 			strings.TrimSuffix(sn[len(sn)-1], ".tgz"), ka.CustomS3UploadBucket)
 	}
-	util.SafeCloseDeferLogger(fileReader)
+	defer util.SafeCloseDeferLogger(fileReader)
 }
 
 func (ka KubeAgentConfig) sendMetricsToCustomBlob(ctx context.Context, metricSample *os.File) {
@@ -583,7 +583,7 @@ func (ka KubeAgentConfig) uploadBlob(ctx context.Context, client *azblob.Client,
 	sn := strings.Split(metricSample.Name(), "/")
 	log.Infof("Exported metric sample %s to custom Azure blob: %s",
 		strings.TrimSuffix(sn[len(sn)-1], ".tgz"), ka.CustomAzureUploadBlobContainerName)
-	util.SafeCloseDeferLogger(file)
+	defer util.SafeCloseDeferLogger(file)
 }
 
 // generateSampleKey creates a key (location) for s3 or azure to upload the sample to. Example of s3 location format

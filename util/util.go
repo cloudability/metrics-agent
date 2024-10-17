@@ -290,19 +290,15 @@ func SafeClose(closer func() error, err *error) {
 
 // SafeCloseDeferLogger takes a file and runs the deferred closing of both. Used for custom agent uploads
 func SafeCloseDeferLogger(file *os.File) {
-	defer func(name string) {
-		err := os.Remove(name)
-		if err != nil {
-			log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
-		}
-	}(file.Name())
+	err := os.Remove(file.Name())
+	if err != nil {
+		log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
+	}
 
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Warnf("Warning: Unable to close metric sample: %v", err)
-		}
-	}(file)
+	err = file.Close()
+	if err != nil {
+		log.Warnf("Warning: Unable to close metric sample: %v", err)
+	}
 }
 
 // MatchOneFile returns the name of one file based on a given directory and pattern
