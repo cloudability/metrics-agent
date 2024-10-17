@@ -288,7 +288,7 @@ func SafeClose(closer func() error, err *error) {
 	}
 }
 
-// SafeCloseLogger takes a file and runs the deferred closing of both. Used for custom agent uploads
+// SafeCloseLogger takes a file and closes then removes it. Used for custom agent uploads
 func SafeCloseLogger(file *os.File) {
 	err := file.Close()
 	if err != nil {
