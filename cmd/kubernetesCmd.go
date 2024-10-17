@@ -150,7 +150,25 @@ func init() {
 		"",
 		"The AWS region that the custom s3 bucket is in",
 	)
+	kubernetesCmd.PersistentFlags().StringVar(
 
+		&config.KubecostPrometheusEndpoint,
+		"kubecost_prometheus_endpoint",
+		"",
+		"The internal domain name of the kubecost prometheus endpoint",
+	)
+	kubernetesCmd.PersistentFlags().BoolVar(
+		&config.KubecostGPUMetrics,
+		"kubecost_gpu_metrics",
+		false,
+		"When true, gather GPU utilization metrics from kubecost",
+	)
+	kubernetesCmd.PersistentFlags().BoolVar(
+		&config.KubecostNetworkMetrics,
+		"kubecost_network_metrics",
+		false,
+		"When true, gather network utilization metrics from kubecost",
+	)
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
 	_ = viper.BindPFlag("cluster_name", kubernetesCmd.PersistentFlags().Lookup("cluster_name"))
@@ -177,32 +195,41 @@ func init() {
 	_ = viper.BindPFlag("upload_region", kubernetesCmd.PersistentFlags().Lookup("upload_region"))
 	_ = viper.BindPFlag("custom_s3_bucket", kubernetesCmd.PersistentFlags().Lookup("custom_s3_bucket"))
 	_ = viper.BindPFlag("custom_s3_region", kubernetesCmd.PersistentFlags().Lookup("custom_s3_region"))
+	_ = viper.BindPFlag("kubecost_prometheus_endpoint",
+		kubernetesCmd.PersistentFlags().Lookup("kubecost_prometheus_endpoint"))
+	_ = viper.BindPFlag("kubecost_gpu_metrics",
+		kubernetesCmd.PersistentFlags().Lookup("kubecost_gpu_metrics"))
+	_ = viper.BindPFlag("kubecost_network_metrics",
+		kubernetesCmd.PersistentFlags().Lookup("kubecost_network_metrics"))
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
 
 	RootCmd.AddCommand(kubernetesCmd)
 
 	config = kubernetes.KubeAgentConfig{
-		APIKey:                 viper.GetString("api_key"),
-		ClusterName:            viper.GetString("cluster_name"),
-		PollInterval:           viper.GetInt("poll_interval"),
-		CollectionRetryLimit:   viper.GetUint("collection_retry_limit"),
-		OutboundProxy:          viper.GetString("outbound_proxy"),
-		OutboundProxyAuth:      viper.GetString("outbound_proxy_auth"),
-		OutboundProxyInsecure:  viper.GetBool("outbound_proxy_insecure"),
-		Insecure:               viper.GetBool("insecure"),
-		Cert:                   viper.GetString("certificate_file"),
-		Key:                    viper.GetString("key_file"),
-		ConcurrentPollers:      viper.GetInt("number_of_concurrent_node_pollers"),
-		ForceKubeProxy:         viper.GetBool("force_kube_proxy"),
-		Namespace:              viper.GetString("namespace"),
-		ScratchDir:             viper.GetString("scratch_dir"),
-		InformerResyncInterval: viper.GetInt("informer_resync_interval"),
-		ParseMetricData:        viper.GetBool("parse_metric_data"),
-		HTTPSTimeout:           viper.GetInt("https_client_timeout"),
-		UploadRegion:           viper.GetString("upload_region"),
-		CustomS3UploadBucket:   viper.GetString("custom_s3_bucket"),
-		CustomS3Region:         viper.GetString("custom_s3_region"),
+		APIKey:                     viper.GetString("api_key"),
+		ClusterName:                viper.GetString("cluster_name"),
+		PollInterval:               viper.GetInt("poll_interval"),
+		CollectionRetryLimit:       viper.GetUint("collection_retry_limit"),
+		OutboundProxy:              viper.GetString("outbound_proxy"),
+		OutboundProxyAuth:          viper.GetString("outbound_proxy_auth"),
+		OutboundProxyInsecure:      viper.GetBool("outbound_proxy_insecure"),
+		Insecure:                   viper.GetBool("insecure"),
+		Cert:                       viper.GetString("certificate_file"),
+		Key:                        viper.GetString("key_file"),
+		ConcurrentPollers:          viper.GetInt("number_of_concurrent_node_pollers"),
+		ForceKubeProxy:             viper.GetBool("force_kube_proxy"),
+		Namespace:                  viper.GetString("namespace"),
+		ScratchDir:                 viper.GetString("scratch_dir"),
+		InformerResyncInterval:     viper.GetInt("informer_resync_interval"),
+		ParseMetricData:            viper.GetBool("parse_metric_data"),
+		HTTPSTimeout:               viper.GetInt("https_client_timeout"),
+		UploadRegion:               viper.GetString("upload_region"),
+		CustomS3UploadBucket:       viper.GetString("custom_s3_bucket"),
+		CustomS3Region:             viper.GetString("custom_s3_region"),
+		KubecostPrometheusEndpoint: viper.GetString("kubecost_prometheus_endpoint"),
+		KubecostGPUMetrics:         viper.GetBool("kubecost_gpu_metrics"),
+		KubecostNetworkMetrics:     viper.GetBool("kubecost_network_metrics"),
 	}
 
 }

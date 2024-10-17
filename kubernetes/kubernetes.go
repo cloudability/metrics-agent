@@ -49,46 +49,53 @@ type ClusterVersion struct {
 
 // KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                 string
-	BearerToken            string
-	BearerTokenPath        string
-	Cert                   string
-	ClusterName            string
-	ClusterHostURL         string
-	clusterUID             string
-	HeapsterURL            string
-	Key                    string
-	OutboundProxyAuth      string
-	OutboundProxy          string
-	provisioningID         string
-	ForceKubeProxy         bool
-	Insecure               bool
-	OutboundProxyInsecure  bool
-	UseInClusterConfig     bool
-	PollInterval           int
-	ConcurrentPollers      int
-	CollectionRetryLimit   uint
-	failedNodeList         map[string]error
-	AgentStartTime         time.Time
-	Clientset              kubernetes.Interface
-	ClusterVersion         ClusterVersion
-	HeapsterProxyURL       url.URL
-	OutboundProxyURL       url.URL
-	HTTPClient             http.Client
-	NodeClient             raw.Client
-	InClusterClient        raw.Client
-	msExportDirectory      *os.File
-	TLSClientConfig        rest.TLSClientConfig
-	Namespace              string
-	ScratchDir             string
-	NodeMetrics            EndpointMask
-	Informers              map[string]*cache.SharedIndexInformer
-	InformerResyncInterval int
-	ParseMetricData        bool
-	HTTPSTimeout           int
-	UploadRegion           string
-	CustomS3UploadBucket   string
-	CustomS3Region         string
+	APIKey                     string
+	BearerToken                string
+	BearerTokenPath            string
+	Cert                       string
+	ClusterName                string
+	ClusterHostURL             string
+	clusterUID                 string
+	HeapsterURL                string
+	Key                        string
+	OutboundProxyAuth          string
+	OutboundProxy              string
+	provisioningID             string
+	ForceKubeProxy             bool
+	Insecure                   bool
+	OutboundProxyInsecure      bool
+	UseInClusterConfig         bool
+	PollInterval               int
+	ConcurrentPollers          int
+	CollectionRetryLimit       uint
+	failedNodeList             map[string]error
+	AgentStartTime             time.Time
+	Clientset                  kubernetes.Interface
+	ClusterVersion             ClusterVersion
+	HeapsterProxyURL           url.URL
+	OutboundProxyURL           url.URL
+	HTTPClient                 http.Client
+	NodeClient                 raw.Client
+	InClusterClient            raw.Client
+	msExportDirectory          *os.File
+	TLSClientConfig            rest.TLSClientConfig
+	Namespace                  string
+	ScratchDir                 string
+	NodeMetrics                EndpointMask
+	Informers                  map[string]*cache.SharedIndexInformer
+	InformerResyncInterval     int
+	ParseMetricData            bool
+	HTTPSTimeout               int
+	UploadRegion               string
+	CustomS3UploadBucket       string
+	CustomS3Region             string
+	KubecostPrometheusEndpoint string
+	KubecostGPUMetrics         bool
+	KubecostNetworkMetrics     bool
+	KubecostClient             *kcClient
+	GPULabelKey                string
+	GPULabelValue              string
+	GPUClient                  *gpuClient
 }
 
 const uploadInterval time.Duration = 10
@@ -167,7 +174,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
 	defer close(informerStopCh)
-
+	// "app.kubernetes.io/name" / "dcgm-exporter" kubeAgent.GPULabelKey, kubeAgent.GPULabelValue)
+	kubeAgent.GPUClient = newGPUClient(kubeAgent.Informers["endpoints"], "app.kubernetes.io/name", "dcgm-exporter")
 	err = downloadBaselineMetricExport(ctx, kubeAgent, clientSetNodeSource)
 
 	if err != nil {
@@ -333,6 +341,19 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	err = retrieveNodeSummaries(ctx, config, msd, metricSampleDir, nodeSource)
 	if err != nil {
 		log.Warnf("Warning: %s", err)
+	}
+
+	if config.KubecostClient != nil {
+		err = config.KubecostClient.downloadSample(metricSampleDir, "stats")
+		if err != nil {
+			return fmt.Errorf("unable to gather kubecost data %v", err)
+		}
+	}
+	if config.GPUClient != nil {
+		gpuErr := config.GPUClient.downloadSample(metricSampleDir, "stats")
+		if gpuErr != nil {
+			log.Warnf("Error retrieving GPU data: %s", gpuErr)
+		}
 	}
 
 	// export k8s resource metrics (ex: pods.jsonl) using informers to the metric sample directory
@@ -615,8 +636,20 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 	}
 
 	updatedConfig.provisioningID, err = getProvisioningID(updatedConfig.APIKey)
+	if err != nil {
+		return updatedConfig, err
+	}
 
-	return updatedConfig, err
+	if config.KubecostNetworkMetrics || config.KubecostGPUMetrics {
+		if config.KubecostPrometheusEndpoint == "" {
+			log.Fatalf("kubecost prometheus endpoint must be configured to gather metrics, network metrics "+
+				"enabled: %v, GPU metrics enabled: %v", config.KubecostNetworkMetrics, config.KubecostGPUMetrics)
+		}
+		updatedConfig.KubecostClient = newKubecostClient(config.KubecostPrometheusEndpoint, config.KubecostGPUMetrics,
+			config.KubecostNetworkMetrics)
+	}
+
+	return updatedConfig, nil
 }
 
 func updateConfigurationForServices(ctx context.Context, config KubeAgentConfig) (
@@ -695,6 +728,19 @@ func downloadBaselineMetricExport(ctx context.Context, config KubeAgentConfig, n
 
 	defer util.SafeClose(ed.Close, &rerr)
 
+	if config.KubecostClient != nil {
+		log.Infof("downloading baseline kc sample to %s", ed.Name())
+		err = config.KubecostClient.downloadSample(ed, "baseline")
+		if err != nil {
+			return fmt.Errorf("unable to gather baseline kubecost data %v", err)
+		}
+	}
+	if config.GPUClient != nil {
+		gpuErr := config.GPUClient.downloadSample(ed, "baseline")
+		if gpuErr != nil {
+			log.Warnf("Error retrieving baseline GPU data: %s", gpuErr)
+		}
+	}
 	// get baseline metric sample
 	config.failedNodeList, err = downloadNodeData(ctx, "baseline", config, ed, nodeSource)
 	if len(config.failedNodeList) > 0 {

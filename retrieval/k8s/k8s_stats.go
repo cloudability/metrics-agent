@@ -27,6 +27,7 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	// v1Sources
 	replicationControllerInformer := factory.Core().V1().ReplicationControllers().Informer()
 	servicesInformer := factory.Core().V1().Services().Informer()
+	endpointsInformer := factory.Core().V1().Endpoints().Informer()
 	nodesInformer := factory.Core().V1().Nodes().Informer()
 	podsInformer := factory.Core().V1().Pods().Informer()
 	persistentVolumesInformer := factory.Core().V1().PersistentVolumes().Informer()
@@ -52,6 +53,7 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	var clusterInformers = map[string]*cache.SharedIndexInformer{
 		"replicationcontrollers": &replicationControllerInformer,
 		"services":               &servicesInformer,
+		"endpoints":              &endpointsInformer,
 		"nodes":                  &nodesInformer,
 		"pods":                   &podsInformer,
 		"persistentvolumes":      &persistentVolumesInformer,
@@ -96,6 +98,18 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	datawriter := bufio.NewWriter(file)
 
 	for _, k8Resource := range resourceList {
+		switch k8Resource.(type) {
+		case *corev1.Pod:
+			to := k8Resource.(*corev1.Pod)
+			if to.Status.Phase != "Running" {
+				continue
+			}
+		case *v1batch.Job:
+			to := k8Resource.(*v1batch.Job)
+			if to.Status.CompletionTime != nil {
+				continue
+			}
+		}
 
 		if parseMetricData {
 			k8Resource = sanitizeData(k8Resource)
