@@ -38,22 +38,22 @@ ignore:
   SNYK-GOLANG-K8SIOCLIENTGOTRANSPORT-7538822:
     - '*':
         reason: >-
-          When bumping this dependency to the recommended version several critical vulnerabilities are introduced.
-          Ignoring for 90 days.
+          When bumping this dependency to the recommended version several
+          critical vulnerabilities are introduced. Ignoring for 90 days.
         expires: 2024-10-22T00:00:00.000Z
         created: 2024-07-23T00:41:35.050Z
   SNYK-GOLANG-K8SIOCLIENTGOUTILJSONPATH-7540854:
     - '*':
         reason: >-
-          When bumping this dependency to the recommended version several critical vulnerabilities are introduced.
-          Ignoring for 90 days.
+          When bumping this dependency to the recommended version several
+          critical vulnerabilities are introduced. Ignoring for 90 days.
         expires: 2024-10-22T00:00:00.000Z
         created: 2024-07-23T00:42:14.222Z
   SNYK-GOLANG-K8SIOAPISERVERPLUGINPKGAUTHENTICATORTOKENOIDC-7459774:
     - '*':
         reason: >-
-          When bumping this dependency to the recommended version several critical vulnerabilities are introduced.
-          Ignoring for 90 days.
+          When bumping this dependency to the recommended version several
+          critical vulnerabilities are introduced. Ignoring for 90 days.
         expires: 2024-10-22T00:00:00.000Z
         created: 2024-07-23T00:42:33.848Z
   SNYK-CC-K8S-8:
@@ -64,4 +64,11 @@ ignore:
           volume/volumeMount to their deployment
         expires: 2200-01-01T00:00:00.000Z
         created: 2024-07-23T00:43:23.074Z
+  SNYK-ALPINE320-OPENSSL-8235201:
+    - '*':
+        reason: >-
+          Alpine 3.20.3 is the newest version of alpine available, ignoring
+          temporarily until patch version is ready
+        expires: 2024-11-30T00:00:00.000Z
+        created: 2024-10-30T18:01:47.217Z
 patch: {}
