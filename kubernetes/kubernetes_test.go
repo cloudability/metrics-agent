@@ -620,6 +620,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 		cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1", Annotations: annotation}})
 	}
 
+	// adds 3 pods, two of which completed long ago and will not be added to export sample
 	podData, err := os.ReadFile("../testdata/pods.jsonl")
 	if err != nil {
 		return nil, err
