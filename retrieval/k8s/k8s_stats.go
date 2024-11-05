@@ -126,7 +126,7 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	return err
 }
 
-//nolint:cocyclo
+//nolint:gocyclo
 func shouldSkipResource(k8Resource interface{}) bool {
 	// safe buffer to allow for longer lived resources to be ingested correctly
 	previousHour := time.Now().Add(-1 * time.Hour)
