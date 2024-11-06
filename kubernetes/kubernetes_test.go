@@ -376,10 +376,6 @@ func TestCollectMetrics(t *testing.T) {
 				if err != nil {
 					t.Error(err)
 				}
-				fileLen := strings.Count(string(in), "\n")
-				if fileLen != 1 {
-					t.Errorf("Expected 1 entry in file %s, got %d", info.Name(), fileLen)
-				}
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were not stripped from pods if parseMetrics is false
 					if !strings.Contains(string(in), "ReallySecretStuff") {
@@ -405,6 +401,24 @@ func TestCollectMetrics(t *testing.T) {
 			return nil
 		})
 	})
+	t.Run("Ensure that resources are properly filtered out", func(t *testing.T) {
+		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				t.Error(err)
+			}
+			if strings.Contains(info.Name(), "jsonl") {
+				in, err := os.ReadFile(path)
+				if err != nil {
+					t.Error(err)
+				}
+				fileLen := strings.Count(string(in), "\n")
+				if fileLen != 1 {
+					t.Errorf("Expected 1 entry in file %s, got %d", info.Name(), fileLen)
+				}
+			}
+			return nil
+		})
+	})
 	t.Run("Ensure collection occurs with parseMetrics enabled"+
 		"ensure sensitive data is stripped", func(t *testing.T) {
 		err = kubeAgentParseMetrics.collectMetrics(context.TODO(), kubeAgentParseMetrics, cs, fns)
@@ -419,10 +433,6 @@ func TestCollectMetrics(t *testing.T) {
 				in, err := os.ReadFile(path)
 				if err != nil {
 					t.Error(err)
-				}
-				fileLen := strings.Count(string(in), "\n")
-				if fileLen != 1 {
-					t.Errorf("Expected 1 entry in file %s, got %d", info.Name(), fileLen)
 				}
 				if strings.Contains(info.Name(), "pods") {
 					// check if secrets were stripped from pods if parseMetrics is true
