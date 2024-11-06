@@ -553,6 +553,10 @@ func Test_getUploadURLByRegion(t *testing.T) {
 	if uploadURL != client.MEBaseURL {
 		t.Error("ME URL was not generated correctly")
 	}
+	uploadURL = client.GetUploadURLByRegion("us-gov-west-1")
+	if uploadURL != client.GovBaseURL {
+		t.Error("Gov URL was not generated correctly")
+	}
 	// unsupported region should default to us-west-2 url generation
 	uploadURL = client.GetUploadURLByRegion("my-unsupported-region-1")
 	if uploadURL != client.DefaultBaseURL {

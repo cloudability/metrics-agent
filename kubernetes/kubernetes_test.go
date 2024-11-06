@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -400,6 +401,24 @@ func TestCollectMetrics(t *testing.T) {
 			return nil
 		})
 	})
+	t.Run("Ensure that resources are properly filtered out", func(t *testing.T) {
+		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				t.Error(err)
+			}
+			if strings.Contains(info.Name(), "jsonl") {
+				in, err := os.ReadFile(path)
+				if err != nil {
+					t.Error(err)
+				}
+				fileLen := strings.Count(string(in), "\n")
+				if fileLen != 1 {
+					t.Errorf("Expected 1 entry in file %s, got %d", info.Name(), fileLen)
+				}
+			}
+			return nil
+		})
+	})
 	t.Run("Ensure collection occurs with parseMetrics enabled"+
 		"ensure sensitive data is stripped", func(t *testing.T) {
 		err = kubeAgentParseMetrics.collectMetrics(context.TODO(), kubeAgentParseMetrics, cs, fns)
@@ -594,25 +613,37 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 	nodes.Add(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1", Annotations: annotation}})
 	persistentVolumes.Add(&v1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv1", Annotations: annotation}})
 	persistentVolumeClaims.Add(&v1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "pvc1", Annotations: annotation}})
-	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs1", Annotations: annotation}})
+	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs1", Annotations: annotation},
+		Status: v1apps.ReplicaSetStatus{Replicas: int32(1)}})
+	// should not be exported as replicaset is empty
+	replicaSets.Add(&v1apps.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "rs2", Annotations: annotation}})
 	daemonSets.Add(&v1apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "ds1", Annotations: annotation}})
 	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job1", Annotations: annotation}})
+	oneDayAgo := metav1.NewTime(time.Now().Add(-24 * time.Hour))
+	// should not be exported as job was completed some time ago
+	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job2", Annotations: annotation},
+		Status: v1batch.JobStatus{CompletionTime: &oneDayAgo}})
+	// should not be exported as job was completed some time ago
+	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job3", Annotations: annotation},
+		Status: v1batch.JobStatus{Failed: int32(1), StartTime: &oneDayAgo}})
 	if clusterVersion > 1.20 {
 		cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1", Annotations: annotation}})
 	}
 
-	// pods is unique as we use this pod file for parseMetrics testing
-	// for parseMetricData testing, add a cldy metrics-agent pod to the mock informers
+	// adds 3 pods, two of which completed long ago and will not be added to export sample
 	podData, err := os.ReadFile("../testdata/pods.jsonl")
 	if err != nil {
 		return nil, err
 	}
-	var myPod *v1.Pod
-	err = json.Unmarshal(podData, &myPod)
-	if err != nil {
-		return nil, err
+	dec := json.NewDecoder(bytes.NewReader(podData))
+	for dec.More() {
+		var pod v1.Pod
+		if err := dec.Decode(&pod); err != nil {
+			return nil, err
+		}
+		pods.Add(&pod)
 	}
-	pods.Add(myPod)
+
 	// namespace also used in testing
 	namespaceData, err := os.ReadFile("../testdata/namespaces.jsonl")
 	if err != nil {

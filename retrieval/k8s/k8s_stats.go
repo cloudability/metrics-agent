@@ -96,7 +96,9 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	datawriter := bufio.NewWriter(file)
 
 	for _, k8Resource := range resourceList {
-
+		if shouldSkipResource(k8Resource) {
+			continue
+		}
 		if parseMetricData {
 			k8Resource = sanitizeData(k8Resource)
 		}
@@ -122,6 +124,38 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	}
 
 	return err
+}
+
+//nolint:gocyclo
+func shouldSkipResource(k8Resource interface{}) bool {
+	// safe buffer to allow for longer lived resources to be ingested correctly
+	previousHour := time.Now().Add(-1 * time.Hour)
+	switch resource := k8Resource.(type) {
+	case *v1batch.Job:
+		if resource.Status.CompletionTime != nil &&
+			previousHour.After(resource.Status.CompletionTime.Time) {
+			return true
+		}
+		if resource.Status.Failed > 0 && resource.Status.StartTime != nil &&
+			previousHour.After(resource.Status.StartTime.Time) {
+			return true
+		}
+	case *corev1.Pod:
+		if resource.Status.Phase == corev1.PodSucceeded || resource.Status.Phase == corev1.PodFailed {
+			canSkip := true
+			for _, v := range resource.Status.ContainerStatuses {
+				if v.State.Terminated != nil && v.State.Terminated.FinishedAt.After(previousHour) {
+					canSkip = false
+				}
+			}
+			return canSkip
+		}
+	case *v1apps.ReplicaSet:
+		if resource.Status.Replicas == 0 && previousHour.After(resource.CreationTimestamp.Time) {
+			return true
+		}
+	}
+	return false
 }
 
 // nolint: gocyclo
