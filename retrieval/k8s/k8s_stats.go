@@ -129,7 +129,7 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 //nolint:gocyclo
 func shouldSkipResource(k8Resource interface{}) bool {
 	// safe buffer to allow for longer lived resources to be ingested correctly
-	previousHour := time.Now().Add(-1 * time.Hour)
+	previousHour := time.Now().UTC().Add(-1 * time.Hour)
 	switch resource := k8Resource.(type) {
 	case *v1batch.Job:
 		if resource.Status.CompletionTime != nil &&
