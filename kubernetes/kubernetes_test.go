@@ -625,7 +625,10 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 		Status: v1batch.JobStatus{CompletionTime: &oneDayAgo}})
 	// should not be exported as job was completed some time ago
 	jobs.Add(&v1batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job3", Annotations: annotation},
-		Status: v1batch.JobStatus{Failed: int32(1), StartTime: &oneDayAgo}})
+		Status: v1batch.JobStatus{
+			Failed:     int32(1),
+			Conditions: []v1batch.JobCondition{{Type: v1batch.JobFailed, LastTransitionTime: oneDayAgo}},
+		}})
 	if clusterVersion > 1.20 {
 		cronJobs.Add(&v1batch.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "cj1", Annotations: annotation}})
 	}

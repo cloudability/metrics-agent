@@ -129,16 +129,21 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 //nolint:gocyclo
 func shouldSkipResource(k8Resource interface{}) bool {
 	// safe buffer to allow for longer lived resources to be ingested correctly
-	previousHour := time.Now().Add(-1 * time.Hour)
+	previousHour := time.Now().UTC().Add(-1 * time.Hour)
 	switch resource := k8Resource.(type) {
 	case *v1batch.Job:
 		if resource.Status.CompletionTime != nil &&
 			previousHour.After(resource.Status.CompletionTime.Time) {
 			return true
 		}
-		if resource.Status.Failed > 0 && resource.Status.StartTime != nil &&
-			previousHour.After(resource.Status.StartTime.Time) {
-			return true
+		if resource.Status.Failed > 0 {
+			for _, condition := range resource.Status.Conditions {
+				if condition.Type == v1batch.JobFailed {
+					if previousHour.After(condition.LastTransitionTime.Time) {
+						return true
+					}
+				}
+			}
 		}
 	case *corev1.Pod:
 		if resource.Status.Phase == corev1.PodSucceeded || resource.Status.Phase == corev1.PodFailed {
@@ -151,9 +156,7 @@ func shouldSkipResource(k8Resource interface{}) bool {
 			return canSkip
 		}
 	case *v1apps.ReplicaSet:
-		if resource.Status.Replicas == 0 && previousHour.After(resource.CreationTimestamp.Time) {
-			return true
-		}
+		return resource.Status.Replicas == 0 && previousHour.After(resource.CreationTimestamp.Time)
 	}
 	return false
 }
