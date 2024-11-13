@@ -97,6 +97,7 @@ require (
 replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker => github.com/docker/docker v25.0.5+incompatible
+	github.com/hashicorp/consul/api => github.com/hashicorp/consul/api v1.30.0
 
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.18
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.14
