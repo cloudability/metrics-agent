@@ -73,7 +73,9 @@ ignore:
         created: 2024-10-30T18:01:47.217Z
   SNYK-GOLANG-K8SIOAPIMACHINERYPKGUTILRUNTIME-8367153:
     - '*':
-        reason: None Given
+        reason: >-
+          Ignoring vulnerability for 30 days as newer versions of k8s.io
+          contain several critical vulnerabilities and are still in alpha
         expires: 2025-01-01T00:00:00.000Z
         created: 2024-11-13T23:30:00.999Z
 patch: {}
