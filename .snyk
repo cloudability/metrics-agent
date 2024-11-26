@@ -1,5 +1,5 @@
 # Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
-version: v1.25.0
+version: v1.25.1
 # ignores vulnerabilities until expiry date; change duration by modifying expiry date
 ignore:
   'SNYK:LIC:GOLANG:GITHUB.COM:LEONKLINGELE:GROUPER:(AGPL-3.0_OR_AGPL-3.0-ONLY)':
@@ -64,6 +64,13 @@ ignore:
           volume/volumeMount to their deployment
         expires: 2200-01-01T00:00:00.000Z
         created: 2024-07-23T00:43:23.074Z
+  SNYK-GOLANG-K8SIOAPIMACHINERYPKGUTILRUNTIME-8367153:
+    - '*':
+        reason: >-
+          When bumping this dependency to the recommended version several
+          critical vulnerabilities are introduced. Ignoring for 30 days.
+        expires: 2024-12-13T00:00:00.000Z
+        created: 2024-11-13T23:09:26.278Z
   SNYK-ALPINE320-OPENSSL-8235201:
     - '*':
         reason: >-
