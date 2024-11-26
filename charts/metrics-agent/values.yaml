@@ -28,6 +28,16 @@ image:
   pullPolicy: Always
 
 imagePullSecrets: []
+# HorizontalPodAutoscaler 
+hpa:
+  enabled: false
+  minReplicas: 1 
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+#Disruption Budget for the Application in caes of node upgrades
+pdb: 
+  enabled: false
+  minAvailable: 1 
 
 resources:
   requests:
