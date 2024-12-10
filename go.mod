@@ -3,7 +3,7 @@ module github.com/cloudability/metrics-agent
 go 1.22
 
 require (
-	github.com/aws/aws-sdk-go v1.35.24
+	github.com/aws/aws-sdk-go v1.40.27
 	github.com/google/cadvisor v0.48.1
 	github.com/googleapis/gnostic v0.5.5
 	github.com/onsi/ginkgo v1.16.5
