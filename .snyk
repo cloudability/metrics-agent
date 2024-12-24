@@ -68,8 +68,8 @@ ignore:
     - '*':
         reason: >-
           When bumping this dependency to the recommended version several
-          critical vulnerabilities are introduced. Ignoring for 30 days.
-        expires: 2024-12-13T00:00:00.000Z
+          critical vulnerabilities are introduced. Ignoring for 60 days.
+        expires: 2025-02-13T00:00:00.000Z
         created: 2024-11-13T23:09:26.278Z
   SNYK-ALPINE320-OPENSSL-8235201:
     - '*':
