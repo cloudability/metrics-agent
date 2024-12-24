@@ -3,9 +3,10 @@ module github.com/cloudability/metrics-agent
 go 1.22
 
 require (
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.0
-	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.4.1
-	github.com/aws/aws-sdk-go v1.35.24
+	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.5.0
+	github.com/aws/aws-sdk-go v1.40.27
 	github.com/google/cadvisor v0.48.1
 	github.com/googleapis/gnostic v0.5.5
 	github.com/onsi/ginkgo v1.16.5
@@ -23,7 +24,6 @@ require (
 )
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
@@ -71,12 +71,12 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/term v0.21.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
@@ -101,7 +101,7 @@ replace (
 
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.18
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.14
-	golang.org/x/crypto => golang.org/x/crypto v0.24.0
+	golang.org/x/crypto => golang.org/x/crypto v0.31.0
 	golang.org/x/image => golang.org/x/image v0.10.0
 	golang.org/x/net => golang.org/x/net v0.23.0
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
