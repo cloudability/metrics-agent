@@ -84,6 +84,7 @@ type KubeAgentConfig struct {
 	NodeMetrics            EndpointMask
 	Informers              map[string]*cache.SharedIndexInformer
 	InformerResyncInterval int
+	DeletedPods            *[]interface{}
 	ParseMetricData        bool
 	HTTPSTimeout           int
 	UploadRegion           string
@@ -160,9 +161,10 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	// informer channel, closes only if metrics-agent stops executing
 	// closing this will kill all informers
 	informerStopCh := make(chan struct{})
+	kubeAgent.DeletedPods = &[]interface{}{}
 	// start up informers for each of the k8s resources that metrics are being collected on
 	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset, kubeAgent.ClusterVersion.version,
-		config.InformerResyncInterval, informerStopCh)
+		config.InformerResyncInterval, informerStopCh, kubeAgent.DeletedPods)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
@@ -336,7 +338,8 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	}
 
 	// export k8s resource metrics (ex: pods.jsonl) using informers to the metric sample directory
-	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir, config.ParseMetricData)
+	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir, config.ParseMetricData,
+		config.DeletedPods)
 	if err != nil {
 		return fmt.Errorf("unable to export k8s metrics: %s", err)
 	}

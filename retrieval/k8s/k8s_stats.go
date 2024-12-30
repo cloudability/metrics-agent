@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -21,7 +22,7 @@ const (
 )
 
 func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
-	resyncInterval int, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
+	resyncInterval int, stopCh chan struct{}, deletedPods *[]interface{}) (map[string]*cache.SharedIndexInformer, error) {
 	factory := informers.NewSharedInformerFactory(clientset, time.Duration(resyncInterval)*time.Hour)
 
 	// v1Sources
@@ -29,6 +30,17 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	servicesInformer := factory.Core().V1().Services().Informer()
 	nodesInformer := factory.Core().V1().Nodes().Informer()
 	podsInformer := factory.Core().V1().Pods().Informer()
+	_, err := podsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(pod interface{}) {
+			fmt.Println("Delete event called appending to deletedPods")
+			*deletedPods = append(*deletedPods, pod)
+			fmt.Printf("appended: %v\n", deletedPods)
+			return
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error creating DeleteFunc on pods informer: %v", err)
+	}
 	persistentVolumesInformer := factory.Core().V1().PersistentVolumes().Informer()
 	persistentVolumeClaimsInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
 	namespacesInformer := factory.Core().V1().Namespaces().Informer()
@@ -68,14 +80,14 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 
 // GetK8sMetricsFromInformer loops through all k8s resource informers in kubeAgentConfig writing each to the WSD
 func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
-	workDir *os.File, parseMetricData bool) error {
+	workDir *os.File, parseMetricData bool, deletedPods *[]interface{}) error {
 	for resourceName, informer := range informers {
 		// Cronjob informer will be nil if k8s version is less than 1.21, if so skip getting the list of cronjobs
 		if *informer == nil {
 			continue
 		}
 		resourceList := (*informer).GetIndexer().List()
-		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData)
+		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData, deletedPods)
 
 		if err != nil {
 			return err
@@ -86,7 +98,7 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 
 // writeK8sResourceFile creates a new file in the upload sample directory for the resourceName passed in and writes data
 func writeK8sResourceFile(workDir *os.File, resourceName string,
-	resourceList []interface{}, parseMetricData bool) (rerr error) {
+	resourceList []interface{}, parseMetricData bool, deletedPods *[]interface{}) (rerr error) {
 
 	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl",
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -110,6 +122,28 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 		if err != nil {
 			return errors.New("error: unable to write resource to file: " + resourceName)
 		}
+	}
+	// append and empty memory capture of deleted pods
+	// TODO this is all duplicate code
+	if resourceName == "pods" {
+		fmt.Println("writing data for pods, appending deleted pods: ", *deletedPods)
+		for _, deletedPod := range *deletedPods {
+			if parseMetricData {
+				deletedPod = sanitizeData(deletedPod)
+			}
+
+			data, nErr := json.Marshal(deletedPod)
+
+			if nErr != nil {
+				return errors.New("error: unable to marshal resource: " + resourceName)
+			}
+			_, nErr = datawriter.WriteString(string(data) + "\n")
+			if nErr != nil {
+				return errors.New("error: unable to write resource to file: " + resourceName)
+			}
+		}
+		// flush in memory storage of deleted pods
+		*deletedPods = []interface{}{}
 	}
 
 	err = datawriter.Flush()
