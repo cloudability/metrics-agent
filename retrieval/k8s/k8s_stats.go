@@ -125,7 +125,7 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	}
 	// append and empty memory capture of deleted pods
 	// TODO this is all duplicate code
-	if resourceName == "pods" {
+	if resourceName == "pods" && deletedPods != nil {
 		fmt.Println("writing data for pods, appending deleted pods: ", *deletedPods)
 		for _, deletedPod := range *deletedPods {
 			if parseMetricData {
