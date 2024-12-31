@@ -39,7 +39,7 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 
 | Environment Variable                           |                                                                                             Description                                                                                              |
 |------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| CLOUDABILITY_API_KEY                           |                                                                                    Required: Cloudability api key                                                                                    |
+| CLOUDABILITY_API_KEY                           |                                            Required/Optional: Cloudability api key. Optional only if using Custom S3 upload or Custom Azure blob upload.                                             |
 | CLOUDABILITY_CLUSTER_NAME                      |                                                            Required: The cluster name to be used for the cluster the agent is running in.                                                            |
 | CLOUDABILITY_POLL_INTERVAL                     |                                                                    Optional: The interval (Seconds) to poll metrics. Default: 180                                                                    |
 | CLOUDABILITY_OUTBOUND_PROXY                    |                    Optional: The URL of an outbound HTTP/HTTPS proxy for the agent to use (eg: http://x.x.x.x:8080). The URL must contain the scheme prefix (http:// or https://)                    |
@@ -59,6 +59,11 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 | CLOUDABILITY_UPLOAD_REGION                     |          Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2`, `eu-central-1`, `ap-southeast-2`, `me-central-1`, `us-gov-west-1`           |
 | CLOUDABILITY_CUSTOM_S3_BUCKET                  |  Optional: A custom S3 bucket the metrics-agent will upload data to. If set, the metrics-agent will ONLY upload to this custom location. CLOUDABILITY_CUSTOM_S3_REGION is REQUIRED if this is set.   |
 | CLOUDABILITY_CUSTOM_S3_REGION                  |            Optional: The AWS region that the custom s3 bucket is in. This will initialize the correct region for the s3 client. CLOUDABILITY_CUSTOM_S3_BUCKET is REQUIRED if this is set.            |
+| CLOUDABILITY_CUSTOM_AZURE_BLOB_CONTAINER_NAME  |                       Optional: A custom Azure blob container name the metrics-agent will upload data to. If set, the metrics-agent will ONLY upload to this custom location.                        |
+| CLOUDABILITY_CUSTOM_AZURE_BLOB_URL             |                                                     Optional: The Azure storage account's URL. This will be used to initialize the Azure client.                                                     |
+| CLOUDABILITY_CUSTOM_AZURE_TENANT_ID            |                       Optional: The Azure Service account's Tenant ID. This will be used to initialize the Azure client. All CUSTOM_AZURE ENV vars are REQUIRED if this is set                       |
+| CLOUDABILITY_CUSTOM_AZURE_CLIENT_ID            |                       Optional: The Azure Service account's Client ID. This will be used to initialize the Azure client. All CUSTOM_AZURE ENV vars are REQUIRED if this is set                       |
+| CLOUDABILITY_CUSTOM_AZURE_CLIENT_SECRET        |                     Optional: The Azure Service account's Client Secret. This will be used to initialize the Azure client. All CUSTOM_AZURE ENV vars are REQUIRED if this is set                     |
 
 ```sh
 
@@ -90,6 +95,11 @@ Flags:
       --upload_region                            The region the metrics-agent will upload data to. (default `us-west-2`)
       --custom_s3_bucket string                  A custom S3 bucket the metrics-agent will upload data to. - Optional
       --custom_s3_region                         The AWS region that the custom s3 bucket is created.
+      --custom_azure_blob_container_name string  A custom Azure blob container name the metrics-agent will upload data to. - Optional
+      --custom_azure_blob_url                    A custom Azure blob url metrics-agent uses to create the Azure client. - Optional
+      --custom_azure_tenant_id                   A custom Azure Service principal tenant id the metrics-agent uses to create the Azure client. - Optional
+      --custom_azure_client_id                   A custom Azure Service Principal client id the metrics-agent uses to create the Azure client. - Optional
+      --custom_azure_client_secret               A custom Azure Service Principal client secret the metrics-agent uses to create the Azure client. - Optional
 Global Flags:
       --log_format string   Format for log output (JSON,PLAIN) (default "PLAIN")
       --log_level string    Log level to run the agent at (INFO,WARN,DEBUG) (default "INFO")
