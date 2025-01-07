@@ -193,6 +193,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 			log.Warnf("WARNING: failed to retrieve S3 URL in connectivity test, agent will fail to "+
 				"upload metrics to Cloudability with error: %v", err)
 		}
+	} else {
+		performCustomUploadTestConnection(&kubeAgent, agentProvider)
 	}
 
 	log.Info("Cloudability Metrics Agent successfully started.")
@@ -282,7 +284,6 @@ func isCustomAzureUploadEnvsSet(ka *KubeAgentConfig) bool {
 }
 
 func performConnectionChecks(ka *KubeAgentConfig) error {
-
 	log.Info("Performing connectivity checks. Checking that the agent can retrieve S3 URL")
 
 	cldyMetricClient, err := client.NewHTTPMetricClient(client.Configuration{
@@ -317,6 +318,27 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 	}
 	log.Info("Connectivity check succeeded")
 	return nil
+}
+
+func performCustomUploadTestConnection(ka *KubeAgentConfig, provider string) {
+	log.Info("Performing Performing connectivity checks for custom upload.")
+	if provider == azureProvider {
+		azureTestConnection(ka)
+	} else {
+		log.Info("Checking that the agent can start aws client using custom s3" +
+			" configuration.")
+		ka.customS3AWSClient()
+	}
+}
+
+func azureTestConnection(ka *KubeAgentConfig) {
+	if ka.CustomAzureTenantID == "" && ka.CustomAzureClientID == "" {
+		log.Info("Checking that the agent can start azure client using managed identity.")
+		ka.customBlobManagedIdentityClient()
+	} else {
+		log.Info("Checking that the agent can start azure client using service principal.")
+		ka.customBlobServicePrincipalClient()
+	}
 }
 
 func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
@@ -499,7 +521,7 @@ func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(ctx context.Context, agen
 		if ka.CustomAzureTenantID == "" && ka.CustomAzureClientID == "" {
 			log.Infof("Uploading Metrics to Custom Azure Blob %s with managed identity",
 				ka.CustomAzureUploadBlobContainerName)
-			ka.sendMetricsToCustomBlobManagedIdentity(ctx, metricSample)
+			go ka.sendMetricsToCustomBlobManagedIdentity(ctx, metricSample)
 		} else {
 			log.Infof("Uploading Metrics to Custom Azure Blob %s", ka.CustomAzureUploadBlobContainerName)
 			go ka.sendMetricsToCustomBlob(ctx, metricSample)
@@ -511,7 +533,7 @@ func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(ctx context.Context, agen
 	}
 }
 
-func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
+func (ka KubeAgentConfig) customS3AWSClient() *session.Session {
 	sess, err := session.NewSession(&aws.Config{
 		Region:     aws.String(ka.CustomS3Region),
 		MaxRetries: aws.Int(3)},
@@ -520,6 +542,11 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 		log.Fatalf("Could not establish AWS Session, "+
 			"ensure AWS environment variables are set correctly: %s", err)
 	}
+	return sess
+}
+
+func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
+	sess := ka.customS3AWSClient()
 	svc := s3.New(sess)
 	uploader := s3manager.NewUploaderWithClient(svc)
 
@@ -545,12 +572,12 @@ func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	util.SafeCloseLogger(fileReader)
 }
 
-func (ka KubeAgentConfig) sendMetricsToCustomBlob(ctx context.Context, metricSample *os.File) {
+func (ka KubeAgentConfig) customBlobServicePrincipalClient() *azblob.Client {
 	cred, err := azidentity.NewClientSecretCredential(ka.CustomAzureTenantID, ka.CustomAzureClientID,
 		ka.CustomAzureClientSecret, nil)
 	if err != nil {
 		log.Fatalf("Could not establish Azure credentials, "+
-			"ensure Azure environment variables are set correctly: %s", err)
+			"ensure all Azure environment variables are set correctly: %s", err)
 	}
 	retryConfig := azblob.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
@@ -562,12 +589,17 @@ func (ka KubeAgentConfig) sendMetricsToCustomBlob(ctx context.Context, metricSam
 	azureClient, err := azblob.NewClient(ka.CustomAzureBlobURL, cred, &retryConfig)
 	if err != nil {
 		log.Fatalf("Could not establish Azure Client, "+
-			"ensure Azure environment variables are set correctly: %s", err)
+			"ensure all Azure environment variables are set correctly: %s", err)
 	}
+	return azureClient
+}
+
+func (ka KubeAgentConfig) sendMetricsToCustomBlob(ctx context.Context, metricSample *os.File) {
+	azureClient := ka.customBlobServicePrincipalClient()
 	ka.uploadBlob(ctx, azureClient, metricSample)
 }
 
-func (ka KubeAgentConfig) sendMetricsToCustomBlobManagedIdentity(ctx context.Context, metricSample *os.File) {
+func (ka KubeAgentConfig) customBlobManagedIdentityClient() *azblob.Client {
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		log.Fatalf("Could not establish Azure credentials with managed identity, "+
@@ -578,6 +610,11 @@ func (ka KubeAgentConfig) sendMetricsToCustomBlobManagedIdentity(ctx context.Con
 		log.Fatalf("Could not establish Azure Client with managed identity, "+
 			"ensure Azure environment variables are set correctly: %s", err)
 	}
+	return azureClient
+}
+
+func (ka KubeAgentConfig) sendMetricsToCustomBlobManagedIdentity(ctx context.Context, metricSample *os.File) {
+	azureClient := ka.customBlobManagedIdentityClient()
 	ka.uploadBlob(ctx, azureClient, metricSample)
 }
 
