@@ -94,7 +94,7 @@ replace (
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.14
 	golang.org/x/crypto => golang.org/x/crypto v0.31.0
 	golang.org/x/image => golang.org/x/image v0.10.0
-	golang.org/x/net => golang.org/x/net v0.23.0
+	golang.org/x/net => golang.org/x/net v0.33.0
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 	google.golang.org/protobuf => google.golang.org/protobuf v1.33.0
 )

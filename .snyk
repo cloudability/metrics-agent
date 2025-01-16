@@ -33,7 +33,7 @@ ignore:
   SNYK-GOLANG-GOLANGORGXIMAGETIFF-7268348:
     - '*':
         reason: No fix available yet
-        expires: 2025-01-11T00:00:00.000Z
+        expires: 2025-03-01T00:00:00.000Z
         created: 2024-07-11T23:07:11.176Z
   SNYK-GOLANG-K8SIOCLIENTGOTRANSPORT-7538822:
     - '*':
@@ -76,6 +76,6 @@ ignore:
         reason: >-
           Ignoring vulnerability for 30 days as newer versions of k8s.io
           contain several critical vulnerabilities and are still in alpha
-        expires: 2025-01-01T00:00:00.000Z
+        expires: 2025-03-01T00:00:00.000Z
         created: 2024-11-13T23:30:00.999Z
 patch: {}
