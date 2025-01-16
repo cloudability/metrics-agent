@@ -288,6 +288,18 @@ func SafeClose(closer func() error, err *error) {
 	}
 }
 
+// SafeCloseLogger takes a file and closes then removes it. Used for custom agent uploads
+func SafeCloseLogger(file *os.File) {
+	err := file.Close()
+	if err != nil {
+		log.Warnf("Warning: Unable to close metric sample: %v", err)
+	}
+	err = os.Remove(file.Name())
+	if err != nil {
+		log.Warnf("Warning: Unable to cleanup after metric sample upload: %v", err)
+	}
+}
+
 // MatchOneFile returns the name of one file based on a given directory and pattern
 // returning an error if more or less than one match is found. The syntax of patterns is the same
 // as in filepath.Glob & Match.
