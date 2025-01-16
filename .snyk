@@ -33,7 +33,7 @@ ignore:
   SNYK-GOLANG-GOLANGORGXIMAGETIFF-7268348:
     - '*':
         reason: No fix available yet
-        expires: 2025-01-11T00:00:00.000Z
+        expires: 2025-03-01T00:00:00.000Z
         created: 2024-07-11T23:07:11.176Z
   SNYK-GOLANG-K8SIOCLIENTGOTRANSPORT-7538822:
     - '*':
@@ -78,4 +78,9 @@ ignore:
           temporarily until patch version is ready
         expires: 2024-11-30T00:00:00.000Z
         created: 2024-10-30T18:01:47.217Z
+  SNYK-GOLANG-GITHUBCOMGOLANGJWTJWT-8341243:
+    - '*':
+        reason: No fix available
+        expires: 2025-03-01T00:00:00.000Z
+        created: 2025-01-16T21:14:33.951Z
 patch: {}
