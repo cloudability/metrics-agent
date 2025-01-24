@@ -232,6 +232,11 @@ func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 			"to run in custom S3 upload mode. CLOUDABILITY_CUSTOM_S3_BUCKET is set to %s and "+
 			"CLOUDABILITY_CUSTOM_S3_REGION is set to %s.", ka.CustomS3UploadBucket, ka.CustomS3Region)
 	}
+	isInvalidClusterName, _ := regexp.MatchString(`[^a-zA-Z\d-]`, ka.ClusterName)
+	if isInvalidClusterName {
+		log.Fatalf("Invalid agent configuration. CLOUDABILITY_CLUSTER_NAME must contain only alphanumeric characters and dashes "+
+			"and is currently set to %s.", ka.ClusterName)
+	}
 	log.Infof("Detected custom S3 bucket location and S3 bucket region. "+
 		"Will upload collected metrics to %s in the aws region %s", ka.CustomS3UploadBucket, ka.CustomS3Region)
 	return true
