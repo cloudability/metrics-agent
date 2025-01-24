@@ -28,7 +28,7 @@ On AWS, both AMD64 and ARM architectures are supported.
 
 ### Deploying with Helm
 
-Instructions for deploying the metrics-agent using Helm can be found [here](https://cloudability.github.io/metrics-agent/). For helm versioning this repository follows the [simple 1-1 versioning](https://codefresh.io/docs/docs/new-helm/helm-best-practices/#simple-1-1-versioning) strategy where the chart version is in snyc with the actual application.
+Instructions for deploying the metrics-agent using Helm can be found [here](https://cloudability.github.io/metrics-agent/). For helm versioning this repository follows the [simple 1-1 versioning](https://codefresh.io/docs/docs/new-helm/helm-best-practices/#simple-1-1-versioning) strategy where the chart version is in sync with the actual application.
 
 ### Unsupported Configurations
 
