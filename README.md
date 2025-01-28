@@ -44,6 +44,6 @@ To uninstall the chart:
     helm delete metrics-agent -n cloudability
 
 Notes: 
-* `<yourApiKey>` is obtained through the Containers Insights page in the Cloudability UI.
+* `<yourApiKey>` and `<yourUploadRegion>` are obtained through the Containers Insights page in the Cloudability UI.
 * Deploying the metrics-agent with Helm creates a kubernetes secret that stores the api-key value. The metrics-agent
 deployment then pulls the apikey value from this secret.
