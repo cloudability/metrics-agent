@@ -49,6 +49,8 @@ spec:
               value: {{ .Values.clusterName }}
             - name: CLOUDABILITY_POLL_INTERVAL
               value: {{ .Values.pollInterval | quote }}
+            - name: CLOUDABILITY_UPLOAD_REGION
+              value: {{ .Values.uploadRegion }}
             {{- if .Values.extraEnv }}
               {{- toYaml .Values.extraEnv | nindent 12 }}
             {{- end }}

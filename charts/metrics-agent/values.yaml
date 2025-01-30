@@ -21,10 +21,12 @@ secretName: ""
 clusterName: ""
 # The interval in seconds to poll metrics.
 pollInterval: 180
+# The region to upload metrics data to. See README for accepted values
+uploadRegion: "us-west-2"
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.11.37
+  tag: 2.11.38
   pullPolicy: Always
 
 imagePullSecrets: []
