@@ -123,11 +123,6 @@ const rbacError string = `RBAC role in the Cloudability namespace may need to be
 // CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
 // nolint: gocyclo
 func CollectKubeMetrics(config KubeAgentConfig) {
-	isInvalidClusterName, _ := regexp.MatchString(`[^a-zA-Z\d-]`, config.ClusterName)
-	if isInvalidClusterName {
-		log.Fatalf("Invalid agent configuration. CLOUDABILITY_CLUSTER_NAME must contain only alphanumeric characters and dashes "+
-			"and is currently set to %s.", config.ClusterName)
-	}
 
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
 	log.Infof("Metric collection retry limit set to %d (default is %d)",
