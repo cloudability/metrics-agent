@@ -562,4 +562,8 @@ func Test_getUploadURLByRegion(t *testing.T) {
 	if uploadURL != client.DefaultBaseURL {
 		t.Error("Unsupported region default to US URL was not generated correctly")
 	}
+	uploadURL = client.GetUploadURLByRegion("us-west-2-staging")
+	if uploadURL != client.StagingBaseURL {
+		t.Error("US staging URL was not generated correctly")
+	}
 }
