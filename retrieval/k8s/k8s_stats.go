@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"os"
 	"time"
 
@@ -29,6 +30,23 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	servicesInformer := factory.Core().V1().Services().Informer()
 	nodesInformer := factory.Core().V1().Nodes().Informer()
 	podsInformer := factory.Core().V1().Pods().Informer()
+
+	err := podsInformer.SetTransform(func(resource interface{}) (interface{}, error) {
+		if pod, ok := resource.(*corev1.Pod); ok {
+			return &raw.CldyPod{
+				TypeMeta:       pod.TypeMeta,
+				CldyObjectMeta: reduceObjectMeta(pod.ObjectMeta),
+				Spec:           pod.Spec,
+				Status:         pod.Status,
+			}, nil
+		}
+		return nil, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
 	persistentVolumesInformer := factory.Core().V1().PersistentVolumes().Informer()
 	persistentVolumeClaimsInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
 	namespacesInformer := factory.Core().V1().Namespaces().Informer()
@@ -297,4 +315,36 @@ func sanitizeNamespace(to interface{}) interface{} {
 	cast := to.(*corev1.Namespace)
 	(*cast).ObjectMeta.ManagedFields = nil
 	return cast
+}
+
+func reduceObjectMeta(data metav1.ObjectMeta) raw.CldyObjectMeta {
+	cldyManageFields := make([]raw.CldyManagedFieldsEntry, 0)
+	for _, field := range data.ManagedFields {
+		cldyManageFields = append(cldyManageFields, raw.CldyManagedFieldsEntry{
+			Manager:     field.Manager,
+			Operation:   field.Operation,
+			APIVersion:  field.APIVersion,
+			Time:        field.Time,
+			FieldsType:  field.FieldsType,
+			Subresource: field.Subresource,
+		})
+	}
+
+	return raw.CldyObjectMeta{
+		Name:                       data.Name,
+		GenerateName:               data.GenerateName,
+		Namespace:                  data.Namespace,
+		SelfLink:                   data.SelfLink,
+		UID:                        data.UID,
+		ResourceVersion:            data.ResourceVersion,
+		Generation:                 data.Generation,
+		CreationTimestamp:          data.CreationTimestamp,
+		DeletionTimestamp:          data.DeletionTimestamp,
+		DeletionGracePeriodSeconds: data.DeletionGracePeriodSeconds,
+		Labels:                     data.Labels,
+		Annotations:                data.Annotations,
+		OwnerReferences:            data.OwnerReferences,
+		Finalizers:                 data.Finalizers,
+		ManagedFields:              cldyManageFields,
+	}
 }

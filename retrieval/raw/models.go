@@ -3,6 +3,7 @@ package raw
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -128,4 +129,41 @@ type CldyAgent struct {
 	Timestamp int64             `json:"ts,omitempty"`
 	Value     float64           `json:"value,omitempty"`
 	Values    map[string]string `json:"values,omitempty"`
+}
+
+type CldyPod struct {
+	metav1.TypeMeta `json:",inline"`
+	CldyObjectMeta  `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Spec            corev1.PodSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Status          corev1.PodStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+}
+
+// CldyObjectMeta represents k8s ObjectMeta but strips unnecessary metadata
+type CldyObjectMeta struct {
+	Name                       string                   `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	GenerateName               string                   `json:"generateName,omitempty" protobuf:"bytes,2,opt,name=generateName"`
+	Namespace                  string                   `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
+	SelfLink                   string                   `json:"selfLink,omitempty" protobuf:"bytes,4,opt,name=selfLink"`
+	UID                        types.UID                `json:"uid,omitempty" protobuf:"bytes,5,opt,name=uid,casttype=k8s.io/kubernetes/pkg/types.UID"`
+	ResourceVersion            string                   `json:"resourceVersion,omitempty" protobuf:"bytes,6,opt,name=resourceVersion"`
+	Generation                 int64                    `json:"generation,omitempty" protobuf:"varint,7,opt,name=generation"`
+	CreationTimestamp          metav1.Time              `json:"creationTimestamp,omitempty" protobuf:"bytes,8,opt,name=creationTimestamp"`
+	DeletionTimestamp          *metav1.Time             `json:"deletionTimestamp,omitempty" protobuf:"bytes,9,opt,name=deletionTimestamp"`
+	DeletionGracePeriodSeconds *int64                   `json:"deletionGracePeriodSeconds,omitempty" protobuf:"varint,10,opt,name=deletionGracePeriodSeconds"`
+	Labels                     map[string]string        `json:"labels,omitempty" protobuf:"bytes,11,rep,name=labels"`
+	Annotations                map[string]string        `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
+	OwnerReferences            []metav1.OwnerReference  `json:"ownerReferences,omitempty" patchStrategy:"merge" patchMergeKey:"uid" protobuf:"bytes,13,rep,name=ownerReferences"`
+	Finalizers                 []string                 `json:"finalizers,omitempty" patchStrategy:"merge" protobuf:"bytes,14,rep,name=finalizers"`
+	ManagedFields              []CldyManagedFieldsEntry `json:"managedFields,omitempty" protobuf:"bytes,17,rep,name=managedFields"`
+}
+
+// CldyManagedFieldsEntry represents k8s ManagedFieldsEntry but strips unnecessary metadata
+type CldyManagedFieldsEntry struct {
+	Manager    string                            `json:"manager,omitempty" protobuf:"bytes,1,opt,name=manager"`
+	Operation  metav1.ManagedFieldsOperationType `json:"operation,omitempty" protobuf:"bytes,2,opt,name=operation,casttype=ManagedFieldsOperationType"`
+	APIVersion string                            `json:"apiVersion,omitempty" protobuf:"bytes,3,opt,name=apiVersion"`
+	Time       *metav1.Time                      `json:"time,omitempty" protobuf:"bytes,4,opt,name=time"`
+	FieldsType string                            `json:"fieldsType,omitempty" protobuf:"bytes,6,opt,name=fieldsType"`
+	// Removed fields v1
+	Subresource string `json:"subresource,omitempty" protobuf:"bytes,8,opt,name=subresource"`
 }
