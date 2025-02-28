@@ -139,6 +139,7 @@ type CldyPod struct {
 }
 
 // CldyObjectMeta represents k8s ObjectMeta but strips unnecessary metadata
+//
 //nolint:lll
 type CldyObjectMeta struct {
 	Name                       string                   `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
@@ -158,6 +159,7 @@ type CldyObjectMeta struct {
 }
 
 // CldyManagedFieldsEntry represents k8s ManagedFieldsEntry but strips unnecessary metadata
+//
 //nolint:lll
 type CldyManagedFieldsEntry struct {
 	Manager    string                            `json:"manager,omitempty" protobuf:"bytes,1,opt,name=manager"`
