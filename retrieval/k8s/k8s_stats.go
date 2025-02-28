@@ -334,7 +334,6 @@ func reduceObjectMeta(data metav1.ObjectMeta) raw.CldyObjectMeta {
 		Name:                       data.Name,
 		GenerateName:               data.GenerateName,
 		Namespace:                  data.Namespace,
-		SelfLink:                   data.SelfLink,
 		UID:                        data.UID,
 		ResourceVersion:            data.ResourceVersion,
 		Generation:                 data.Generation,

@@ -143,7 +143,6 @@ type CldyObjectMeta struct {
 	Name                       string                   `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	GenerateName               string                   `json:"generateName,omitempty" protobuf:"bytes,2,opt,name=generateName"`
 	Namespace                  string                   `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
-	SelfLink                   string                   `json:"selfLink,omitempty" protobuf:"bytes,4,opt,name=selfLink"`
 	UID                        types.UID                `json:"uid,omitempty" protobuf:"bytes,5,opt,name=uid,casttype=k8s.io/kubernetes/pkg/types.UID"`
 	ResourceVersion            string                   `json:"resourceVersion,omitempty" protobuf:"bytes,6,opt,name=resourceVersion"`
 	Generation                 int64                    `json:"generation,omitempty" protobuf:"varint,7,opt,name=generation"`
