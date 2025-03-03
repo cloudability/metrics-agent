@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"os"
 	"time"
@@ -33,16 +34,17 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 
 	err := podsInformer.SetTransform(func(resource interface{}) (interface{}, error) {
 		if pod, ok := resource.(*corev1.Pod); ok {
-			return &raw.CldyPod{
+			leanPod := raw.CldyPod{
 				TypeMeta:       pod.TypeMeta,
 				CldyObjectMeta: reduceObjectMeta(pod.ObjectMeta),
 				Spec:           pod.Spec,
 				Status:         pod.Status,
-			}, nil
+			}
+			fmt.Printf("Storing Pod backup %v\n", leanPod)
+			return leanPod, nil
 		}
-		return nil, nil
+		return resource, fmt.Errorf("object is not a Pod")
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +95,10 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 			continue
 		}
 		resourceList := (*informer).GetIndexer().List()
+		if resourceName == "pods" {
+			fmt.Printf("This is the pods informer %v \n\n\n", resourceList)
+			fmt.Printf("This is the pods informer deref %v \n\n\n", &resourceList)
+		}
 		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData)
 
 		if err != nil {
