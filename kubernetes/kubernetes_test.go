@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/cloudability/metrics-agent/retrieval/k8s"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -364,8 +365,8 @@ func TestCollectMetrics(t *testing.T) {
 			}
 		}
 	})
-	t.Run("Ensure collection occurs with parseMetrics is disabled"+
-		" ensure sensitive data is not stripped", func(t *testing.T) {
+	t.Run("Ensure collection occurs with parseMetrics is disabled and transforms"+
+		" ensure sensitive data is still stripped", func(t *testing.T) {
 
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -377,24 +378,24 @@ func TestCollectMetrics(t *testing.T) {
 					t.Error(err)
 				}
 				if strings.Contains(info.Name(), "pods") {
-					// check if secrets were not stripped from pods if parseMetrics is false
-					if !strings.Contains(string(in), "ReallySecretStuff") {
-						t.Error("Original file should have contained secret, but did not")
+					// check if secrets were stripped from pods if parseMetrics is false with transform in place
+					if strings.Contains(string(in), "ReallySecretStuff") {
+						t.Error("Original file should not have contained secret, but did")
 					}
 				} else if strings.Contains(info.Name(), "namespaces") {
-					// check if secrets were not stripped from namespaces if parseMetrics is false
-					if !strings.Contains(string(in), "ManageFieldToBeDeleted") {
-						t.Error("Original file should have contained ManagedField data, but did not")
+					// check if secrets were stripped from namespaces if parseMetrics is false with transform in place
+					if strings.Contains(string(in), "ManageFieldToBeDeleted") {
+						t.Error("Original file should not have contained ManagedField data, but did")
 					}
 				} else if strings.Contains(info.Name(), "deployments") {
-					// check if sensitive fields were not stripped from deployments if parseMetrics is false
-					if !strings.Contains(string(in), "DangThisIsSecret") {
-						t.Error("Original file should have contained sensitive data, but did not")
+					// check if sensitive fields were stripped from deployments if parseMetrics is false with transform
+					if strings.Contains(string(in), "DangThisIsSecret") {
+						t.Error("Original file should not have contained sensitive data, but did")
 					}
 				} else {
-					// all other jsonl share the same annotation that should not be removed
-					if !strings.Contains(string(in), "IAmSecretEnvVariables") {
-						t.Error("Original file should have contained sensitive data, but did not")
+					// all other jsonl share the same annotation that should be removed
+					if strings.Contains(string(in), "IAmSecretEnvVariables") {
+						t.Error("Original file should not have contained sensitive data, but did")
 					}
 				}
 			}
@@ -678,6 +679,7 @@ func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, sto
 		if (*informer) == nil {
 			continue
 		}
+		_ = (*informer).SetTransform(k8s.Transform)
 		go (*informer).Run(stopCh)
 	}
 }

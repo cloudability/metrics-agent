@@ -21,7 +21,7 @@ const (
 	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
-var transform = func(resource interface{}) (interface{}, error) {
+var Transform = func(resource interface{}) (interface{}, error) {
 	var err error
 	resource, err = sanitizeData(resource)
 	if err != nil {
@@ -70,7 +70,7 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	}
 
 	for _, informer := range clusterInformers {
-		err := (*informer).SetTransform(transform)
+		err := (*informer).SetTransform(Transform)
 		if err != nil {
 			return nil, err
 		}
