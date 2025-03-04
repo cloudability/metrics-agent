@@ -21,17 +21,8 @@ const (
 	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
-var Transform = func(resource interface{}) (interface{}, error) {
-	var err error
-	resource, err = sanitizeData(resource)
-	if err != nil {
-		return nil, fmt.Errorf("resource is not valid type error: %v", err)
-	}
-	return resource, nil
-}
-
 func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
-	resyncInterval int, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
+	resyncInterval int, parseMetricsData bool, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	factory := informers.NewSharedInformerFactory(clientset, time.Duration(resyncInterval)*time.Hour)
 
 	// v1Sources
@@ -70,7 +61,8 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	}
 
 	for _, informer := range clusterInformers {
-		err := (*informer).SetTransform(Transform)
+		transform := GetTransformFunc(parseMetricsData)
+		err := (*informer).SetTransform(transform)
 		if err != nil {
 			return nil, err
 		}
@@ -176,7 +168,7 @@ func shouldSkipResource(k8Resource interface{}) bool {
 }
 
 // nolint: gocyclo
-func sanitizeData(to interface{}) (interface{}, error) {
+func sanitizeData(to interface{}, parseMetricsData bool) (interface{}, error) {
 	switch to.(type) {
 	case *corev1.Pod:
 		return sanitizePod(to), nil
@@ -312,4 +304,15 @@ func sanitizeNamespace(to interface{}) interface{} {
 	delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
 	(*cast).ObjectMeta.ManagedFields = nil
 	return cast
+}
+
+func GetTransformFunc(parseMetricsData bool) func(resource interface{}) (interface{}, error) {
+	return func(resource interface{}) (interface{}, error) {
+		var err error
+		resource, err = sanitizeData(resource, parseMetricsData)
+		if err != nil {
+			return nil, fmt.Errorf("resource is not valid type error: %v", err)
+		}
+		return resource, nil
+	}
 }

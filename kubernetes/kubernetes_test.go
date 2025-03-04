@@ -270,12 +270,12 @@ func TestCollectMetrics(t *testing.T) {
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 
 	stopCh := make(chan struct{})
-	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, stopCh)
+	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, false, stopCh)
 	if err != nil {
 		t.Error(err)
 	}
 	parseStopCh := make(chan struct{})
-	parseInformers, err := getMockInformers(1.22, parseStopCh)
+	parseInformers, err := getMockInformers(1.22, true, parseStopCh)
 	if err != nil {
 		t.Error(err)
 	}
@@ -544,7 +544,8 @@ func NewTestServer() *httptest.Server {
 }
 
 // nolint: lll
-func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
+func getMockInformers(clusterVersion float64, parseMetricsData bool,
+	stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
 	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
@@ -601,7 +602,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 		"cronjobs":               &cjinformer,
 	}
 	// Call the Run function for each Informer, allowing the informers to listen for Add events
-	startMockInformers(mockInformers, stopCh)
+	startMockInformers(mockInformers, parseMetricsData, stopCh)
 
 	// Private Annotation to be removed if ParseMetrics is enabled
 	annotation := map[string]string{
@@ -674,12 +675,13 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 	return mockInformers, nil
 }
 
-func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, stopCh chan struct{}) {
+func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, parseMetricsData bool,
+	stopCh chan struct{}) {
 	for _, informer := range mockInformers {
 		if (*informer) == nil {
 			continue
 		}
-		_ = (*informer).SetTransform(k8s.Transform)
+		_ = (*informer).SetTransform(k8s.GetTransformFunc(parseMetricsData))
 		go (*informer).Run(stopCh)
 	}
 }

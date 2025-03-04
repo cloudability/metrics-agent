@@ -162,7 +162,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	informerStopCh := make(chan struct{})
 	// start up informers for each of the k8s resources that metrics are being collected on
 	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset, kubeAgent.ClusterVersion.version,
-		config.InformerResyncInterval, informerStopCh)
+		config.InformerResyncInterval, config.ParseMetricData, informerStopCh)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
