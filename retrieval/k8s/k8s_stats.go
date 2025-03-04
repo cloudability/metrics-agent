@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cloudability/metrics-agent/retrieval/raw"
 	"os"
 	"time"
 
@@ -22,6 +21,15 @@ const (
 	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
+var transform = func(resource interface{}) (interface{}, error) {
+	var err error
+	resource, err = sanitizeData(resource)
+	if err != nil {
+		return nil, fmt.Errorf("resource is not valid type error: %v", err)
+	}
+	return resource, nil
+}
+
 func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	resyncInterval int, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	factory := informers.NewSharedInformerFactory(clientset, time.Duration(resyncInterval)*time.Hour)
@@ -32,19 +40,7 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	nodesInformer := factory.Core().V1().Nodes().Informer()
 	podsInformer := factory.Core().V1().Pods().Informer()
 
-	err := podsInformer.SetTransform(func(resource interface{}) (interface{}, error) {
-		if pod, ok := resource.(*corev1.Pod); ok {
-			leanPod := raw.CldyPod{
-				TypeMeta:       pod.TypeMeta,
-				CldyObjectMeta: reduceObjectMeta(pod.ObjectMeta),
-				Spec:           pod.Spec,
-				Status:         pod.Status,
-			}
-			fmt.Printf("Storing Pod backup %v\n", leanPod)
-			return leanPod, nil
-		}
-		return resource, fmt.Errorf("object is not a Pod")
-	})
+	err := podsInformer.SetTransform(transform)
 	if err != nil {
 		return nil, err
 	}
@@ -64,11 +60,6 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 		cronJobsInformer = factory.Batch().V1().CronJobs().Informer()
 	}
 
-	// runs in background, starts all informers that are a part of the factory
-	factory.Start(stopCh)
-	// wait until all informers have successfully synced
-	factory.WaitForCacheSync(stopCh)
-
 	var clusterInformers = map[string]*cache.SharedIndexInformer{
 		"replicationcontrollers": &replicationControllerInformer,
 		"services":               &servicesInformer,
@@ -83,24 +74,32 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 		"jobs":                   &jobsInformer,
 		"cronjobs":               &cronJobsInformer,
 	}
+
+	for _, informer := range clusterInformers {
+		err = (*informer).SetTransform(transform)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// runs in background, starts all informers that are a part of the factory
+	factory.Start(stopCh)
+	// wait until all informers have successfully synced
+	factory.WaitForCacheSync(stopCh)
+
 	return clusterInformers, nil
 }
 
 // GetK8sMetricsFromInformer loops through all k8s resource informers in kubeAgentConfig writing each to the WSD
 func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
-	workDir *os.File, parseMetricData bool) error {
+	workDir *os.File) error {
 	for resourceName, informer := range informers {
 		// Cronjob informer will be nil if k8s version is less than 1.21, if so skip getting the list of cronjobs
 		if *informer == nil {
 			continue
 		}
 		resourceList := (*informer).GetIndexer().List()
-		if resourceName == "pods" {
-			fmt.Printf("This is the pods informer %v \n\n\n", resourceList)
-			fmt.Printf("This is the pods informer deref %v \n\n\n", &resourceList)
-		}
-		err := writeK8sResourceFile(workDir, resourceName, resourceList, parseMetricData)
-
+		err := writeK8sResourceFile(workDir, resourceName, resourceList)
 		if err != nil {
 			return err
 		}
@@ -110,7 +109,7 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 
 // writeK8sResourceFile creates a new file in the upload sample directory for the resourceName passed in and writes data
 func writeK8sResourceFile(workDir *os.File, resourceName string,
-	resourceList []interface{}, parseMetricData bool) (rerr error) {
+	resourceList []interface{}) (rerr error) {
 
 	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl",
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -122,9 +121,6 @@ func writeK8sResourceFile(workDir *os.File, resourceName string,
 	for _, k8Resource := range resourceList {
 		if shouldSkipResource(k8Resource) {
 			continue
-		}
-		if parseMetricData {
-			k8Resource = sanitizeData(k8Resource)
 		}
 
 		data, err := json.Marshal(k8Resource)
@@ -186,10 +182,10 @@ func shouldSkipResource(k8Resource interface{}) bool {
 }
 
 // nolint: gocyclo
-func sanitizeData(to interface{}) interface{} {
+func sanitizeData(to interface{}) (interface{}, error) {
 	switch to.(type) {
 	case *corev1.Pod:
-		return sanitizePod(to)
+		return sanitizePod(to), nil
 	case *v1apps.DaemonSet:
 		cast := to.(*v1apps.DaemonSet)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -198,14 +194,14 @@ func sanitizeData(to interface{}) interface{} {
 		cast.Spec.UpdateStrategy = v1apps.DaemonSetUpdateStrategy{}
 		cast.Spec.MinReadySeconds = 0
 		cast.Spec.RevisionHistoryLimit = nil
-		return cast
+		return cast, nil
 	case *v1apps.ReplicaSet:
 		cast := to.(*v1apps.ReplicaSet)
 		sanitizeMeta(&cast.ObjectMeta)
 		cast.Spec.Replicas = nil
 		cast.Spec.Template = corev1.PodTemplateSpec{}
 		cast.Spec.MinReadySeconds = 0
-		return cast
+		return cast, nil
 	case *v1apps.Deployment:
 		cast := to.(*v1apps.Deployment)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -215,7 +211,7 @@ func sanitizeData(to interface{}) interface{} {
 		cast.Spec.MinReadySeconds = 0
 		cast.Spec.RevisionHistoryLimit = nil
 		cast.Spec.ProgressDeadlineSeconds = nil
-		return cast
+		return cast, nil
 	case *v1batch.Job:
 		cast := to.(*v1batch.Job)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -228,13 +224,13 @@ func sanitizeData(to interface{}) interface{} {
 		cast.Spec.TTLSecondsAfterFinished = nil
 		cast.Spec.CompletionMode = nil
 		cast.Spec.Suspend = nil
-		return cast
+		return cast, nil
 	case *v1batch.CronJob:
 		cast := to.(*v1batch.CronJob)
 		sanitizeMeta(&cast.ObjectMeta)
 		// cronjobs have no Selector
 		cast.Spec = v1batch.CronJobSpec{}
-		return cast
+		return cast, nil
 	case *corev1.Service:
 		cast := to.(*corev1.Service)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -255,30 +251,30 @@ func sanitizeData(to interface{}) interface{} {
 		cast.Spec.AllocateLoadBalancerNodePorts = nil
 		cast.Spec.LoadBalancerClass = nil
 		cast.Spec.InternalTrafficPolicy = nil
-		return cast
+		return cast, nil
 	case *corev1.ReplicationController:
 		cast := to.(*corev1.ReplicationController)
 		sanitizeMeta(&cast.ObjectMeta)
 		cast.Spec.Replicas = nil
 		cast.Spec.Template = nil
 		cast.Spec.MinReadySeconds = 0
-		return cast
+		return cast, nil
 	case *corev1.Namespace:
-		return sanitizeNamespace(to)
+		return sanitizeNamespace(to), nil
 	case *corev1.PersistentVolume:
 		cast := to.(*corev1.PersistentVolume)
 		sanitizeMeta(&cast.ObjectMeta)
-		return cast
+		return cast, nil
 	case *corev1.PersistentVolumeClaim:
 		cast := to.(*corev1.PersistentVolumeClaim)
 		sanitizeMeta(&cast.ObjectMeta)
-		return cast
+		return cast, nil
 	case *corev1.Node:
 		cast := to.(*corev1.Node)
 		sanitizeMeta(&cast.ObjectMeta)
-		return cast
+		return cast, nil
 	}
-	return to
+	return to, fmt.Errorf("invalid object type")
 }
 
 func sanitizeMeta(objectMeta *metav1.ObjectMeta) {
@@ -319,37 +315,7 @@ func sanitizeContainer(container corev1.Container) corev1.Container {
 
 func sanitizeNamespace(to interface{}) interface{} {
 	cast := to.(*corev1.Namespace)
+	delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
 	(*cast).ObjectMeta.ManagedFields = nil
 	return cast
-}
-
-func reduceObjectMeta(data metav1.ObjectMeta) raw.CldyObjectMeta {
-	cldyManageFields := make([]raw.CldyManagedFieldsEntry, 0)
-	for _, field := range data.ManagedFields {
-		cldyManageFields = append(cldyManageFields, raw.CldyManagedFieldsEntry{
-			Manager:     field.Manager,
-			Operation:   field.Operation,
-			APIVersion:  field.APIVersion,
-			Time:        field.Time,
-			FieldsType:  field.FieldsType,
-			Subresource: field.Subresource,
-		})
-	}
-
-	return raw.CldyObjectMeta{
-		Name:                       data.Name,
-		GenerateName:               data.GenerateName,
-		Namespace:                  data.Namespace,
-		UID:                        data.UID,
-		ResourceVersion:            data.ResourceVersion,
-		Generation:                 data.Generation,
-		CreationTimestamp:          data.CreationTimestamp,
-		DeletionTimestamp:          data.DeletionTimestamp,
-		DeletionGracePeriodSeconds: data.DeletionGracePeriodSeconds,
-		Labels:                     data.Labels,
-		Annotations:                data.Annotations,
-		OwnerReferences:            data.OwnerReferences,
-		Finalizers:                 data.Finalizers,
-		ManagedFields:              cldyManageFields,
-	}
 }
