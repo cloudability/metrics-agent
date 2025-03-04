@@ -39,12 +39,6 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	servicesInformer := factory.Core().V1().Services().Informer()
 	nodesInformer := factory.Core().V1().Nodes().Informer()
 	podsInformer := factory.Core().V1().Pods().Informer()
-
-	err := podsInformer.SetTransform(transform)
-	if err != nil {
-		return nil, err
-	}
-
 	persistentVolumesInformer := factory.Core().V1().PersistentVolumes().Informer()
 	persistentVolumeClaimsInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
 	namespacesInformer := factory.Core().V1().Namespaces().Informer()
@@ -76,7 +70,7 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	}
 
 	for _, informer := range clusterInformers {
-		err = (*informer).SetTransform(transform)
+		err := (*informer).SetTransform(transform)
 		if err != nil {
 			return nil, err
 		}
