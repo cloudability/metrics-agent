@@ -80,6 +80,10 @@ func CheckRequiredSettings(requiredArgs []string) error {
 
 	}
 
+	if strings.TrimSpace(viper.GetString("cluster_name")) == "" {
+		return fmt.Errorf("Cluster name cannot only contain whitespace")
+	}
+
 	if viper.IsSet("poll_interval") && viper.GetInt("poll_interval") < 5 {
 		return fmt.Errorf(
 			"Polling interval must be 5 seconds or greater")
