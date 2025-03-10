@@ -119,12 +119,6 @@ func init() {
 		100,
 		"Number of concurrent goroutines created when polling node data. Default 100",
 	)
-	kubernetesCmd.PersistentFlags().BoolVar(
-		&config.ParseMetricData,
-		"parse_metric_data",
-		false,
-		"When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: False",
-	)
 	kubernetesCmd.PersistentFlags().IntVar(
 		&config.HTTPSTimeout,
 		"https_client_timeout",
@@ -172,7 +166,6 @@ func init() {
 	_ = viper.BindPFlag("informer_resync_interval", kubernetesCmd.PersistentFlags().Lookup("informer_resync_interval"))
 	_ = viper.BindPFlag("number_of_concurrent_node_pollers",
 		kubernetesCmd.PersistentFlags().Lookup("number_of_concurrent_node_pollers"))
-	_ = viper.BindPFlag("parse_metric_data", kubernetesCmd.PersistentFlags().Lookup("parse_metric_data"))
 	_ = viper.BindPFlag("https_client_timeout", kubernetesCmd.PersistentFlags().Lookup("https_client_timeout"))
 	_ = viper.BindPFlag("upload_region", kubernetesCmd.PersistentFlags().Lookup("upload_region"))
 	_ = viper.BindPFlag("custom_s3_bucket", kubernetesCmd.PersistentFlags().Lookup("custom_s3_bucket"))
@@ -198,11 +191,9 @@ func init() {
 		Namespace:              viper.GetString("namespace"),
 		ScratchDir:             viper.GetString("scratch_dir"),
 		InformerResyncInterval: viper.GetInt("informer_resync_interval"),
-		ParseMetricData:        viper.GetBool("parse_metric_data"),
 		HTTPSTimeout:           viper.GetInt("https_client_timeout"),
 		UploadRegion:           viper.GetString("upload_region"),
 		CustomS3UploadBucket:   viper.GetString("custom_s3_bucket"),
 		CustomS3Region:         viper.GetString("custom_s3_region"),
 	}
-
 }

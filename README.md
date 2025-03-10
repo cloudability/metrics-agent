@@ -16,12 +16,11 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 ### Kubernetes Versions
 
-Kubernetes version 1.30 is supported by metrics agent on AWS cloud service (EKS).
-Kubernetes versions 1.29 and below are supported by the metrics agent on AWS cloud service (EKS), Google Cloud Platform (GKE), Azure cloud services (AKS), and Oracle Cloud (OKE).
+Kubernetes versions 1.31 and below are supported by the metrics agent on AWS cloud service (EKS), Google Cloud Platform (GKE), Azure cloud services (AKS), and Oracle Cloud (OKE).
 
 ### OpenShift Versions
 
-OpenShift versions 4.14 to 4.10 are supported by the metrics agent on ROSA.
+OpenShift versions 4.17 to 4.10 are supported by the metrics agent on ROSA.
 
 #### Architectures
 
@@ -29,7 +28,7 @@ On AWS, both AMD64 and ARM architectures are supported.
 
 ### Deploying with Helm
 
-Instructions for deploying the metrics-agent using Helm can be found [here](https://cloudability.github.io/metrics-agent/). For helm versioning this repository follows the [simple 1-1 versioning](https://codefresh.io/docs/docs/new-helm/helm-best-practices/#simple-1-1-versioning) strategy where the chart version is in snyc with the actual application.
+Instructions for deploying the metrics-agent using Helm can be found [here](https://cloudability.github.io/metrics-agent/). For helm versioning this repository follows the [simple 1-1 versioning](https://codefresh.io/docs/docs/new-helm/helm-best-practices/#simple-1-1-versioning) strategy where the chart version is in sync with the actual application.
 
 ### Unsupported Configurations
 
@@ -40,7 +39,7 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 | Environment Variable                           |                                                                                             Description                                                                                              |
 |------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
 | CLOUDABILITY_API_KEY                           |                                                                                    Required: Cloudability api key                                                                                    |
-| CLOUDABILITY_CLUSTER_NAME                      |                                                            Required: The cluster name to be used for the cluster the agent is running in.                                                            |
+| CLOUDABILITY_CLUSTER_NAME                      |                                                            Required: The cluster name to be used for the cluster the agent is running in. Cannot be exclusively whitespace.                            |
 | CLOUDABILITY_POLL_INTERVAL                     |                                                                    Optional: The interval (Seconds) to poll metrics. Default: 180                                                                    |
 | CLOUDABILITY_OUTBOUND_PROXY                    |                    Optional: The URL of an outbound HTTP/HTTPS proxy for the agent to use (eg: http://x.x.x.x:8080). The URL must contain the scheme prefix (http:// or https://)                    |
 | CLOUDABILITY_OUTBOUND_PROXY_AUTH               | Optional: Basic Authentication credentials to be used with the defined outbound proxy. If your outbound proxy requires basic authentication credentials can be defined in the form username:password |
@@ -54,7 +53,6 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 | CLOUDABILITY_SCRATCH_DIR                       | Optional: Temporary directory that metrics will be written to. If set, must assure that the directory exists and that the user agent UID 10000 has read/write access to the folder. Default: `/tmp`  |
 | CLOUDABILITY_NUMBER_OF_CONCURRENT_NODE_POLLERS |                                                   Optional: Number of goroutines that are created to poll node metrics in parallel. Default: `100`                                                   |
 | CLOUDABILITY_INFORMER_RESYNC_INTERVAL          |                      Optional: Period of time (in hours) that the informers will fully resync the list of running resources. Default: 24 hours. Can be set to 0 to never resync                      |
-| CLOUDABILITY_PARSE_METRIC_DATA                 |                                        Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                        |
 | CLOUDABILITY_HTTPS_CLIENT_TIMEOUT              |                   Optional: Amount (in seconds) of time the http client has before timing out requests. Might need to be increased to clusters with large payloads. Default: `60`                    |
 | CLOUDABILITY_UPLOAD_REGION                     |          Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2`, `eu-central-1`, `ap-southeast-2`, `me-central-1`, `us-gov-west-1`           |
 | CLOUDABILITY_CUSTOM_S3_BUCKET                  |  Optional: A custom S3 bucket the metrics-agent will upload data to. If set, the metrics-agent will ONLY upload to this custom location. CLOUDABILITY_CUSTOM_S3_REGION is REQUIRED if this is set.   |
@@ -85,7 +83,6 @@ Flags:
       --namespace string                         The namespace which the agent runs in. Changing this is not recommended. (default `cloudability`)
       --informer_resync_interval int             The amount of time, in hours, between informer resyncs. (default 24)
       --number_of_concurrent_node_pollers int    The number of goroutines that are created to poll node metrics in parallel. (default `100`)
-      --parse_metric_data bool                   When true, core files will be parsed and non-relevant data will be removed prior to upload. (default `false`)
       --https_client_timeout int                 Amount (in seconds) of time the https client has before timing out requests. (default `60`)
       --upload_region                            The region the metrics-agent will upload data to. (default `us-west-2`)
       --custom_s3_bucket string                  A custom S3 bucket the metrics-agent will upload data to. - Optional

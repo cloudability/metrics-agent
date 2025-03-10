@@ -84,7 +84,6 @@ type KubeAgentConfig struct {
 	NodeMetrics            EndpointMask
 	Informers              map[string]*cache.SharedIndexInformer
 	InformerResyncInterval int
-	ParseMetricData        bool
 	HTTPSTimeout           int
 	UploadRegion           string
 	CustomS3UploadBucket   string
@@ -162,7 +161,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	informerStopCh := make(chan struct{})
 	// start up informers for each of the k8s resources that metrics are being collected on
 	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset, kubeAgent.ClusterVersion.version,
-		config.InformerResyncInterval, config.ParseMetricData, informerStopCh)
+		config.InformerResyncInterval, informerStopCh)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
@@ -602,7 +601,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 		return updatedConfig, err
 	}
 	updatedConfig.InClusterClient = raw.NewClient(updatedConfig.HTTPClient, config.Insecure,
-		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit, config.ParseMetricData)
+		config.BearerToken, config.BearerTokenPath, config.CollectionRetryLimit)
 
 	updatedConfig.clusterUID, err = getNamespaceUID(ctx, updatedConfig.Clientset, "default")
 	if err != nil {
@@ -828,7 +827,6 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 	m.Values["informer_resync_interval"] = strconv.Itoa(config.InformerResyncInterval)
 	m.Values["force_kube_proxy"] = strconv.FormatBool(config.ForceKubeProxy)
 	m.Values["number_of_concurrent_node_pollers"] = strconv.Itoa(config.ConcurrentPollers)
-	m.Values["parse_metric_data"] = strconv.FormatBool(config.ParseMetricData)
 	m.Values["https_client_timeout"] = strconv.Itoa(config.HTTPSTimeout)
 	m.Values["upload_region"] = config.UploadRegion
 	m.Values["custom_s3_bucket"] = config.CustomS3UploadBucket

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -21,8 +20,13 @@ const (
 	KubernetesLastAppliedConfig = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
+var Transform = func(resource interface{}) (interface{}, error) {
+	resource = sanitizeData(resource)
+	return resource, nil
+}
+
 func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
-	resyncInterval int, parseMetricsData bool, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
+	resyncInterval int, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	factory := informers.NewSharedInformerFactory(clientset, time.Duration(resyncInterval)*time.Hour)
 
 	// v1Sources
@@ -61,8 +65,7 @@ func StartUpInformers(clientset kubernetes.Interface, clusterVersion float64,
 	}
 
 	for _, informer := range clusterInformers {
-		transform := GetTransformFunc(parseMetricsData)
-		err := (*informer).SetTransform(transform)
+		err := (*informer).SetTransform(Transform)
 		if err != nil {
 			return nil, err
 		}
@@ -168,10 +171,10 @@ func shouldSkipResource(k8Resource interface{}) bool {
 }
 
 // nolint: gocyclo
-func sanitizeData(to interface{}, parseMetricsData bool) (interface{}, error) {
+func sanitizeData(to interface{}) interface{} {
 	switch to.(type) {
 	case *corev1.Pod:
-		return sanitizePod(to), nil
+		return sanitizePod(to)
 	case *v1apps.DaemonSet:
 		cast := to.(*v1apps.DaemonSet)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -180,14 +183,14 @@ func sanitizeData(to interface{}, parseMetricsData bool) (interface{}, error) {
 		cast.Spec.UpdateStrategy = v1apps.DaemonSetUpdateStrategy{}
 		cast.Spec.MinReadySeconds = 0
 		cast.Spec.RevisionHistoryLimit = nil
-		return cast, nil
+		return cast
 	case *v1apps.ReplicaSet:
 		cast := to.(*v1apps.ReplicaSet)
 		sanitizeMeta(&cast.ObjectMeta)
 		cast.Spec.Replicas = nil
 		cast.Spec.Template = corev1.PodTemplateSpec{}
 		cast.Spec.MinReadySeconds = 0
-		return cast, nil
+		return cast
 	case *v1apps.Deployment:
 		cast := to.(*v1apps.Deployment)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -197,7 +200,7 @@ func sanitizeData(to interface{}, parseMetricsData bool) (interface{}, error) {
 		cast.Spec.MinReadySeconds = 0
 		cast.Spec.RevisionHistoryLimit = nil
 		cast.Spec.ProgressDeadlineSeconds = nil
-		return cast, nil
+		return cast
 	case *v1batch.Job:
 		cast := to.(*v1batch.Job)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -210,13 +213,13 @@ func sanitizeData(to interface{}, parseMetricsData bool) (interface{}, error) {
 		cast.Spec.TTLSecondsAfterFinished = nil
 		cast.Spec.CompletionMode = nil
 		cast.Spec.Suspend = nil
-		return cast, nil
+		return cast
 	case *v1batch.CronJob:
 		cast := to.(*v1batch.CronJob)
 		sanitizeMeta(&cast.ObjectMeta)
 		// cronjobs have no Selector
 		cast.Spec = v1batch.CronJobSpec{}
-		return cast, nil
+		return cast
 	case *corev1.Service:
 		cast := to.(*corev1.Service)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -237,36 +240,37 @@ func sanitizeData(to interface{}, parseMetricsData bool) (interface{}, error) {
 		cast.Spec.AllocateLoadBalancerNodePorts = nil
 		cast.Spec.LoadBalancerClass = nil
 		cast.Spec.InternalTrafficPolicy = nil
-		return cast, nil
+		return cast
 	case *corev1.ReplicationController:
 		cast := to.(*corev1.ReplicationController)
 		sanitizeMeta(&cast.ObjectMeta)
 		cast.Spec.Replicas = nil
 		cast.Spec.Template = nil
 		cast.Spec.MinReadySeconds = 0
-		return cast, nil
+		return cast
 	case *corev1.Namespace:
-		return sanitizeNamespace(to), nil
+		return sanitizeNamespace(to)
 	case *corev1.PersistentVolume:
 		cast := to.(*corev1.PersistentVolume)
 		sanitizeMeta(&cast.ObjectMeta)
-		return cast, nil
+		return cast
 	case *corev1.PersistentVolumeClaim:
 		cast := to.(*corev1.PersistentVolumeClaim)
 		sanitizeMeta(&cast.ObjectMeta)
-		return cast, nil
+		return cast
 	case *corev1.Node:
 		cast := to.(*corev1.Node)
 		sanitizeMeta(&cast.ObjectMeta)
-		return cast, nil
+		return cast
 	}
-	return to, fmt.Errorf("invalid object type")
+	return to
 }
 
 func sanitizeMeta(objectMeta *metav1.ObjectMeta) {
 	objectMeta.ManagedFields = nil
 	delete(objectMeta.Annotations, KubernetesLastAppliedConfig)
 	objectMeta.Finalizers = nil
+	objectMeta.GenerateName = ""
 }
 
 func sanitizePod(to interface{}) interface{} {
@@ -282,6 +286,12 @@ func sanitizePod(to interface{}) interface{} {
 	for j, container := range (*cast).Spec.InitContainers {
 		(*cast).Spec.InitContainers[j] = sanitizeContainer(container)
 	}
+	(*cast).Spec.DNSPolicy = ""
+	(*cast).Spec.ServiceAccountName = ""
+	(*cast).Spec.DeprecatedServiceAccount = ""
+	(*cast).Spec.SecurityContext = nil
+	(*cast).Spec.ImagePullSecrets = nil
+	(*cast).Spec.EnableServiceLinks = nil
 	return cast
 }
 
@@ -304,15 +314,4 @@ func sanitizeNamespace(to interface{}) interface{} {
 	delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
 	(*cast).ObjectMeta.ManagedFields = nil
 	return cast
-}
-
-func GetTransformFunc(parseMetricsData bool) func(resource interface{}) (interface{}, error) {
-	return func(resource interface{}) (interface{}, error) {
-		var err error
-		resource, err = sanitizeData(resource, parseMetricsData)
-		if err != nil {
-			return nil, fmt.Errorf("resource is not valid type error: %v", err)
-		}
-		return resource, nil
-	}
 }

@@ -144,7 +144,7 @@ func TestEnsureMetricServicesAvailable(t *testing.T) {
 			HeapsterURL:       ts.URL,
 			HTTPClient:        client,
 			ConcurrentPollers: 10,
-			InClusterClient:   raw.NewClient(client, true, "", "", 0, false),
+			InClusterClient:   raw.NewClient(client, true, "", "", 0),
 		}
 
 		var err error
@@ -235,15 +235,6 @@ func TestCollectMetrics(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error opening temp dir: %v", err)
 	}
-	// tmp dir for parseMetricsCollectionTest
-	dir2, err := os.MkdirTemp("", "TestCollectMetricsParseMetrics")
-	if err != nil {
-		t.Errorf("error creating temp dir2: %v", err)
-	}
-	tDir2, err := os.Open(dir2)
-	if err != nil {
-		t.Errorf("Error opening temp dir2: %v", err)
-	}
 
 	ka := KubeAgentConfig{
 		ClusterVersion: ClusterVersion{
@@ -261,7 +252,6 @@ func TestCollectMetrics(t *testing.T) {
 		BearerTokenPath:    "",
 		ForceKubeProxy:     false,
 		ConcurrentPollers:  10,
-		ParseMetricData:    false,
 	}
 	ka.NodeMetrics = EndpointMask{}
 	// set Proxy method available
@@ -270,34 +260,9 @@ func TestCollectMetrics(t *testing.T) {
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 
 	stopCh := make(chan struct{})
-	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, false, stopCh)
+	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, stopCh)
 	if err != nil {
 		t.Error(err)
-	}
-	parseStopCh := make(chan struct{})
-	parseInformers, err := getMockInformers(1.22, true, parseStopCh)
-	if err != nil {
-		t.Error(err)
-	}
-
-	kubeAgentParseMetrics := KubeAgentConfig{
-		ClusterVersion: ClusterVersion{
-			version:     1.22,
-			versionInfo: sv,
-		},
-		Clientset:          cs,
-		HTTPClient:         http.Client{},
-		msExportDirectory:  tDir2,
-		UseInClusterConfig: false,
-		ClusterHostURL:     ts.URL,
-		HeapsterURL:        ts.URL,
-		Insecure:           true,
-		BearerToken:        "",
-		BearerTokenPath:    "",
-		ForceKubeProxy:     false,
-		ConcurrentPollers:  10,
-		ParseMetricData:    true,
-		Informers:          parseInformers,
 	}
 
 	wd, err := os.Getwd()
@@ -306,7 +271,7 @@ func TestCollectMetrics(t *testing.T) {
 	}
 	ka.BearerTokenPath = wd + "/testdata/mockToken"
 
-	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, ka.BearerTokenPath, 0, false)
+	ka.InClusterClient = raw.NewClient(ka.HTTPClient, ka.Insecure, ka.BearerToken, ka.BearerTokenPath, 0)
 	fns := NewClientsetNodeSource(cs)
 
 	t.Run("Ensure that a collection occurs", func(t *testing.T) {
@@ -365,8 +330,7 @@ func TestCollectMetrics(t *testing.T) {
 			}
 		}
 	})
-	t.Run("Ensure collection occurs with parseMetrics is disabled and transforms"+
-		" ensure sensitive data is still stripped", func(t *testing.T) {
+	t.Run("Ensure collection occurs and sensitive data is stripped by Transform", func(t *testing.T) {
 
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -378,17 +342,17 @@ func TestCollectMetrics(t *testing.T) {
 					t.Error(err)
 				}
 				if strings.Contains(info.Name(), "pods") {
-					// check if secrets were stripped from pods if parseMetrics is false with transform in place
+					// check if secrets were stripped from pods with transform in place
 					if strings.Contains(string(in), "ReallySecretStuff") {
 						t.Error("Original file should not have contained secret, but did")
 					}
 				} else if strings.Contains(info.Name(), "namespaces") {
-					// check if secrets were stripped from namespaces if parseMetrics is false with transform in place
+					// check if secrets were stripped from namespaces with transform in place
 					if strings.Contains(string(in), "ManageFieldToBeDeleted") {
 						t.Error("Original file should not have contained ManagedField data, but did")
 					}
 				} else if strings.Contains(info.Name(), "deployments") {
-					// check if sensitive fields were stripped from deployments if parseMetrics is false with transform
+					// check if sensitive fields were stripped from deployments with transform
 					if strings.Contains(string(in), "DangThisIsSecret") {
 						t.Error("Original file should not have contained sensitive data, but did")
 					}
@@ -420,47 +384,6 @@ func TestCollectMetrics(t *testing.T) {
 			return nil
 		})
 	})
-	t.Run("Ensure collection occurs with parseMetrics enabled"+
-		"ensure sensitive data is stripped", func(t *testing.T) {
-		err = kubeAgentParseMetrics.collectMetrics(context.TODO(), kubeAgentParseMetrics, cs, fns)
-		if err != nil {
-			t.Error(err)
-		}
-		filepath.Walk(kubeAgentParseMetrics.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				t.Error(err)
-			}
-			if strings.Contains(info.Name(), "jsonl") {
-				in, err := os.ReadFile(path)
-				if err != nil {
-					t.Error(err)
-				}
-				if strings.Contains(info.Name(), "pods") {
-					// check if secrets were stripped from pods if parseMetrics is true
-					if strings.Contains(string(in), "ReallySecretStuff") {
-						t.Error("Stripped file should not have contained secret, but did")
-					}
-				} else if strings.Contains(info.Name(), "namespaces") {
-					// check if sensitive fields were stripped from namespaces if parseMetrics is true
-					if strings.Contains(string(in), "ManageFieldToBeDeleted") {
-						t.Error("Stripped file should not have contained ManagedField data, but did")
-					}
-				} else if strings.Contains(info.Name(), "deployments") {
-					// check if sensitive fields were stripped from deployments if parseMetrics is true
-					if strings.Contains(string(in), "DangThisIsSecret") {
-						t.Error("Stripped file should not have contained sensitive data, but did")
-					}
-				} else {
-					// all other jsonl share the same annotation that should be removed
-					if strings.Contains(string(in), "IAmSecretEnvVariables") {
-						t.Error("Stripped file should not have contained sensitive data, but did")
-					}
-				}
-			}
-			return nil
-		})
-	})
-
 }
 
 // isRequiredFile checks if the filename matches one of the filenames
@@ -544,8 +467,7 @@ func NewTestServer() *httptest.Server {
 }
 
 // nolint: lll
-func getMockInformers(clusterVersion float64, parseMetricsData bool,
-	stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
+func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
 	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
@@ -602,9 +524,9 @@ func getMockInformers(clusterVersion float64, parseMetricsData bool,
 		"cronjobs":               &cjinformer,
 	}
 	// Call the Run function for each Informer, allowing the informers to listen for Add events
-	startMockInformers(mockInformers, parseMetricsData, stopCh)
+	startMockInformers(mockInformers, stopCh)
 
-	// Private Annotation to be removed if ParseMetrics is enabled
+	// Private Annotation to be removed by SetTransform
 	annotation := map[string]string{
 		"kubectl.kubernetes.io/last-applied-configuration": "IAmSecretEnvVariables",
 	}
@@ -675,13 +597,12 @@ func getMockInformers(clusterVersion float64, parseMetricsData bool,
 	return mockInformers, nil
 }
 
-func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, parseMetricsData bool,
-	stopCh chan struct{}) {
+func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, stopCh chan struct{}) {
 	for _, informer := range mockInformers {
 		if (*informer) == nil {
 			continue
 		}
-		_ = (*informer).SetTransform(k8s.GetTransformFunc(parseMetricsData))
+		_ = (*informer).SetTransform(k8s.Transform)
 		go (*informer).Run(stopCh)
 	}
 }

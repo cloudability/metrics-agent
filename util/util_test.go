@@ -22,6 +22,7 @@ type testConfig struct {
 	KubeStateMetricsURL string
 	PollInterval        int
 	UseInClusterConfig  bool
+	ClusterName         string
 }
 
 func TestIsValidURL(t *testing.T) {
@@ -112,14 +113,21 @@ func TestCheckRequiredSettings(t *testing.T) {
 		600,
 		"Time, in seconds to poll the services infrastructure. Default: 600",
 	)
+	kubernetesCmd.PersistentFlags().StringVar(
+		&config.ClusterName,
+		"cluster_name",
+		"default-test",
+		"Kubernetes Cluster Name - required this must be unique to every cluster.",
+	)
 
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
 	_ = viper.BindPFlag("poll_interval", kubernetesCmd.PersistentFlags().Lookup("poll_interval"))
+	_ = viper.BindPFlag("cluster_name", kubernetesCmd.PersistentFlags().Lookup("cluster_name"))
 
 	// nolint dupl
 	t.Run("ensure that required settings are set as cmd flags", func(t *testing.T) {
 
-		args := []string{"kubernetes", "--poll_interval", "5", "--api_key", "8675309-9035768"}
+		args := []string{"kubernetes", "--poll_interval", "5", "--api_key", "8675309-9035768", "--cluster_name", "specificTest"}
 		kubernetesCmd.SetArgs(args)
 
 		if err := kubernetesCmd.Execute(); err != nil {
@@ -130,7 +138,7 @@ func TestCheckRequiredSettings(t *testing.T) {
 	// nolint dupl
 	t.Run("ensure that missing required cmd flags is detected", func(t *testing.T) {
 
-		args := []string{"kubernetes", "--poll_interval", "5", "--api_key", "8675309-9035768"}
+		args := []string{"kubernetes", "--poll_interval", "5", "--api_key", "8675309-9035768", "--cluster_name", "specificTest"}
 		kubernetesCmd.SetArgs(args)
 
 		if err := kubernetesCmd.Execute(); err != nil {
@@ -145,6 +153,7 @@ func TestCheckRequiredSettings(t *testing.T) {
 
 		_ = os.Setenv("CLOUDABILITY_API_KEY", "8675309-9035768")
 		_ = os.Setenv("CLOUDABILITY_POLL_INTERVAL", "5")
+		_ = os.Setenv("CLOUDABILITY_CLUSTER_NAME", "test")
 
 		if err := kubernetesCmd.Execute(); err != nil {
 			t.Errorf("required settings set via environment variables but not detected: %v", err)
@@ -162,6 +171,7 @@ func TestCheckRequiredSettings(t *testing.T) {
 
 		_ = os.Setenv("CLOUDABILITY_API_KEY", "8675309-9035768")
 		_ = os.Setenv("CLOUDABILITY_POLL_INTERVAL", "5")
+		_ = os.Setenv("CLOUDABILITY_CLUSTER_NAME", "test")
 
 		if err := kubernetesCmd.Execute(); err != nil {
 			t.Errorf("incorrect settings via environment variables but condition not detected: %v", err)
@@ -178,9 +188,26 @@ func TestCheckRequiredSettings(t *testing.T) {
 		kubernetesCmd.SetArgs(envArgs)
 		_ = os.Setenv("CLOUDABILITY_API_KEY", "8675309-9035768")
 		_ = os.Setenv("CLOUDABILITY_POLL_INTERVAL", "4")
+		_ = os.Setenv("CLOUDABILITY_CLUSTER_NAME", "test")
 
 		if err := kubernetesCmd.Execute(); err != nil {
 			t.Errorf("incorrect poll interval set via environment variables but not detected: %v", err)
+		}
+	})
+
+	t.Run("ensure that invalid string value is detected", func(t *testing.T) {
+
+		viper.SetEnvPrefix("cloudability")
+		viper.AutomaticEnv()
+
+		envArgs := []string{"kubernetes"}
+		kubernetesCmd.SetArgs(envArgs)
+		_ = os.Setenv("CLOUDABILITY_API_KEY", "8675309-9035768")
+		_ = os.Setenv("CLOUDABILITY_POLL_INTERVAL", "5")
+		_ = os.Setenv("CLOUDABILITY_CLUSTER_NAME", " ")
+
+		if err := kubernetesCmd.Execute(); err != nil {
+			t.Errorf("incorrect cluster name set via environment variables but condition not detected: %v", err)
 		}
 	})
 }
