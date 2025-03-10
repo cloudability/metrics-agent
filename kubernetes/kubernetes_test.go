@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
+	"github.com/cloudability/metrics-agent/retrieval/k8s"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -268,12 +269,12 @@ func TestCollectMetrics(t *testing.T) {
 	ka.NodeMetrics.SetAvailability(NodeStatsSummaryEndpoint, Direct, true)
 
 	stopCh := make(chan struct{})
-	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, stopCh)
+	ka.Informers, err = getMockInformers(ka.ClusterVersion.version, false, stopCh)
 	if err != nil {
 		t.Error(err)
 	}
 	parseStopCh := make(chan struct{})
-	parseInformers, err := getMockInformers(1.22, parseStopCh)
+	parseInformers, err := getMockInformers(1.22, true, parseStopCh)
 	if err != nil {
 		t.Error(err)
 	}
@@ -364,7 +365,7 @@ func TestCollectMetrics(t *testing.T) {
 		}
 	})
 	t.Run("Ensure collection occurs with parseMetrics is disabled"+
-		" ensure sensitive data is not stripped", func(t *testing.T) {
+		" ensure only expected data is stripped", func(t *testing.T) {
 
 		filepath.Walk(ka.msExportDirectory.Name(), func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -376,24 +377,27 @@ func TestCollectMetrics(t *testing.T) {
 					t.Error(err)
 				}
 				if strings.Contains(info.Name(), "pods") {
-					// check if secrets were not stripped from pods if parseMetrics is false
-					if !strings.Contains(string(in), "ReallySecretStuff") {
-						t.Error("Original file should have contained secret, but did not")
+					// check if secrets were still stripped from pods if parseMetrics is false
+					if strings.Contains(string(in), "ReallySecretStuff") {
+						t.Error("file should not have contained secret, but did")
+					}
+					if !strings.Contains(string(in), "\"imagePullPolicy\":\"Always\"") {
+						t.Error("file should have contained imagePullPolicy, but did not")
 					}
 				} else if strings.Contains(info.Name(), "namespaces") {
-					// check if secrets were not stripped from namespaces if parseMetrics is false
-					if !strings.Contains(string(in), "ManageFieldToBeDeleted") {
-						t.Error("Original file should have contained ManagedField data, but did not")
+					// check if secrets were still stripped from namespaces if parseMetrics is false
+					if strings.Contains(string(in), "ManageFieldToBeDeleted") {
+						t.Error("file should not have contained ManagedField data, but did")
 					}
 				} else if strings.Contains(info.Name(), "deployments") {
-					// check if sensitive fields were not stripped from deployments if parseMetrics is false
-					if !strings.Contains(string(in), "DangThisIsSecret") {
-						t.Error("Original file should have contained sensitive data, but did not")
+					// check if sensitive fields was still stripped from deployments if parseMetrics is false
+					if strings.Contains(string(in), "DangThisIsSecret") {
+						t.Error("file should not have contained sensitive data, but did")
 					}
 				} else {
-					// all other jsonl share the same annotation that should not be removed
-					if !strings.Contains(string(in), "IAmSecretEnvVariables") {
-						t.Error("Original file should have contained sensitive data, but did not")
+					// all other jsonl share the same annotation that should be removed
+					if strings.Contains(string(in), "IAmSecretEnvVariables") {
+						t.Error("file should not have contained sensitive data, but did")
 					}
 				}
 			}
@@ -419,6 +423,9 @@ func TestCollectMetrics(t *testing.T) {
 					// check if secrets were stripped from pods if parseMetrics is true
 					if strings.Contains(string(in), "ReallySecretStuff") {
 						t.Error("Stripped file should not have contained secret, but did")
+					}
+					if strings.Contains(string(in), "\"imagePullPolicy\":\"Always\"") {
+						t.Error("file should not have contained imagePullPolicy, but did")
 					}
 				} else if strings.Contains(info.Name(), "namespaces") {
 					// check if sensitive fields were stripped from namespaces if parseMetrics is true
@@ -524,7 +531,8 @@ func NewTestServer() *httptest.Server {
 }
 
 // nolint: lll
-func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
+func getMockInformers(clusterVersion float64, parseMetricsData bool,
+	stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
 	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
@@ -581,7 +589,7 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 		"cronjobs":               &cjinformer,
 	}
 	// Call the Run function for each Informer, allowing the informers to listen for Add events
-	startMockInformers(mockInformers, stopCh)
+	startMockInformers(mockInformers, parseMetricsData, stopCh)
 
 	// Private Annotation to be removed if ParseMetrics is enabled
 	annotation := map[string]string{
@@ -639,11 +647,12 @@ func getMockInformers(clusterVersion float64, stopCh chan struct{}) (map[string]
 	return mockInformers, nil
 }
 
-func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, stopCh chan struct{}) {
+func startMockInformers(mockInformers map[string]*cache.SharedIndexInformer, parseMetrics bool, stopCh chan struct{}) {
 	for _, informer := range mockInformers {
 		if (*informer) == nil {
 			continue
 		}
+		_ = (*informer).SetTransform(k8s.GetTransformFunc(parseMetrics))
 		go (*informer).Run(stopCh)
 	}
 }

@@ -162,7 +162,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	informerStopCh := make(chan struct{})
 	// start up informers for each of the k8s resources that metrics are being collected on
 	kubeAgent.Informers, err = k8s_stats.StartUpInformers(kubeAgent.Clientset, kubeAgent.ClusterVersion.version,
-		config.InformerResyncInterval, informerStopCh)
+		config.InformerResyncInterval, config.ParseMetricData, informerStopCh)
 	if err != nil {
 		log.Warnf("Warning: Informers failed to start up: %s", err)
 	}
@@ -336,7 +336,7 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 	}
 
 	// export k8s resource metrics (ex: pods.jsonl) using informers to the metric sample directory
-	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir, config.ParseMetricData)
+	err = k8s_stats.GetK8sMetricsFromInformer(config.Informers, metricSampleDir)
 	if err != nil {
 		return fmt.Errorf("unable to export k8s metrics: %s", err)
 	}
