@@ -98,7 +98,7 @@ There are two ways to deploy Metrics-agent:
 
 Cloudability customers can download the deployment yaml directly from Cloudability UI. The downloaded yaml contains default settings including the API key needed to enable the metrics-agent to upload metrics to Cloudability. The customer should change the default settings in the yaml according to their clusters' configuration and security requirements.
 
-The API key is currently configured as an enviornment variable in the pod as plain text. It's highly recommended to integrate the API key with the customer's own secret manager solution. This could be the CSP's secret manager such as AWS secret manager, GCP secret manager, etc. Please refer to Kubernetes and CSP document for such integration.
+The API key is currently configured as an environment variable in the pod as plain text. It's highly recommended to integrate the API key with the customer's own secret manager solution. This could be the CSP's secret manager such as AWS secret manager, GCP secret manager, etc. Please refer to Kubernetes and CSP document for such integration.
 
 ### Deployment using helm
 
