@@ -23,7 +23,6 @@ jobs:
 
   build:
     name: Build
-    needs: snyk_scan
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/setup-go@v2
