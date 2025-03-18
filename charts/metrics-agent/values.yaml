@@ -108,8 +108,8 @@ podAnnotations: {}
 #    name: tmp
 readOnlyRootFilesystem: false
 
-drop:
-  - ALL
+drop: 
+- ALL
 
 # Extra K8s manifests to deploy,
 # NOTE: not all various extraObject deployment configurations are tested/supported. When adding extra resources
