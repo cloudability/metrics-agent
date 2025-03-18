@@ -16,11 +16,11 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 ### Kubernetes Versions
 
-Kubernetes versions 1.31 and below are supported by the metrics agent on AWS cloud service (EKS), Google Cloud Platform (GKE), Azure cloud services (AKS), and Oracle Cloud (OKE).
+Kubernetes versions 1.32 and below are supported by the metrics agent on AWS cloud service (EKS), Google Cloud Platform (GKE), Azure cloud services (AKS), and Oracle Cloud (OKE).
 
 ### OpenShift Versions
 
-OpenShift versions 4.17 to 4.10 are supported by the metrics agent on ROSA.
+OpenShift versions 4.17 to 4.12 are supported by the metrics agent on ROSA.
 
 #### Architectures
 

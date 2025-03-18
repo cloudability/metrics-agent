@@ -140,18 +140,18 @@ version:
 release-version:
 	@echo $(RELEASE-VERSION)
 
+test-e2e-1.32: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.32.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
+
+test-e2e-1.31: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.31.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
+
 test-e2e-1.30: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.30.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
 test-e2e-1.29: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.29.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-1.28: container-build-single-platform install-tools
-	$(call TEST_KUBERNETES,v1.28.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
-
-test-e2e-1.27: container-build-single-platform install-tools
-	$(call TEST_KUBERNETES,v1.27.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
-
-test-e2e-all: test-e2e-1.30 test-e2e-1.29 test-e2e-1.28 test-e2e-1.27
+test-e2e-all: test-e2e-1.32 test-e2e-1.31 test-e2e-1.30 test-e2e-1.29
 
 .PHONY: test version
