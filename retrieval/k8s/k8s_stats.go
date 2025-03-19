@@ -178,6 +178,7 @@ func shouldSkipPod(previousHour time.Time, resource *corev1.Pod) bool {
 }
 
 // sanitizeData removes information from kubernetes resources for customer security purposes
+// nolint:gocyclo
 func sanitizeData(to interface{}) interface{} {
 	switch to.(type) {
 	case *corev1.Pod:
@@ -274,6 +275,7 @@ func sanitizeData(to interface{}) interface{} {
 }
 
 // trimData removes unneeded kubernetes resource fields
+// nolint:gocyclo
 func trimData(to interface{}) interface{} {
 	switch to.(type) {
 	case *corev1.Pod:
