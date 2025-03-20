@@ -16,11 +16,11 @@ Every 10 minutes the metrics agent creates a tarball of the gathered metrics and
 
 ### Kubernetes Versions
 
-Kubernetes versions 1.31 and below are supported by the metrics agent on AWS cloud service (EKS), Google Cloud Platform (GKE), Azure cloud services (AKS), and Oracle Cloud (OKE).
+Kubernetes versions 1.32 and below are supported by the metrics agent on AWS cloud service (EKS), Google Cloud Platform (GKE), Azure cloud services (AKS), and Oracle Cloud (OKE).
 
 ### OpenShift Versions
 
-OpenShift versions 4.17 to 4.10 are supported by the metrics agent on ROSA.
+OpenShift versions 4.17 to 4.12 are supported by the metrics agent on ROSA.
 
 #### Architectures
 
@@ -56,8 +56,6 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 | CLOUDABILITY_PARSE_METRIC_DATA                 |                                        Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                        |
 | CLOUDABILITY_HTTPS_CLIENT_TIMEOUT              |                   Optional: Amount (in seconds) of time the http client has before timing out requests. Might need to be increased to clusters with large payloads. Default: `60`                    |
 | CLOUDABILITY_UPLOAD_REGION                     |          Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2`, `eu-central-1`, `ap-southeast-2`, `me-central-1`, `us-gov-west-1`           |
-| CLOUDABILITY_CUSTOM_S3_BUCKET                  |  Optional: A custom S3 bucket the metrics-agent will upload data to. If set, the metrics-agent will ONLY upload to this custom location. CLOUDABILITY_CUSTOM_S3_REGION is REQUIRED if this is set.   |
-| CLOUDABILITY_CUSTOM_S3_REGION                  |            Optional: The AWS region that the custom s3 bucket is in. This will initialize the correct region for the s3 client. CLOUDABILITY_CUSTOM_S3_BUCKET is REQUIRED if this is set.            |
 
 ```sh
 
@@ -87,12 +85,24 @@ Flags:
       --parse_metric_data bool                   When true, core files will be parsed and non-relevant data will be removed prior to upload. (default `false`)
       --https_client_timeout int                 Amount (in seconds) of time the https client has before timing out requests. (default `60`)
       --upload_region                            The region the metrics-agent will upload data to. (default `us-west-2`)
-      --custom_s3_bucket string                  A custom S3 bucket the metrics-agent will upload data to. - Optional
-      --custom_s3_region                         The AWS region that the custom s3 bucket is created.
 Global Flags:
       --log_format string   Format for log output (JSON,PLAIN) (default "PLAIN")
       --log_level string    Log level to run the agent at (INFO,WARN,DEBUG) (default "INFO")
 ```
+
+## Deployment of Metrics-Agent
+
+There are two ways to deploy Metrics-agent:
+
+### Deployment using yaml
+
+Cloudability customers can download the deployment yaml directly from Cloudability UI. The downloaded yaml contains default settings including the API key needed to enable the metrics-agent to upload metrics to Cloudability. The customer should change the default settings in the yaml according to their clusters' configuration and security requirements.
+
+The API key is currently configured as an environment variable in the pod as plain text. It's highly recommended to integrate the API key with the customer's own secret manager solution. This could be the CSP's secret manager such as AWS secret manager, GCP secret manager, etc. Please refer to Kubernetes and CSP document for such integration.
+
+### Deployment using helm
+
+Cloudability customers can use helm to deploy the metrics-agent. Please refer to the [Helm Installation Guide](https://cloudability.github.io/metrics-agent/).
 
 ## Computing Resources for Metrics Agent
 
