@@ -256,8 +256,6 @@ func sanitizeData(to interface{}) interface{} {
 		cast.Spec.MinReadySeconds = 0
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
-	case *corev1.Namespace:
-		return sanitizeNamespace(to)
 	case *corev1.PersistentVolume:
 		cast := to.(*corev1.PersistentVolume)
 		sanitizeMeta(&cast.ObjectMeta)
@@ -327,8 +325,6 @@ func trimData(to interface{}) interface{} {
 }
 
 func sanitizeMeta(objectMeta *metav1.ObjectMeta) {
-	objectMeta.ManagedFields = nil
-	delete(objectMeta.Annotations, KubernetesLastAppliedConfig)
 	objectMeta.Finalizers = nil
 }
 
@@ -339,11 +335,6 @@ func trimMeta(objectMeta *metav1.ObjectMeta) {
 
 func sanitizePod(to interface{}) interface{} {
 	cast := to.(*corev1.Pod)
-
-	// stripping env var and related data from the object
-	(*cast).ObjectMeta.ManagedFields = nil
-	delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-
 	for j, container := range (*cast).Spec.Containers {
 		(*cast).Spec.Containers[j] = sanitizeContainer(container)
 	}
@@ -369,7 +360,6 @@ func trimPod(to interface{}) interface{} {
 }
 
 func sanitizeContainer(container corev1.Container) corev1.Container {
-	container.Env = nil
 	container.Command = nil
 	container.Args = nil
 	container.ImagePullPolicy = ""
@@ -387,12 +377,6 @@ func trimContainer(container corev1.Container) corev1.Container {
 	return container
 }
 
-func sanitizeNamespace(to interface{}) interface{} {
-	cast := to.(*corev1.Namespace)
-	(*cast).ObjectMeta.ManagedFields = nil
-	return cast
-}
-
 func trimNamespace(to interface{}) interface{} {
 	cast := to.(*corev1.Namespace)
 	(*cast).ObjectMeta.ManagedFields = nil
@@ -403,9 +387,8 @@ func GetTransformFunc(parseMetricsData bool) func(resource interface{}) (interfa
 	return func(resource interface{}) (interface{}, error) {
 		if parseMetricsData {
 			resource = sanitizeData(resource)
-		} else {
-			resource = trimData(resource)
 		}
+		resource = trimData(resource)
 		return resource, nil
 	}
 }
