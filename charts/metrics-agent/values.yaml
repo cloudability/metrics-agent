@@ -25,7 +25,7 @@ pollInterval: 180
 uploadRegion: "us-west-2"
 
 image:
-  name: cloudability/metrics-agent
+  name: ghcr.io/cloudability/metrics-agent
   tag: 2.13.1
   pullPolicy: Always
 
