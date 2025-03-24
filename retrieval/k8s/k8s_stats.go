@@ -141,8 +141,6 @@ func shouldSkipResource(k8Resource interface{}) bool {
 		return shouldSkipPod(previousHour, resource)
 	case *v1apps.ReplicaSet:
 		return resource.Status.Replicas == 0 && previousHour.After(resource.CreationTimestamp.Time)
-	case *v1apps.Deployment:
-		return resource.Status.Replicas == 0 && previousHour.After(resource.CreationTimestamp.Time)
 	}
 	return false
 }
