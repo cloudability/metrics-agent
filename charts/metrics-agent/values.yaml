@@ -26,7 +26,7 @@ uploadRegion: "us-west-2"
 
 image:
   name: ghcr.io/cloudability/metrics-agent
-  tag: 2.13.1
+  tag: 2.13.0
   pullPolicy: Always
 
 imagePullSecrets: []
