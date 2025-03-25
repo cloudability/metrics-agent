@@ -150,10 +150,10 @@ make deploy-local
 
 ## Local Development
 
-The makefile target _deploy-local_ assumes that you have [docker](https://www.docker.com/community-edition) and kubernetes (with a context: docker-for-desktop) running locally. The target does the following:
+The makefile target _deploy-local_ assumes that you have [docker](https://www.docker.com/community-edition)/podman and kubernetes (with a context: docker-for-desktop) running locally. The target does the following:
 
 - Builds a container with the local project codebase 
 - Locally creates a deployment / pod with the local metrics agent container
 
 ### Testing
-In addition to running all go tests via the make step `make test`,  `make test-e2e-all` runs end to end tests by spinning up a [kind](https://github.com/kubernetes-sigs/kind) cluster, building the metrics agent, deploying it to the reference clusters, then testing the collected data.  The use of kind requires a local docker daemon to be running.
+In addition to running all go tests via the make step `make test`,  `make test-e2e-all` runs end to end tests by spinning up a [kind](https://github.com/kubernetes-sigs/kind) cluster, building the metrics agent, deploying it to the reference clusters, then testing the collected data.  The use of kind requires a local docker/podman daemon to be running.

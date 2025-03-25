@@ -4,38 +4,84 @@ on:
   push:
     paths:
       - 'version/version.go'
+env:
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
-  deploy:
+  build-and-deploy:
     name: Build and Deploy
     # only build/deploy for beta and master branches
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta'
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      # Set up BuildKit Docker container builder to be able to build
+      # multi-platform images and export cache
+      # https://github.com/docker/setup-buildx-action
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      # Login against a Docker registry
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - uses: actions/setup-go@v2
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
-          go-version: '1.22'
-      - uses: actions/checkout@v2
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Docker Build Master and Push
-        # If pushing to the master branch, we want to correctly tag the builds
-        # in docker-hub with the new master makefile command
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Set Master variables
         if: github.ref == 'refs/heads/master'
-        run: make container-build-master
-      - name: Docker Build Beta and Push
-        # If pushing to the beta branch, we want to correctly tag the builds
-        # in docker-hub with the new beta makefile command
+        run: |
+          VER=$(sed -nE 's/^var[[:space:]]VERSION[[:space:]]=[[:space:]]"([^"]+)".*/\1/p' version/version.go)
+          LATEST="latest"
+          echo "VERSION=$VER" >> $GITHUB_ENV
+          echo "LATEST_TAG=$LATEST" >> $GITHUB_ENV
+      - name: Set Beta variables
         if: github.ref == 'refs/heads/beta'
-        run: make container-build-beta
+        run: |
+          VER=$(sed -nE 's/^var[[:space:]]VERSION[[:space:]]=[[:space:]]"([^"]+)".*/\1-beta/p' version/version.go)
+          LATEST="beta-latest"
+          echo "VERSION=$VER" >> $GITHUB_ENV
+          echo "LATEST_TAG=$LATEST" >> $GITHUB_ENV
+      # Build and push Docker image with Buildx
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ghcr.io/${{ env.IMAGE_NAME }}:${{ env.LATEST_TAG }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          file: ./deploy/docker/Dockerfile
+          platforms: linux/amd64, linux/arm64/v8
+          build-args: |
+            golang_version=1.22
+            package=github.com/${{ env.IMAGE_NAME }}
+            application=metrics-agent
 
   helmRelease:
     name: Cut Helm Release when Updated
-    needs: deploy
+    needs: build-and-deploy
     runs-on: ubuntu-latest
     # Only cut release if pushing to master
     if: github.ref == 'refs/heads/master'
@@ -53,19 +99,3 @@ jobs:
         uses: helm/chart-releaser-action@v1.1.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-  slackFinish:
-    name: Notify Finish
-    needs: helmRelease
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: technote-space/workflow-conclusion-action@v2
-      - uses: 8398a7/action-slack@v3
-        with:
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-          status: ${{ env.WORKFLOW_CONCLUSION }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-
-
