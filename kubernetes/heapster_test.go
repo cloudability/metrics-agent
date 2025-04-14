@@ -65,6 +65,7 @@ func TestGetHeapsterURL(t *testing.T) {
 	})
 }
 
+// nolint:revive
 func TestValidateHeapster(t *testing.T) {
 
 	t.Run("Ensure that a valid heapster service is found and responds with data", func(t *testing.T) {

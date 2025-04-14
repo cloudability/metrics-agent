@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// nolint:revive
 var (
 	config       kubernetes.KubeAgentConfig
 	requiredArgs = []string{

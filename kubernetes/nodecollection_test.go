@@ -541,6 +541,7 @@ type testNodeSource struct {
 	Nodes []v1.Node
 }
 
+// nolint:revive
 func (tns testNodeSource) GetReadyNodes(ctx context.Context) ([]v1.Node, error) {
 	returnCodes := []int{200, 200, 200, 400, 400, 400, 200, 200, 200, 400}
 
@@ -561,6 +562,7 @@ func (tns testNodeSource) NodeAddress(node *v1.Node) (string, int32, error) {
 }
 
 // launchTLSTestServer takes a slice of http status codes (int) to return
+// nolint:revive
 func launchTLSTestServer(responseCodes []int) *httptest.Server {
 	callCount := 0
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
