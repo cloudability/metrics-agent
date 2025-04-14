@@ -85,6 +85,7 @@ func TestTestHTTPConnection(t *testing.T) {
 
 }
 
+// nolint:revive
 func TestCheckRequiredSettings(t *testing.T) {
 
 	t.Parallel()

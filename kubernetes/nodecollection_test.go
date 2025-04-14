@@ -500,6 +500,7 @@ func TestDownloadNodeData(t *testing.T) {
 	})
 }
 
+// nolint:revive
 func TestDownloadNodeDataRetries(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 	var callCount uint
@@ -554,6 +555,7 @@ func (tns testNodeSource) GetReadyNodes(ctx context.Context) ([]v1.Node, error) 
 	return nodes, nil
 }
 
+// nolint:revive
 func (tns testNodeSource) NodeAddress(node *v1.Node) (string, int32, error) {
 	return "", int32(0), nil
 }

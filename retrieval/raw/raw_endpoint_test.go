@@ -44,6 +44,7 @@ func BenchmarkParsedPodsFile(b *testing.B) {
 	}
 }
 
+// nolint:revive
 func ensureThatErrorsAreHandled(t testing.TB) {
 	httpClient := http.DefaultClient
 	client := NewClient(
@@ -81,6 +82,7 @@ func ensureThatFileCreatedForPodsData(t testing.TB) {
 	ensureThatFileCreated(t, "../../testdata/pods.json", "pods", false, false)
 }
 
+// nolint:revive
 func ensureThatFileCreated(t testing.TB, testData string, source string, parseData bool, checkForSecrets bool) {
 	httpClient := http.DefaultClient
 	client := NewClient(
