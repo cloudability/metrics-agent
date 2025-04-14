@@ -15,9 +15,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+// nolint: goconst
 func TestGetHeapsterURL(t *testing.T) {
 	cs := fake.NewSimpleClientset()
-	// nolint dupl
 	t.Run("Ensure that heapster pod is found in the kube-system namespace", func(t *testing.T) {
 
 		pod := &v1.Pod{
@@ -40,7 +40,6 @@ func TestGetHeapsterURL(t *testing.T) {
 			t.Errorf("Error getting heapster pod url: %v", err)
 		}
 	})
-	// nolint dupl
 	t.Run("Ensure that heapster service is found in the kube-system namespace", func(t *testing.T) {
 
 		service := &v1.Service{
@@ -65,7 +64,7 @@ func TestGetHeapsterURL(t *testing.T) {
 	})
 }
 
-// nolint:revive
+// nolint:revive, errcheck
 func TestValidateHeapster(t *testing.T) {
 
 	t.Run("Ensure that a valid heapster service is found and responds with data", func(t *testing.T) {
@@ -102,6 +101,7 @@ func TestValidateHeapster(t *testing.T) {
 
 }
 
+// nolint: gosec
 func TestHandleBaselineHeapsterMetrics(t *testing.T) {
 
 	msExportDirectory := os.TempDir() + "/cldy-metrics" + strconv.FormatInt(

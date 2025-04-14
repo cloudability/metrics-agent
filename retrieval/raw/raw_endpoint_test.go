@@ -82,7 +82,7 @@ func ensureThatFileCreatedForPodsData(t testing.TB) {
 	ensureThatFileCreated(t, "../../testdata/pods.json", "pods", false, false)
 }
 
-// nolint:revive
+// nolint:revive, errcheck
 func ensureThatFileCreated(t testing.TB, testData string, source string, parseData bool, checkForSecrets bool) {
 	httpClient := http.DefaultClient
 	client := NewClient(

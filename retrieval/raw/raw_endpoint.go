@@ -206,6 +206,7 @@ func sanitizeNamespaceData(to interface{}) interface{} {
 	return cast
 }
 
+// nolint:gosimple
 func sanitizeSelectorMatchedResourceList(to interface{}) interface{} {
 	cast := to.(LabelSelectorMatchedResourceList)
 	for i := range cast.Items {
@@ -219,6 +220,7 @@ func sanitizeSelectorMatchedResourceList(to interface{}) interface{} {
 	return cast
 }
 
+// nolint: gosimple
 func sanitizePodList(to interface{}) interface{} {
 	cast := to.(PodList)
 	for i := range cast.Items {
@@ -252,6 +254,7 @@ func sanitizeContainer(container v1.Container) v1.Container {
 	return container
 }
 
+// nolint: gosimple
 func sanitizeMapMatchedResourceList(to interface{}) interface{} {
 	cast := to.(LabelMapMatchedResourceList)
 	for i := range cast.Items {

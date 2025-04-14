@@ -121,7 +121,7 @@ const rbacError string = `RBAC role in the Cloudability namespace may need to be
 	***IMPORTANT*** If the cluster is managed by GKE - there are special instructions for provisioning.`
 
 // CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
-// nolint: gocyclo
+// nolint gocyclo
 func CollectKubeMetrics(config KubeAgentConfig) {
 
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
@@ -307,7 +307,7 @@ func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
 	return config
 }
 
-// nolint:revive
+// nolint revive
 func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentConfig,
 	clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
 
@@ -420,7 +420,7 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 	return nil
 }
 
-// nolint: govet
+// nolint govet
 func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 	cldyMetricClient, err := client.NewHTTPMetricClient(client.Configuration{
 		Token:         ka.APIKey,
@@ -455,7 +455,7 @@ func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, metric
 	}
 }
 
-// nolint:revive
+// nolint revive
 func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:     aws.String(ka.CustomS3Region),
@@ -622,7 +622,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 	return updatedConfig, err
 }
 
-// nolint:revive
+// nolint revive
 func updateConfigurationForServices(ctx context.Context, config KubeAgentConfig) (
 	KubeAgentConfig, error) {
 
@@ -709,7 +709,7 @@ func downloadBaselineMetricExport(ctx context.Context, config KubeAgentConfig, n
 	return err
 }
 
-// nolint: govet
+// nolint govet
 func ensureMetricServicesAvailable(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {
 	config, err := ensureNodeSource(ctx, config)
 	if err != nil {

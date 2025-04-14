@@ -126,6 +126,7 @@ func NewTestClient(ts *httptest.Server, labels map[string]string) *fake.Clientse
 	return NewTestClientWithNodes(ts, labels, 1)
 }
 
+// nolint: gosec
 func NewTestClientWithNodes(ts *httptest.Server, labels map[string]string, numNodes int) *fake.Clientset {
 	s := strings.Split(ts.Listener.Addr().String(), ":")
 	ip := s[0]
@@ -577,6 +578,7 @@ func launchTLSTestServer(responseCodes []int) *httptest.Server {
 
 // setupTestNodeDownloaderClients returns commonly-needed configs and clients
 // for testing node downloads
+// nolint: gosec
 func setupTestNodeDownloaderClients(ts *httptest.Server,
 	cs *fake.Clientset,
 	retries uint) (*os.File, testNodeSource, KubeAgentConfig) {

@@ -538,7 +538,7 @@ func TestSetProxyURL(t *testing.T) {
 
 }
 
-// nolint:revive
+// nolint:revive, errcheck
 func NewTestServer() *httptest.Server {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		jsonResp, _ := json.Marshal(map[string]string{"test": "data", "time": time.Now().String()})

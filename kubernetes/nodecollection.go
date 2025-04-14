@@ -257,10 +257,12 @@ func (s sourceName) summary() string {
 	return fmt.Sprintf("%s-summary-%s", s.prefix, s.nodeName)
 }
 
+// nolint: unused
 func (s sourceName) container() string {
 	return fmt.Sprintf("%s-container-%s", s.prefix, s.nodeName)
 }
 
+// nolint:unused
 func (s sourceName) cadvisorMetrics() string {
 	return fmt.Sprintf("%s-cadvisor_metrics-%s", s.prefix, s.nodeName)
 }
