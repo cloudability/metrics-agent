@@ -99,6 +99,7 @@ func (cns ClientsetNodeSource) NodeAddress(node *v1.Node) (string, int32, error)
 	return "", 0, fmt.Errorf("Could not find internal IP address for node %s ", node.Name)
 }
 
+// nolint: govet
 func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig,
 	workDir *os.File, nodeSource NodeSource) (map[string]error, error) {
 	var nodes []v1.Node
@@ -178,6 +179,7 @@ type nodeFetchData struct {
 }
 
 // setupDirectNodeAPI retrieves node stats directly from the node api
+// nolint:revive
 func setupDirectNodeAPI(ns NodeSource, config KubeAgentConfig, n *v1.Node, nd nodeFetchData) (directNode, error) {
 	ip, port, err := ns.NodeAddress(n)
 	if err != nil {
@@ -255,10 +257,12 @@ func (s sourceName) summary() string {
 	return fmt.Sprintf("%s-summary-%s", s.prefix, s.nodeName)
 }
 
+// nolint: unused
 func (s sourceName) container() string {
 	return fmt.Sprintf("%s-container-%s", s.prefix, s.nodeName)
 }
 
+// nolint:unused
 func (s sourceName) cadvisorMetrics() string {
 	return fmt.Sprintf("%s-cadvisor_metrics-%s", s.prefix, s.nodeName)
 }

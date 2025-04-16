@@ -60,6 +60,7 @@ func TestToJSONLines(t *testing.T) {
 	}
 }
 
+// nolint:gosec
 func createRandomMeasurement() measurement.Measurement {
 	tags := make(map[string]string)
 	tags["host"] = "macbookpro.Local.abc123"
@@ -182,7 +183,7 @@ func TestSendMetricSample(t *testing.T) {
 
 }
 
-// nolint: gocyclo
+// nolint: gocyclo, errcheck
 func TestSendMetricSample_ErrorState(t *testing.T) {
 	testAgentVersion := "0.0.1"
 	UID := "867-53-abc-efg-09"

@@ -1,5 +1,6 @@
 package kubernetes
 
+// nolint:revive
 import (
 	"fmt"
 	"testing"
@@ -21,7 +22,7 @@ var _ = Describe("Kubernetes", func() {
 			errorStr := handleError(fmt.Errorf("Error retrieving upload URI: 500"), "us-west-2")
 			Expect(errorStr).To(Equal(fmt.Sprintf(transportError, client.DefaultBaseURL)))
 		})
-
+		// nolint: staticcheck
 		It("should return an error if metrics-agent receives a 403 error getting upload URI", func() {
 			errorStr := handleError(fmt.Errorf(forbiddenError), "us-west-2")
 			Expect(errorStr).To(Equal(fmt.Sprintf(apiKeyError, kbProvisionURL)))
