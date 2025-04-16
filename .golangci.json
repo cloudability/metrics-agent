@@ -3,46 +3,45 @@
     "timeout": "5m"
   },
   "linters": {
-    "disable-all": true,
     "enable": [
-      "deadcode",
       "gocyclo",
       "revive",
       "goconst",
       "misspell",
       "ineffassign",
       "lll",
-      "vet",
+      "govet",
       "gosec",
       "dupl",
       "unconvert",
       "errcheck",
       "staticcheck",
-      "structcheck",
-      "varcheck",
       "gofmt"
-    ]
-  },
-  "linters-settings": {
-    "dupl": {
-      "threshold": 100
+    ],
+    "settings": {
+      "dupl": {
+        "threshold": 100
+      },
+      "lll": {
+        "line-length": 120
+      },
+      "gocyclo": {
+        "min-complexity": 12
+      }
     },
-    "lll": {
-      "line-length": 120
-    },
-    "gocyclo": {
-      "min-complexity": 12
+    "exclusions": {
+      "rules": [
+        {
+          "path": "_test.go",
+          "linters": [
+          "gocyclo",
+          "errcheck",
+          "dupl",
+          "gosec"
+          ]
+        }
+      ]
     }
   },
-  "issues": {
-    "exclude-rules": [{
-      "path": "_test.go",
-      "linters": [
-        "gocyclo",
-        "errcheck",
-        "dupl",
-        "gosec"
-      ]
-    }]
-  }
+  "version": "2"
 }

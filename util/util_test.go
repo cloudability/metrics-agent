@@ -85,6 +85,7 @@ func TestTestHTTPConnection(t *testing.T) {
 
 }
 
+// nolint:revive
 func TestCheckRequiredSettings(t *testing.T) {
 
 	t.Parallel()
@@ -279,6 +280,7 @@ func TestCreateMetricSample(t *testing.T) {
 	})
 }
 
+// nolint: gosec
 func TestMatchOneFile(t *testing.T) {
 	dir := os.TempDir() + "/cldy-test" + strconv.FormatInt(
 		time.Now().Unix(), 10)

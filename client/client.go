@@ -266,6 +266,7 @@ func (c httpMetricClient) retryWithBackoff(
 	return resp, err
 }
 
+// nolint:revive
 func (c httpMetricClient) buildAndDoRequest(
 	metricFile *os.File,
 	metricSampleURL,
