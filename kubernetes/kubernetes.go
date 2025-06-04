@@ -138,7 +138,9 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
 
-	kubeAgent.APIKey = gatherAPIKeyFromVolume(config, customS3Mode)
+	if !customS3Mode {
+		kubeAgent.APIKey = gatherAPIKeyFromVolume(config)
+	}
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
 
@@ -219,19 +221,24 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-func gatherAPIKeyFromVolume(config KubeAgentConfig, customS3Mode bool) string {
-	var key string
-	// warning message for agents that are storing the api key as an environment variable
-	if config.APIKey != "" {
-		log.Warnf("warning: cloudability api key is stored as environment variable, best practice is to" +
-			"use secret store and mount volume, see README for details")
-	}
-	if config.APIKey == "" && !customS3Mode {
-		key = getKeyFromFileVolume(config.APIKeyFilepath)
-		if key == "" {
-			log.Fatalf("failed to collect api key from either environment variable or volume mount." +
-				" A cloudability API Key is required for the agent to run")
+func gatherAPIKeyFromVolume(config KubeAgentConfig) string {
+	key := getKeyFromFileVolume(config.APIKeyFilepath)
+	// key from volume is empty, attempt to pull from environment variable
+	if key == "" {
+		// both keys are empty, stop agent
+		if config.APIKey == "" {
+			log.Fatalf("CLOUDABILITY_API_KEY is not mounted as a secret or present in environment variables. " +
+				"Please see README for details.")
 		}
+		log.Warnf("no CLOUDABILITY_API_KEY found in volume but was found in environment variables. " +
+			"Best practice is to use a secret and mount volume, see README for details.")
+		// fallback to environment key
+		return config.APIKey
+	}
+	// inform customers who have set both
+	if config.APIKey != "" {
+		log.Warnf("CLOUDABILITY_API_KEY is found in both volume and environment variables." +
+			" Suggest to remove the CLOUDABILITY_API_KEY from environment variables.")
 	}
 	return key
 }
