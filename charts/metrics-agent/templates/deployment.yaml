@@ -47,7 +47,7 @@ spec:
             - name: CLOUDABILITY_UPLOAD_REGION
               value: {{ .Values.uploadRegion }}
             - name: CLOUDABILITY_API_KEY_FILEPATH
-              value: {{ .Values.fullPathToApiKey }}
+              value: {{ .Values.pathToApiKey -}}/{{ .Values.fileNameWithApiKey }}
             {{- if .Values.extraEnv }}
               {{- toYaml .Values.extraEnv | nindent 12 }}
             {{- end }}
@@ -57,7 +57,7 @@ spec:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           volumeMounts:
             - name: api-key-volume
-              mountPath: {{ .Values.volumePathForApiKey }}
+              mountPath: {{ .Values.pathToApiKey }}
               readOnly: true
             {{- if .Values.volumeMounts }}
               {{- toYaml .Values.volumeMounts | nindent 12 }}

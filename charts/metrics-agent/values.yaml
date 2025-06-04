@@ -11,10 +11,10 @@ fullnameOverride: ""
 # In the Cloudability app, go to Insights -> Containers, then click
 # the provisioning cluster button that will take you through our provisioning workflow.
 apiKey: ""
-# configurable full path to the location where the CLOUDABILITY_API_KEY is stored on the container
-fullPathToApiKey: "/etc/secrets/CLOUDABILITY_API_KEY"
-# configurable path to the directory the api key is stored
-volumePathForApiKey: "/etc/secrets"
+# configurable path to the location where the CLOUDABILITY_API_KEY is stored on the container
+pathToApiKey: "/etc/secrets"
+# configurable fileName to the file where the api key is stored
+fileNameWithApiKey: "CLOUDABILITY_API_KEY"
 
 # You may also store the apikey in a secret and pull the apikey from there as well.
 # name of the secret already stored in k8s containing CLOUDABILITY_API_KEY.
