@@ -247,9 +247,8 @@ func gatherAPIKeyFromVolume(config KubeAgentConfig) string {
 func getKeyFromFileVolume(filepath string) string {
 	key, err := os.ReadFile(filepath)
 	if err != nil {
-		log.Fatalf("error attempting to collect cloudability api key from file: %s with err: %v. "+
-			"Ensure the cloudability api key is either set as an environment variable or the correct volume mounting "+
-			"is in place to allow the agent to access the file storing the api key", filepath, err)
+		log.Warnf("error attempting to collect cloudability api key from file: %s with err: %v", filepath, err)
+		return ""
 	}
 	return string(key)
 }
