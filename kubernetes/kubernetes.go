@@ -137,9 +137,8 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	kubeAgent := newKubeAgent(ctx, config)
 
 	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
-
 	if !customS3Mode {
-		kubeAgent.APIKey = gatherAPIKeyFromVolume(config)
+		kubeAgent.APIKey = getAPIKey(config)
 	}
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
@@ -221,7 +220,7 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
-func gatherAPIKeyFromVolume(config KubeAgentConfig) string {
+func getAPIKey(config KubeAgentConfig) string {
 	key := getKeyFromFileVolume(config.APIKeyFilepath)
 	// key from volume is empty, attempt to pull from environment variable
 	if key == "" {
@@ -243,7 +242,7 @@ func gatherAPIKeyFromVolume(config KubeAgentConfig) string {
 	return key
 }
 
-// getKeyFromFileVolume attempts to gather the base64 encoded api key from filepath
+// getKeyFromFileVolume attempts to gather the api key from filepath
 func getKeyFromFileVolume(filepath string) string {
 	key, err := os.ReadFile(filepath)
 	if err != nil {
