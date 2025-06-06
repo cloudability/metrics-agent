@@ -34,7 +34,7 @@ func init() {
 		&config.APIKey,
 		"api_key",
 		"",
-		"Cloudability API Key - required",
+		"Cloudability API Key - required if api key is not stored in volume mount",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.ClusterName,
@@ -151,6 +151,12 @@ func init() {
 		"",
 		"The AWS region that the custom s3 bucket is in",
 	)
+	kubernetesCmd.PersistentFlags().StringVar(
+		&config.APIKeyFilepath,
+		"api_key_filepath",
+		"",
+		"Recommended - The file path where the api key is stored",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -178,6 +184,7 @@ func init() {
 	_ = viper.BindPFlag("upload_region", kubernetesCmd.PersistentFlags().Lookup("upload_region"))
 	_ = viper.BindPFlag("custom_s3_bucket", kubernetesCmd.PersistentFlags().Lookup("custom_s3_bucket"))
 	_ = viper.BindPFlag("custom_s3_region", kubernetesCmd.PersistentFlags().Lookup("custom_s3_region"))
+	_ = viper.BindPFlag("api_key_filepath", kubernetesCmd.PersistentFlags().Lookup("api_key_filepath"))
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
 
@@ -204,6 +211,7 @@ func init() {
 		UploadRegion:           viper.GetString("upload_region"),
 		CustomS3UploadBucket:   viper.GetString("custom_s3_bucket"),
 		CustomS3Region:         viper.GetString("custom_s3_region"),
+		APIKeyFilepath:         viper.GetString("api_key_filepath"),
 	}
 
 }

@@ -36,26 +36,27 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 
 ### Configuration Options
 
-| Environment Variable                           |                                                                                             Description                                                                                              |
-|------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| CLOUDABILITY_API_KEY                           |                                                                                    Required: Cloudability api key                                                                                    |
-| CLOUDABILITY_CLUSTER_NAME                      |                                                            Required: The cluster name to be used for the cluster the agent is running in. Cannot be exclusively whitespace.                            |
-| CLOUDABILITY_POLL_INTERVAL                     |                                                                    Optional: The interval (Seconds) to poll metrics. Default: 180                                                                    |
-| CLOUDABILITY_OUTBOUND_PROXY                    |                    Optional: The URL of an outbound HTTP/HTTPS proxy for the agent to use (eg: http://x.x.x.x:8080). The URL must contain the scheme prefix (http:// or https://)                    |
-| CLOUDABILITY_OUTBOUND_PROXY_AUTH               | Optional: Basic Authentication credentials to be used with the defined outbound proxy. If your outbound proxy requires basic authentication credentials can be defined in the form username:password |
-| CLOUDABILITY_OUTBOUND_PROXY_INSECURE           |                                                 Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False                                                  |
-| CLOUDABILITY_INSECURE                          |                                                    Optional: When true, does not verify certificates when making TLS connections. Default: False                                                     |
-| CLOUDABILITY_FORCE_KUBE_PROXY                  |                                  Optional: When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False                                   |
-| CLOUDABILITY_COLLECTION_RETRY_LIMIT            |                                             Optional: Number of times agent should attempt to gather metrics from each source upon a failure Default: 1                                              |
-| CLOUDABILITY_NAMESPACE                         |        Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`         |
-| CLOUDABILITY_LOG_FORMAT                        |                                                                     Optional: Format for log output (JSON,PLAIN) Default: PLAIN                                                                      |
-| CLOUDABILITY_LOG_LEVEL                         |                                                           Optional: Log level to run the agent at (INFO,WARN,DEBUG,TRACE). Default: `INFO`                                                           |
-| CLOUDABILITY_SCRATCH_DIR                       | Optional: Temporary directory that metrics will be written to. If set, must assure that the directory exists and that the user agent UID 10000 has read/write access to the folder. Default: `/tmp`  |
-| CLOUDABILITY_NUMBER_OF_CONCURRENT_NODE_POLLERS |                                                   Optional: Number of goroutines that are created to poll node metrics in parallel. Default: `100`                                                   |
-| CLOUDABILITY_INFORMER_RESYNC_INTERVAL          |                      Optional: Period of time (in hours) that the informers will fully resync the list of running resources. Default: 24 hours. Can be set to 0 to never resync                      |
-| CLOUDABILITY_PARSE_METRIC_DATA                 |                                        Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                        |
-| CLOUDABILITY_HTTPS_CLIENT_TIMEOUT              |                   Optional: Amount (in seconds) of time the http client has before timing out requests. Might need to be increased to clusters with large payloads. Default: `60`                    |
-| CLOUDABILITY_UPLOAD_REGION                     |          Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2`, `eu-central-1`, `ap-southeast-2`, `me-central-1`, `us-gov-west-1`           |
+| Environment Variable                           |                                                                                                              Description                                                                                                              |
+|------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| CLOUDABILITY_API_KEY                           |                                                           Cloudability api key. Not recommended to store as environment variable, instead use CLOUDABILITY_API_KEY_FILEPATH                                                           |
+| CLOUDABILITY_API_KEY_FILEPATH                  |                                                                          Path to the file where the api key is stored, ex: /etc/secrets/CLOUDABILITY_API_KEY                                                                          |
+| CLOUDABILITY_CLUSTER_NAME                      |                                                           Required: The cluster name to be used for the cluster the agent is running in. Cannot be exclusively whitespace.                                                            |
+| CLOUDABILITY_POLL_INTERVAL                     |                                                                                    Optional: The interval (Seconds) to poll metrics. Default: 180                                                                                     |
+| CLOUDABILITY_OUTBOUND_PROXY                    |                                    Optional: The URL of an outbound HTTP/HTTPS proxy for the agent to use (eg: http://x.x.x.x:8080). The URL must contain the scheme prefix (http:// or https://)                                     |
+| CLOUDABILITY_OUTBOUND_PROXY_AUTH               |                 Optional: Basic Authentication credentials to be used with the defined outbound proxy. If your outbound proxy requires basic authentication credentials can be defined in the form username:password                  |
+| CLOUDABILITY_OUTBOUND_PROXY_INSECURE           |                                                                  Optional: When true, does not verify TLS certificates when using the outbound proxy. Default: False                                                                  |
+| CLOUDABILITY_INSECURE                          |                                                                     Optional: When true, does not verify certificates when making TLS connections. Default: False                                                                     |
+| CLOUDABILITY_FORCE_KUBE_PROXY                  |                                                   Optional: When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False                                                   |
+| CLOUDABILITY_COLLECTION_RETRY_LIMIT            |                                                              Optional: Number of times agent should attempt to gather metrics from each source upon a failure Default: 1                                                              |
+| CLOUDABILITY_NAMESPACE                         |                         Optional: Override the namespace that the agent runs in. It is not recommended to change this as it may negatively affect the agents ability to collect data. Default: `cloudability`                         |
+| CLOUDABILITY_LOG_FORMAT                        |                                                                                      Optional: Format for log output (JSON,PLAIN) Default: PLAIN                                                                                      |
+| CLOUDABILITY_LOG_LEVEL                         |                                                                           Optional: Log level to run the agent at (INFO,WARN,DEBUG,TRACE). Default: `INFO`                                                                            |
+| CLOUDABILITY_SCRATCH_DIR                       |                  Optional: Temporary directory that metrics will be written to. If set, must assure that the directory exists and that the user agent UID 10000 has read/write access to the folder. Default: `/tmp`                  |
+| CLOUDABILITY_NUMBER_OF_CONCURRENT_NODE_POLLERS |                                                                   Optional: Number of goroutines that are created to poll node metrics in parallel. Default: `100`                                                                    |
+| CLOUDABILITY_INFORMER_RESYNC_INTERVAL          |                                      Optional: Period of time (in hours) that the informers will fully resync the list of running resources. Default: 24 hours. Can be set to 0 to never resync                                       |
+| CLOUDABILITY_PARSE_METRIC_DATA                 |                                                        Optional: When true, core files will be parsed and non-relevant data will be removed prior to upload. Default: `false`                                                         |
+| CLOUDABILITY_HTTPS_CLIENT_TIMEOUT              |                                    Optional: Amount (in seconds) of time the http client has before timing out requests. Might need to be increased to clusters with large payloads. Default: `60`                                    |
+| CLOUDABILITY_UPLOAD_REGION                     |                           Optional: The region the metrics-agent will upload data to. Default `us-west-2`. Supported values: `us-west-2`, `eu-central-1`, `ap-southeast-2`, `me-central-1`, `us-gov-west-1`                           |
 
 ```sh
 
@@ -66,7 +67,8 @@ Usage:
   metrics-agent kubernetes [flags]
 
 Flags:
-      --api_key string                           Cloudability API Key - required
+      --api_key string                           Cloudability api key. Not recommended to store as environment variable, instead use CLOUDABILITY_API_KEY_FILEPATH
+      --api_key_filepath                         Path to the file where the api key is stored, ex: /etc/secrets/CLOUDABILITY_API_KEY 
       --certificate_file string                  The path to a certificate file. - Optional
       --cluster_name string                      Kubernetes Cluster Name - required this must be unique to every cluster.
       --collection_retry_limit uint              Number of times agent should attempt to gather metrics from each source upon a failure (default 1)
@@ -98,7 +100,9 @@ There are two ways to deploy Metrics-agent:
 
 Cloudability customers can download the deployment yaml directly from Cloudability UI. The downloaded yaml contains default settings including the API key needed to enable the metrics-agent to upload metrics to Cloudability. The customer should change the default settings in the yaml according to their clusters' configuration and security requirements.
 
-The API key is currently configured as an environment variable in the pod as plain text. It's highly recommended to integrate the API key with the customer's own secret manager solution. This could be the CSP's secret manager such as AWS secret manager, GCP secret manager, etc. Please refer to Kubernetes and CSP document for such integration.
+The API key is currently supported as an environment variable in the pod as plain text. However, it is highly recommended to update the agent version to >2.13.0 and to pull from a mounted volume using CLOUDABILITY_API_KEY_FILEPATH. Customers can also use various CSP's secret manager such as AWS secret manager, GCP secret manager, etc to then mount on the agent. Please refer to Kubernetes and CSP document for such integration.
+
+Note: If the metrics-agent was deployed using the older template, ensure you provision the new YAML from either Helm >2.13.0 or the UI that creates a Kubernetes secret and mounts the correct volume before updating to use CLOUDABILITY_API_KEY_FILEPATH.
 
 ### Deployment using helm
 

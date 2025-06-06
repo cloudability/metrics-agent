@@ -40,17 +40,14 @@ spec:
           args:
           - 'kubernetes'
           env:
-            - name: "CLOUDABILITY_API_KEY"
-              valueFrom:
-                secretKeyRef:
-                  name: {{- if not .Values.secretName }} {{ include "metrics-agent.fullname" . }} {{- else }} {{ .Values.secretName }} {{- end }}
-                  key: CLOUDABILITY_API_KEY
             - name: CLOUDABILITY_CLUSTER_NAME
               value: {{ .Values.clusterName }}
             - name: CLOUDABILITY_POLL_INTERVAL
               value: {{ .Values.pollInterval | quote }}
             - name: CLOUDABILITY_UPLOAD_REGION
               value: {{ .Values.uploadRegion }}
+            - name: CLOUDABILITY_API_KEY_FILEPATH
+              value: {{ .Values.pathToApiKey -}}/{{ .Values.fileNameWithApiKey }}
             {{- if .Values.extraEnv }}
               {{- toYaml .Values.extraEnv | nindent 12 }}
             {{- end }}
@@ -58,14 +55,20 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
-          {{- toYaml . | nindent 12 }}
-          {{- end }}
-      {{- with .Values.volumes }}
+            - name: api-key-volume
+              mountPath: {{ .Values.pathToApiKey }}
+              readOnly: true
+            {{- if .Values.volumeMounts }}
+              {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
       volumes:
-      {{- toYaml . | nindent 8 }}
-      {{- end }}
+        - name: api-key-volume
+          secret:
+            secretName: {{ include "metrics-agent.fullname" . }}
+        {{- if .Values.volumes }}
+          {{- toYaml .Values.volumes | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -89,6 +89,7 @@ type KubeAgentConfig struct {
 	UploadRegion           string
 	CustomS3UploadBucket   string
 	CustomS3Region         string
+	APIKeyFilepath         string
 }
 
 const uploadInterval time.Duration = 10
@@ -136,7 +137,9 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	kubeAgent := newKubeAgent(ctx, config)
 
 	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
-
+	if !customS3Mode {
+		kubeAgent.APIKey = getAPIKey(config)
+	}
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
 
@@ -217,14 +220,42 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
+func getAPIKey(config KubeAgentConfig) string {
+	key := getKeyFromFileVolume(config.APIKeyFilepath)
+	// key from volume is empty, attempt to pull from environment variable
+	if key == "" {
+		// both keys are empty, stop agent
+		if config.APIKey == "" {
+			log.Fatalf("CLOUDABILITY_API_KEY is not mounted as a secret or present in environment variables. " +
+				"Please see README for details.")
+		}
+		log.Warnf("no CLOUDABILITY_API_KEY found in volume but was found in environment variables. " +
+			"Best practice is to use a secret and mount volume, see README for details.")
+		// fallback to environment key
+		return config.APIKey
+	}
+	// inform customers who have set both
+	if config.APIKey != "" {
+		log.Warnf("CLOUDABILITY_API_KEY is found in both volume and environment variables." +
+			" Suggest to remove the CLOUDABILITY_API_KEY from environment variables.")
+	}
+	return key
+}
+
+// getKeyFromFileVolume attempts to gather the api key from filepath
+func getKeyFromFileVolume(filepath string) string {
+	key, err := os.ReadFile(filepath)
+	if err != nil {
+		log.Warnf("error attempting to collect cloudability api key from file: %s with err: %v", filepath, err)
+		return ""
+	}
+	return string(key)
+}
+
 // isCustomS3UploadEnvsSet checks to see if the agent has a custom S3 location and S3 region to upload to
 // if both these variables are not set, default upload to Apptio S3
 func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 	if ka.CustomS3Region == "" && ka.CustomS3UploadBucket == "" {
-		if ka.APIKey == "" {
-			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
-				"when not using CLOUDABILITY_CUSTOM_S3_BUCKET & CLOUDABILITY_CUSTOM_S3_REGION")
-		}
 		return false
 	}
 	if ka.CustomS3UploadBucket == "" || ka.CustomS3Region == "" {

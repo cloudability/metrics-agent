@@ -11,6 +11,10 @@ fullnameOverride: ""
 # In the Cloudability app, go to Insights -> Containers, then click
 # the provisioning cluster button that will take you through our provisioning workflow.
 apiKey: ""
+# configurable path to the location where the CLOUDABILITY_API_KEY is stored on the container
+pathToApiKey: "/etc/secrets"
+# configurable fileName to the file where the api key is stored
+fileNameWithApiKey: "CLOUDABILITY_API_KEY"
 
 # You may also store the apikey in a secret and pull the apikey from there as well.
 # name of the secret already stored in k8s containing CLOUDABILITY_API_KEY.
@@ -26,7 +30,7 @@ uploadRegion: "us-west-2"
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.12.1
+  tag: 2.13.0
   pullPolicy: Always
 
 imagePullSecrets: []
