@@ -45,5 +45,7 @@ To uninstall the chart:
 
 Notes: 
 * `<yourApiKey>` and `<yourUploadRegion>` are obtained through the Containers Insights page in the Cloudability UI.
+  * `<yourApiKey>` should be in plain text during installation. If you provision a cluster from the UI and the CLOUDABILITY_API_KEY is in a Kubernetes secret object, you must base64 decode the key before running the helm install command.
+  `echo "<base64EncodedKey>" | base64 -D`
 * Deploying the metrics-agent with Helm creates a kubernetes secret that stores the api-key value. The metrics-agent
 deployment then pulls the apikey value from this secret.
