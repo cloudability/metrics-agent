@@ -30,7 +30,7 @@ uploadRegion: "us-west-2"
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.13.0
+  tag: 2.13.1
   pullPolicy: Always
 
 imagePullSecrets: []

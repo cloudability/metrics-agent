@@ -226,8 +226,8 @@ func getAPIKey(config KubeAgentConfig) string {
 	if key == "" {
 		// both keys are empty, stop agent
 		if config.APIKey == "" {
-			log.Fatalf("CLOUDABILITY_API_KEY is not mounted as a secret or present in environment variables. " +
-				"Please see README for details.")
+			log.Warnf("CLOUDABILITY_API_KEY is not mounted as a secret or present in environment variables. " +
+				"The agent will not be able to upload to Cloudability. Please see README for details.")
 		}
 		log.Warnf("no CLOUDABILITY_API_KEY found in volume but was found in environment variables. " +
 			"Best practice is to use a secret and mount volume, see README for details.")
