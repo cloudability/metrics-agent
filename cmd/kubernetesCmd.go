@@ -172,8 +172,7 @@ func init() {
 	_ = viper.BindPFlag("outbound_proxy_insecure", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_insecure"))
 	_ = viper.BindPFlag(
 		"use_proxy_for_getting_upload_url_only",
-		kubernetesCmd.PersistentFlags().Lookup("use_proxy_for_getting_upload_url_only",
-		))
+		kubernetesCmd.PersistentFlags().Lookup("use_proxy_for_getting_upload_url_only"))
 	_ = viper.BindPFlag("insecure", kubernetesCmd.PersistentFlags().Lookup("insecure"))
 	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
 	_ = viper.BindPFlag("get_all_container_stats", kubernetesCmd.PersistentFlags().Lookup("get_all_container_stats"))
