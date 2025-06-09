@@ -88,7 +88,8 @@ func init() {
 		&config.UseProxyForGettingUploadURLOnly,
 		"use_proxy_for_getting_upload_url_only",
 		false,
-		"When true, the specified proxy will be set for requests to get upload urls for metrics, but not for actually uploading metrics. Default: False",
+		"When true, the specified proxy will be set for requests to get upload urls for metrics, but not for "+
+			"actually uploading metrics. Default: False",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.Insecure,
@@ -169,7 +170,10 @@ func init() {
 	_ = viper.BindPFlag("outbound_proxy", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy"))
 	_ = viper.BindPFlag("outbound_proxy_auth", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_auth"))
 	_ = viper.BindPFlag("outbound_proxy_insecure", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_insecure"))
-	_ = viper.BindPFlag("use_proxy_for_getting_upload_url_only", kubernetesCmd.PersistentFlags().Lookup("use_proxy_for_getting_upload_url_only"))
+	_ = viper.BindPFlag(
+		"use_proxy_for_getting_upload_url_only",
+		kubernetesCmd.PersistentFlags().Lookup("use_proxy_for_getting_upload_url_only",
+		))
 	_ = viper.BindPFlag("insecure", kubernetesCmd.PersistentFlags().Lookup("insecure"))
 	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
 	_ = viper.BindPFlag("get_all_container_stats", kubernetesCmd.PersistentFlags().Lookup("get_all_container_stats"))
