@@ -98,21 +98,25 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 		TLSHandshakeTimeout: cfg.Timeout,
 	}
 
-	ConnectHeader := http.Header{}
-	if cfg.ProxyAuth != "" {
-		basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(cfg.ProxyAuth))
-		ConnectHeader.Add(proxyAuthHeader, basicAuth)
-	}
+	// configure outbound proxy
+	if len(cfg.ProxyURL.Host) > 0 {
+		ConnectHeader := http.Header{}
 
-	netTransport = &http.Transport{
-		Dial:                (&net.Dialer{Timeout: cfg.Timeout}).Dial,
-		Proxy:               BuildProxyFunc(cfg),
-		ProxyConnectHeader:  ConnectHeader,
-		TLSHandshakeTimeout: cfg.Timeout,
-		TLSClientConfig: &tls.Config{
-			//nolint gas
-			InsecureSkipVerify: cfg.ProxyInsecure,
-		},
+		if cfg.ProxyAuth != "" {
+			basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(cfg.ProxyAuth))
+			ConnectHeader.Add(proxyAuthHeader, basicAuth)
+		}
+
+		netTransport = &http.Transport{
+			Dial:                (&net.Dialer{Timeout: cfg.Timeout}).Dial,
+			Proxy:               BuildProxyFunc(cfg),
+			ProxyConnectHeader:  ConnectHeader,
+			TLSHandshakeTimeout: cfg.Timeout,
+			TLSClientConfig: &tls.Config{
+				//nolint gas
+				InsecureSkipVerify: cfg.ProxyInsecure,
+			},
+		}
 	}
 
 	httpClient := http.Client{
