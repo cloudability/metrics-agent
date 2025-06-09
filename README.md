@@ -38,7 +38,8 @@ Cloudability Metrics Agent currently does not support Rancher or On Prem cluster
 
 | Environment Variable                               |                                                                                             Description                                                                                              |
 |----------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| CLOUDABILITY_API_KEY                               |                                                                                    Required: Cloudability api key                                                                                    |
+| CLOUDABILITY_API_KEY                           |                                                           Cloudability api key. Not recommended to store as environment variable, instead use CLOUDABILITY_API_KEY_FILEPATH                                                           |
+| CLOUDABILITY_API_KEY_FILEPATH                  |                                                                          Path to the file where the api key is stored, ex: /etc/secrets/CLOUDABILITY_API_KEY                                                                          |
 | CLOUDABILITY_CLUSTER_NAME                          |                                           Required: The cluster name to be used for the cluster the agent is running in. Cannot be exclusively whitespace.                                           |
 | CLOUDABILITY_POLL_INTERVAL                         |                                                                    Optional: The interval (Seconds) to poll metrics. Default: 180                                                                    |
 | CLOUDABILITY_OUTBOUND_PROXY                        |                    Optional: The URL of an outbound HTTP/HTTPS proxy for the agent to use (eg: http://x.x.x.x:8080). The URL must contain the scheme prefix (http:// or https://)                    |
@@ -67,7 +68,8 @@ Usage:
   metrics-agent kubernetes [flags]
 
 Flags:
-      --api_key string                           Cloudability API Key - required
+      --api_key string                           Cloudability api key. Not recommended to store as environment variable, instead use CLOUDABILITY_API_KEY_FILEPATH
+      --api_key_filepath                         Path to the file where the api key is stored, ex: /etc/secrets/CLOUDABILITY_API_KEY 
       --certificate_file string                  The path to a certificate file. - Optional
       --cluster_name string                      Kubernetes Cluster Name - required this must be unique to every cluster.
       --collection_retry_limit uint              Number of times agent should attempt to gather metrics from each source upon a failure (default 1)
@@ -77,6 +79,7 @@ Flags:
       --outbound_proxy string                    Outbound HTTP/HTTPS proxy eg: http://x.x.x.x:8080. Must have a scheme prefix (http:// or https://) - Optional
       --outbound_proxy_auth string               Outbound proxy basic authentication credentials. Must defined in the form username:password - Optional
       --outbound_proxy_insecure                  When true, does not verify TLS certificates when using the outbound proxy. Default: False
+      --use_proxy_for_getting_upload_url_only    When true, the specified proxy will be set for requests to get upload urls for metrics, but not for actually uploading metrics. Default: False
 
       --force_kube_proxy                         When true, forces agent to use the proxy to connect to nodes rather than attempting a direct connection. Default: False
       --poll_interval int                        Time, in seconds, to poll the services infrastructure. Default: 180 (default 180)
@@ -99,7 +102,9 @@ There are two ways to deploy Metrics-agent:
 
 Cloudability customers can download the deployment yaml directly from Cloudability UI. The downloaded yaml contains default settings including the API key needed to enable the metrics-agent to upload metrics to Cloudability. The customer should change the default settings in the yaml according to their clusters' configuration and security requirements.
 
-The API key is currently configured as an environment variable in the pod as plain text. It's highly recommended to integrate the API key with the customer's own secret manager solution. This could be the CSP's secret manager such as AWS secret manager, GCP secret manager, etc. Please refer to Kubernetes and CSP document for such integration.
+The API key is currently supported as an environment variable in the pod as plain text. However, it is highly recommended to update the agent version to >2.13.0 and to pull from a mounted volume using CLOUDABILITY_API_KEY_FILEPATH. Customers can also use various CSP's secret manager such as AWS secret manager, GCP secret manager, etc to then mount on the agent. Please refer to Kubernetes and CSP document for such integration.
+
+Note: If the metrics-agent was deployed using the older template, ensure you provision the new YAML from either Helm >2.13.0 or the UI that creates a Kubernetes secret and mounts the correct volume before updating to use CLOUDABILITY_API_KEY_FILEPATH.
 
 ### Deployment using helm
 
