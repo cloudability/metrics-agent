@@ -49,47 +49,48 @@ type ClusterVersion struct {
 
 // KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                 string
-	BearerToken            string
-	BearerTokenPath        string
-	Cert                   string
-	ClusterName            string
-	ClusterHostURL         string
-	clusterUID             string
-	HeapsterURL            string
-	Key                    string
-	OutboundProxyAuth      string
-	OutboundProxy          string
-	provisioningID         string
-	ForceKubeProxy         bool
-	Insecure               bool
-	OutboundProxyInsecure  bool
-	UseInClusterConfig     bool
-	PollInterval           int
-	ConcurrentPollers      int
-	CollectionRetryLimit   uint
-	failedNodeList         map[string]error
-	AgentStartTime         time.Time
-	Clientset              kubernetes.Interface
-	ClusterVersion         ClusterVersion
-	HeapsterProxyURL       url.URL
-	OutboundProxyURL       url.URL
-	HTTPClient             http.Client
-	NodeClient             raw.Client
-	InClusterClient        raw.Client
-	msExportDirectory      *os.File
-	TLSClientConfig        rest.TLSClientConfig
-	Namespace              string
-	ScratchDir             string
-	NodeMetrics            EndpointMask
-	Informers              map[string]*cache.SharedIndexInformer
-	InformerResyncInterval int
-	ParseMetricData        bool
-	HTTPSTimeout           int
-	UploadRegion           string
-	CustomS3UploadBucket   string
-	CustomS3Region         string
-	APIKeyFilepath         string
+	APIKey                          string
+	BearerToken                     string
+	BearerTokenPath                 string
+	Cert                            string
+	ClusterName                     string
+	ClusterHostURL                  string
+	clusterUID                      string
+	HeapsterURL                     string
+	Key                             string
+	OutboundProxyAuth               string
+	OutboundProxy                   string
+	UseProxyForGettingUploadURLOnly bool
+	provisioningID                  string
+	ForceKubeProxy                  bool
+	Insecure                        bool
+	OutboundProxyInsecure           bool
+	UseInClusterConfig              bool
+	PollInterval                    int
+	ConcurrentPollers               int
+	CollectionRetryLimit            uint
+	failedNodeList                  map[string]error
+	AgentStartTime                  time.Time
+	Clientset                       kubernetes.Interface
+	ClusterVersion                  ClusterVersion
+	HeapsterProxyURL                url.URL
+	OutboundProxyURL                url.URL
+	HTTPClient                      http.Client
+	NodeClient                      raw.Client
+	InClusterClient                 raw.Client
+	msExportDirectory               *os.File
+	TLSClientConfig                 rest.TLSClientConfig
+	Namespace                       string
+	ScratchDir                      string
+	NodeMetrics                     EndpointMask
+	Informers                       map[string]*cache.SharedIndexInformer
+	InformerResyncInterval          int
+	ParseMetricData                 bool
+	HTTPSTimeout                    int
+	UploadRegion                    string
+	CustomS3UploadBucket            string
+	CustomS3Region                  string
+	APIKeyFilepath                  string
 }
 
 const uploadInterval time.Duration = 10
@@ -454,13 +455,14 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 // nolint govet
 func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 	cldyMetricClient, err := client.NewHTTPMetricClient(client.Configuration{
-		Token:         ka.APIKey,
-		Verbose:       false,
-		ProxyURL:      ka.OutboundProxyURL,
-		ProxyAuth:     ka.OutboundProxyAuth,
-		ProxyInsecure: ka.OutboundProxyInsecure,
-		Timeout:       time.Duration(ka.HTTPSTimeout) * time.Second,
-		Region:        ka.UploadRegion,
+		Token:                           ka.APIKey,
+		Verbose:                         false,
+		ProxyURL:                        ka.OutboundProxyURL,
+		ProxyAuth:                       ka.OutboundProxyAuth,
+		ProxyInsecure:                   ka.OutboundProxyInsecure,
+		Timeout:                         time.Duration(ka.HTTPSTimeout) * time.Second,
+		Region:                          ka.UploadRegion,
+		UseProxyForGettingUploadURLOnly: ka.UseProxyForGettingUploadURLOnly,
 	})
 
 	if err != nil {

@@ -5,12 +5,16 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -567,4 +571,257 @@ func Test_getUploadURLByRegion(t *testing.T) {
 	if uploadURL != client.StagingBaseURL {
 		t.Error("US staging URL was not generated correctly")
 	}
+}
+
+func Test_BuildProxyFunc(t *testing.T) {
+	proxyStr := "https://proxy.example.com"
+	proxyURL, err := url.Parse(proxyStr)
+	if err != nil {
+		t.Error(err)
+	}
+	testCases := []struct {
+		name       string
+		cfg        client.Configuration
+		requestURL string
+		expected   string
+	}{
+		{
+			name: "get upload url - no proxy",
+			cfg: client.Configuration{
+				UseProxyForGettingUploadURLOnly: false,
+				ProxyURL:                        url.URL{},
+			},
+			requestURL: "https://test.cloudability.com/metricsample",
+			expected:   "",
+		},
+		{
+			name: "get upload url - proxy enabled for both requests",
+			cfg: client.Configuration{
+				UseProxyForGettingUploadURLOnly: false,
+				ProxyURL:                        *proxyURL,
+			},
+			requestURL: "https://test.cloudability.com/metricsample",
+			expected:   proxyStr,
+		},
+		{
+			name: "get upload url - proxy enabled for only get upload url requests - proxy url not set",
+			cfg: client.Configuration{
+				UseProxyForGettingUploadURLOnly: true,
+				ProxyURL:                        url.URL{},
+			},
+			requestURL: "https://test.cloudability.com/metricsample",
+			expected:   "",
+		},
+		{
+			name: "get upload url - proxy enabled for only get upload url requests - proxy url is set",
+			cfg: client.Configuration{
+				UseProxyForGettingUploadURLOnly: true,
+				ProxyURL:                        *proxyURL,
+			},
+			requestURL: "https://test.cloudability.com/metricsample",
+			expected:   proxyStr,
+		},
+		{
+			name: "s3 upload - no proxy",
+			cfg: client.Configuration{
+				UseProxyForGettingUploadURLOnly: false,
+				ProxyURL:                        url.URL{},
+			},
+			requestURL: "https://s3.amazonaws.com/test",
+			expected:   "",
+		},
+		{
+			name: "s3 upload - proxy enabled for both requests",
+			cfg: client.Configuration{
+				UseProxyForGettingUploadURLOnly: false,
+				ProxyURL:                        *proxyURL,
+			},
+			requestURL: "https://s3.amazonaws.com/test",
+			expected:   proxyStr,
+		},
+		{
+			name: "s3 upload - proxy enabled for only get upload url requests - proxy url not set",
+			cfg: client.Configuration{
+				UseProxyForGettingUploadURLOnly: true,
+				ProxyURL:                        url.URL{},
+			},
+			requestURL: "https://s3.amazonaws.com/test",
+			expected:   "",
+		},
+		{
+			name: "s3 upload - proxy enabled for only get upload url requests - proxy url is set",
+			cfg: client.Configuration{
+				UseProxyForGettingUploadURLOnly: true,
+				ProxyURL:                        *proxyURL,
+			},
+			requestURL: "https://s3.amazonaws.com/test",
+			expected:   "",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyFunc := client.BuildProxyFunc(tc.cfg)
+			var request *http.Request
+			request, err = http.NewRequest("POST", tc.requestURL, nil)
+			if err != nil {
+				t.Error(err)
+			}
+			var actualURL *url.URL
+			actualURL, err = proxyFunc(request)
+			if err != nil {
+				t.Error(err)
+			}
+			if actualURL == nil && tc.expected != "" {
+				t.Errorf("Expected empty strings for actual and expected")
+			}
+			if actualURL != nil && actualURL.String() != tc.expected {
+				t.Errorf("Actual URL: %s, expected URL: %s", actualURL.String(), tc.expected)
+			}
+		})
+	}
+}
+
+func Test_SendMetrics_ProxyScenarios(t *testing.T) {
+	uploadServer := newUploadServer()
+	defer uploadServer.Close()
+
+	urlServer := newURLServer(t, uploadServer.URL)
+	defer urlServer.Close()
+
+	mockSample, err := os.CreateTemp("", "metricsample")
+	if err != nil {
+		t.Error(err)
+	}
+	defer func(name string) {
+		err = os.Remove(name)
+		if err != nil {
+			t.Error(err)
+		}
+	}(mockSample.Name())
+	_, err = mockSample.WriteString("some data")
+	if err != nil {
+		t.Error(err)
+	}
+
+	config := client.Configuration{
+		Token:      test.SecureRandomAlphaString(20),
+		BaseURL:    urlServer.URL + "/metricsample",
+		MaxRetries: 1,
+		Region:     "us-west-2",
+	}
+
+	testCases := []struct {
+		name                            string
+		config                          client.Configuration
+		outboundProxySet                bool
+		useProxyForGettingUploadURLOnly bool
+		expectedProxyHitCount           int32
+	}{
+		{
+			name:                            "no proxy",
+			config:                          config,
+			outboundProxySet:                false,
+			useProxyForGettingUploadURLOnly: false,
+			expectedProxyHitCount:           0,
+		},
+		{
+			name:                            "proxy enabled for both requests",
+			config:                          config,
+			outboundProxySet:                true,
+			useProxyForGettingUploadURLOnly: false,
+			expectedProxyHitCount:           2,
+		},
+		{
+			name:                            "proxy enabled for only get upload url requests - proxy url not set",
+			config:                          config,
+			outboundProxySet:                false,
+			useProxyForGettingUploadURLOnly: true,
+			expectedProxyHitCount:           0,
+		},
+		{
+			name:                            "proxy enabled for only get upload url requests - proxy url is set",
+			config:                          config,
+			outboundProxySet:                true,
+			useProxyForGettingUploadURLOnly: true,
+			expectedProxyHitCount:           1,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err = mockSample.Seek(0, io.SeekStart)
+			if err != nil {
+				t.Error(err)
+			}
+			proxy, actualProxyHitCount := newProxySpy()
+			defer proxy.Close()
+
+			proxyURL, err := url.Parse(proxy.URL)
+			if err != nil {
+				t.Error(err)
+			}
+			tc.config.UseProxyForGettingUploadURLOnly = tc.useProxyForGettingUploadURLOnly
+			if tc.outboundProxySet {
+				tc.config.ProxyURL = *proxyURL
+			}
+
+			mockClient, err := client.NewHTTPMetricClient(tc.config)
+			if err != nil {
+				t.Error(err)
+			}
+
+			err = mockClient.SendMetricSample(mockSample, "version", "uid")
+			if err != nil {
+				t.Error(err)
+			}
+
+			if *actualProxyHitCount != tc.expectedProxyHitCount {
+				t.Errorf("Actual proxy hits: %d, expected: %d", actualProxyHitCount, tc.expectedProxyHitCount)
+			}
+		})
+	}
+}
+
+func newProxySpy() (*httptest.Server, *int32) {
+	hitCounter := int32(0)
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hitCounter, 1)
+		req, err := http.NewRequest(r.Method, r.URL.String(), r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		req.Header = r.Header.Clone()
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
+		_, err = io.Copy(w, resp.Body)
+		w.WriteHeader(http.StatusOK)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}))
+	return proxy, &hitCounter
+}
+
+func newURLServer(t *testing.T, uploadURL string) *httptest.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/metricsample", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Add("Content-type", "application/json")
+		_, err := fmt.Fprintf(w, `{"Location":"%s"}`, uploadURL)
+		if err != nil {
+			t.Error(err)
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	return httptest.NewServer(mux)
+}
+
+func newUploadServer() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
 }
