@@ -447,7 +447,7 @@ func BuildProxyFunc(cfg Configuration) func(*http.Request) (*url.URL, error) {
 			return nil, nil
 		}
 
-		// else return proxy for both requests
+		// proxy enabled for both requests
 		return &cfg.ProxyURL, nil
 	}
 }

@@ -689,8 +689,11 @@ func Test_SendMetrics_ProxyScenarios(t *testing.T) {
 	defer urlServer.Close()
 
 	mockSample, err := os.CreateTemp("", "metricsample")
+	if err != nil {
+		t.Error(err)
+	}
 	defer func(name string) {
-		err := os.Remove(name)
+		err = os.Remove(name)
 		if err != nil {
 			t.Error(err)
 		}
@@ -708,39 +711,39 @@ func Test_SendMetrics_ProxyScenarios(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name                        string
-		config                      client.Configuration
-		outboundProxySet            bool
-		useProxyForGettingUploadURL bool
-		expectedProxyHitCount       int32
+		name                            string
+		config                          client.Configuration
+		outboundProxySet                bool
+		useProxyForGettingUploadURLOnly bool
+		expectedProxyHitCount           int32
 	}{
 		{
-			name:                        "no proxy",
-			config:                      config,
-			outboundProxySet:            false,
-			useProxyForGettingUploadURL: false,
-			expectedProxyHitCount:       0,
+			name:                            "no proxy",
+			config:                          config,
+			outboundProxySet:                false,
+			useProxyForGettingUploadURLOnly: false,
+			expectedProxyHitCount:           0,
 		},
 		{
-			name:                        "proxy enabled for both requests",
-			config:                      config,
-			outboundProxySet:            true,
-			useProxyForGettingUploadURL: false,
-			expectedProxyHitCount:       2,
+			name:                            "proxy enabled for both requests",
+			config:                          config,
+			outboundProxySet:                true,
+			useProxyForGettingUploadURLOnly: false,
+			expectedProxyHitCount:           2,
 		},
 		{
-			name:                        "proxy enabled for only get upload url requests - proxy url not set",
-			config:                      config,
-			outboundProxySet:            false,
-			useProxyForGettingUploadURL: true,
-			expectedProxyHitCount:       0,
+			name:                            "proxy enabled for only get upload url requests - proxy url not set",
+			config:                          config,
+			outboundProxySet:                false,
+			useProxyForGettingUploadURLOnly: true,
+			expectedProxyHitCount:           0,
 		},
 		{
-			name:                        "proxy enabled for only get upload url requests - proxy url is set",
-			config:                      config,
-			outboundProxySet:            true,
-			useProxyForGettingUploadURL: true,
-			expectedProxyHitCount:       1,
+			name:                            "proxy enabled for only get upload url requests - proxy url is set",
+			config:                          config,
+			outboundProxySet:                true,
+			useProxyForGettingUploadURLOnly: true,
+			expectedProxyHitCount:           1,
 		},
 	}
 	for _, tc := range testCases {
@@ -756,7 +759,7 @@ func Test_SendMetrics_ProxyScenarios(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			tc.config.UseProxyForGettingUploadURLOnly = tc.useProxyForGettingUploadURL
+			tc.config.UseProxyForGettingUploadURLOnly = tc.useProxyForGettingUploadURLOnly
 			if tc.outboundProxySet {
 				tc.config.ProxyURL = *proxyURL
 			}
@@ -779,9 +782,9 @@ func Test_SendMetrics_ProxyScenarios(t *testing.T) {
 }
 
 func newProxySpy() (*httptest.Server, *int32) {
-	counter := int32(0)
+	hitCounter := int32(0)
 	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&counter, 1)
+		atomic.AddInt32(&hitCounter, 1)
 		req, err := http.NewRequest(r.Method, r.URL.String(), r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -801,12 +804,12 @@ func newProxySpy() (*httptest.Server, *int32) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}))
-	return proxy, &counter
+	return proxy, &hitCounter
 }
 
 func newURLServer(t *testing.T, uploadURL string) *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/metricsample", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/metricsample", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-type", "application/json")
 		_, err := fmt.Fprintf(w, `{"Location":"%s"}`, uploadURL)
 		if err != nil {
@@ -818,7 +821,7 @@ func newURLServer(t *testing.T, uploadURL string) *httptest.Server {
 }
 
 func newUploadServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 }
