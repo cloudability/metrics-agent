@@ -90,7 +90,7 @@ type KubeAgentConfig struct {
 	UploadRegion                    string
 	CustomS3UploadBucket            string
 	CustomS3Region                  string
-	APIKeyFilepath         string
+	APIKeyFilepath                  string
 }
 
 const uploadInterval time.Duration = 10

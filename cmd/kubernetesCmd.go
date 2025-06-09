@@ -222,7 +222,7 @@ func init() {
 		UploadRegion:                    viper.GetString("upload_region"),
 		CustomS3UploadBucket:            viper.GetString("custom_s3_bucket"),
 		CustomS3Region:                  viper.GetString("custom_s3_region"),
-		APIKeyFilepath:         viper.GetString("api_key_filepath"),
+		APIKeyFilepath:                  viper.GetString("api_key_filepath"),
 	}
 
 }
