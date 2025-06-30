@@ -53,20 +53,20 @@ var /* const */ validToken = regexp.MustCompile(`^\w+$`)
 
 // Configuration represents configurable values for the Cloudability Client
 type Configuration struct {
-	Timeout       time.Duration
-	Token         string
-	MaxRetries    int
-	BaseURL       string
-	ProxyURL      url.URL
-	ProxyAuth     string
-	ProxyInsecure bool
-	Verbose       bool
-	Region        string
+	Timeout                         time.Duration
+	Token                           string
+	MaxRetries                      int
+	BaseURL                         string
+	ProxyURL                        url.URL
+	ProxyAuth                       string
+	ProxyInsecure                   bool
+	UseProxyForGettingUploadURLOnly bool
+	Verbose                         bool
+	Region                          string
 }
 
 // NewHTTPMetricClient will configure a new instance of a Cloudability client.
 func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
-
 	if !validToken.MatchString(cfg.Token) {
 		return nil, errors.New("token format is invalid (only alphanumeric are allowed). Please check you " +
 			"are using your Containers Insights API Key (not Frontdoor). This can be found in the YAML after " +
@@ -109,7 +109,7 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 
 		netTransport = &http.Transport{
 			Dial:                (&net.Dialer{Timeout: cfg.Timeout}).Dial,
-			Proxy:               http.ProxyURL(&cfg.ProxyURL),
+			Proxy:               BuildProxyFunc(cfg),
 			ProxyConnectHeader:  ConnectHeader,
 			TLSHandshakeTimeout: cfg.Timeout,
 			TLSClientConfig: &tls.Config{
@@ -433,5 +433,25 @@ func GetUploadURLByRegion(region string) string {
 	default:
 		log.Warnf("Region %s is not supported. Defaulting to us-west-2 region.", region)
 		return DefaultBaseURL
+	}
+}
+
+func BuildProxyFunc(cfg Configuration) func(*http.Request) (*url.URL, error) {
+	return func(request *http.Request) (*url.URL, error) {
+		// outbound proxy not set
+		if cfg.ProxyURL.Host == "" {
+			return nil, nil
+		}
+
+		if cfg.UseProxyForGettingUploadURLOnly {
+			// agent configured to only use proxy for GetUploadURL requests
+			if request.URL.Path == "/metricsample" {
+				return &cfg.ProxyURL, nil
+			}
+			return nil, nil
+		}
+
+		// proxy enabled for both requests
+		return &cfg.ProxyURL, nil
 	}
 }
