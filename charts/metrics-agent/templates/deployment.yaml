@@ -65,7 +65,7 @@ spec:
       volumes:
         - name: api-key-volume
           secret:
-            secretName: {{ include "metrics-agent.fullname" . }}
+            secretName: {{- if not .Values.secretName }} {{ include "metrics-agent.fullname" . }} {{- else }} {{ .Values.secretName }} {{- end }}
         {{- if .Values.volumes }}
           {{- toYaml .Values.volumes | nindent 8 }}
         {{- end }}
