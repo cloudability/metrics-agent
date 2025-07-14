@@ -50,7 +50,17 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.1.0
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          export CR_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          owner=$(cut -d '/' -f 1 <<< "$GITHUB_REPOSITORY")
+          repo=$(cut -d '/' -f 2 <<< "$GITHUB_REPOSITORY")
+          
+          release=1.8.1
+          filename=chart-releaser_1.8.1_linux_amd64.tar.gz
+          wget https://github.com/helm/chart-releaser/releases/download/v${release}/${filename}
+          cosign verify-blob --certificate-oidc-issuer "https://token.actions.githubusercontent.com" --certificate-identity https://github.com/helm/chart-releaser/.github/workflows/release.yaml@refs/tags/v${release} --cert https://github.com/helm/chart-releaser/releases/download/v${release}/${filename}.pem --signature https://github.com/helm/chart-releaser/releases/download/v${release}/${filename}.sig $filename
+          tar -xf $filename cr
+          ./cr package charts/metrics-agent
+          ./cr upload --owner "$owner" --git-repo "$repo" --packages-with-index --push --skip-existing
+          ./cr index --owner "$owner" --git-repo "$repo" --packages-with-index --index-path . --push
 
