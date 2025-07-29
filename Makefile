@@ -5,7 +5,7 @@ EXEC_CHECK := $(foreach exec,$(EXECUTABLES), \
 
 GOLANG_VERSION?=1.23
 REPO_DIR:=$(shell pwd)
-PREFIX=cloudability
+PREFIX=localhost/cloudability
 CLDY_API_KEY=${CLOUDABILITY_API_KEY}
 PLATFORM?=linux/amd64
 PLATFORM_TAG?=amd64
@@ -140,6 +140,9 @@ version:
 release-version:
 	@echo $(RELEASE-VERSION)
 
+test-e2e-1.33: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.33.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
+
 test-e2e-1.32: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.32.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
@@ -149,9 +152,6 @@ test-e2e-1.31: container-build-single-platform install-tools
 test-e2e-1.30: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.30.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-1.29: container-build-single-platform install-tools
-	$(call TEST_KUBERNETES,v1.29.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
-
-test-e2e-all: test-e2e-1.32 test-e2e-1.31 test-e2e-1.30 test-e2e-1.29
+test-e2e-all: test-e2e-1.33 test-e2e-1.32 test-e2e-1.31 test-e2e-1.30
 
 .PHONY: test version
