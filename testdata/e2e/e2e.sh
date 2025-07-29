@@ -38,8 +38,13 @@ setup_kind() {
     i=0
     until [ $i -ge 5 ]
     do
-      podman save ${IMAGE} -o test.tar
-      kind load image-archive test.tar --name e2e-${KUBERNETES_VERSION} && echo "${IMAGE} image added to cluster" && break
+      if [ "$OS" = "Darwin" ]; then
+        podman save ${IMAGE} -o test.tar
+        kind load image-archive test.tar --name e2e-${KUBERNETES_VERSION} && echo "${IMAGE} image added to cluster" && break
+        rm test.tar
+      else
+        kind load docker-image ${IMAGE} --name e2e-${KUBERNETES_VERSION} && echo "${IMAGE} image added to cluster" && break
+      fi
       n=$[$i+1]
       sleep 15
     done
