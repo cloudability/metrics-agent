@@ -92,12 +92,12 @@ wait_for_metrics() {
 
 get_sample_data(){
   echo "Waiting for agent data collection check: docker cp e2e-${KUBERNETES_VERSION}-control-plane:/tmp ${WORKINGDIR}"
-  sleep 30
+  sleep 60
   if [ "${CI}" = "true" ]; then
     POD=$(${CI_KUBECTL} get pod -n cloudability -l app=metrics-agent -o jsonpath="{.items[0].metadata.name}")
     echo "pod is $POD"
     ${CI_KUBECTL} cp cloudability/${POD}:/tmp /root/export
-    sleep 10
+    sleep 30
     docker cp e2e-${KUBERNETES_VERSION}-control-plane:/root/export ${WORKINGDIR}
   else
     POD=$(kubectl get pod -n cloudability -l app=metrics-agent -o jsonpath="{.items[0].metadata.name}")
