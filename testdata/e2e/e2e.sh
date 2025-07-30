@@ -40,8 +40,7 @@ setup_kind() {
     do
       if [ "$OS" = "Darwin" ]; then
         podman save ${IMAGE} -o test.tar
-        kind load image-archive test.tar --name e2e-${KUBERNETES_VERSION} && echo "${IMAGE} image added to cluster" && break
-        rm test.tar
+        kind load image-archive test.tar --name e2e-${KUBERNETES_VERSION} && echo "${IMAGE} image added to cluster" && rm test.tar && break
       else
         kind load docker-image ${IMAGE} --name e2e-${KUBERNETES_VERSION} && echo "${IMAGE} image added to cluster" && break
       fi
