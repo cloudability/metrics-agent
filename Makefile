@@ -152,6 +152,9 @@ test-e2e-1.31: container-build-single-platform install-tools
 test-e2e-1.30: container-build-single-platform install-tools
 	$(call TEST_KUBERNETES,v1.30.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
 
-test-e2e-all: test-e2e-1.33 test-e2e-1.32 test-e2e-1.31 test-e2e-1.30
+test-e2e-1.29: container-build-single-platform install-tools
+	$(call TEST_KUBERNETES,v1.29.0,$(PREFIX),$(VERSION)-$(PLATFORM_TAG))
+
+test-e2e-all: test-e2e-1.32 test-e2e-1.31 test-e2e-1.30 test-e2e-1.29
 
 .PHONY: test version
