@@ -66,14 +66,14 @@ deploy(){
     ${CI_KUBECTL} -n cloudability patch deployment metrics-agent --patch "{\"spec\": {\"template\": {\"spec\": {\"containers\": [{${CONTAINER}, ${ENVS} }]}}}}"
     sleep 10
     ${CI_KUBECTL} create ns stress
-    ${CI_KUBECTL} -n stress run stress --labels=app=stress --image=jfusterm/stress -- --cpu 50 --vm 1 --vm-bytes 127m
+    ${CI_KUBECTL} -n stress run stress --labels=app=stress --image=nginx
   else
     kubectl apply -f deploy/kubernetes/cloudability-metrics-agent.yaml
     kubectl -n cloudability patch deployment metrics-agent --patch \
   "{\"spec\": {\"template\": {\"spec\": {\"containers\": [{${CONTAINER}, ${ENVS} }]}}}}"
     sleep 10
     kubectl create ns stress
-    kubectl -n stress run stress --labels=app=stress --image=jfusterm/stress -- --cpu 50 --vm 1 --vm-bytes 127m
+    kubectl -n stress run stress --labels=app=stress --image=nginx
   fi
 }
 
@@ -97,12 +97,12 @@ get_sample_data(){
     POD=$(${CI_KUBECTL} get pod -n cloudability -l app=metrics-agent -o jsonpath="{.items[0].metadata.name}")
     echo "pod is $POD"
     ${CI_KUBECTL} cp cloudability/${POD}:/tmp /root/export
-    sleep 30
+    sleep 10
     docker cp e2e-${KUBERNETES_VERSION}-control-plane:/root/export ${WORKINGDIR}
   else
     POD=$(kubectl get pod -n cloudability -l app=metrics-agent -o jsonpath="{.items[0].metadata.name}")
     echo "pod is $POD"
-    sleep 30
+    sleep 10
     kubectl cp cloudability/$POD:/tmp ${WORKINGDIR}
   fi
 }
