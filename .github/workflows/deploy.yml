@@ -44,6 +44,10 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.9.2
+      - name: Check cosign install
+        uses: cosign version
 
       - name: Configure Git
         run: |
