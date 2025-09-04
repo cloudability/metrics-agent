@@ -558,6 +558,18 @@ func Test_getUploadURLByRegion(t *testing.T) {
 	if uploadURL != client.MEBaseURL {
 		t.Error("ME URL was not generated correctly")
 	}
+	uploadURL = client.GetUploadURLByRegion("ap-northeast-1")
+	if uploadURL != client.JPBaseURL {
+		t.Error("JP URL was not generated correctly")
+	}
+	uploadURL = client.GetUploadURLByRegion("ap-south-1")
+	if uploadURL != client.INBaseURL {
+		t.Error("IN URL was not generated correctly")
+	}
+	uploadURL = client.GetUploadURLByRegion("ap-southeast-1")
+	if uploadURL != client.SGBaseURL {
+		t.Error("SG URL was not generated correctly")
+	}
 	uploadURL = client.GetUploadURLByRegion("us-gov-west-1")
 	if uploadURL != client.GovBaseURL {
 		t.Error("Gov URL was not generated correctly")
