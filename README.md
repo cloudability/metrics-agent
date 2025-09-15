@@ -20,7 +20,7 @@ Kubernetes versions 1.33 and below are supported by the metrics agent on AWS clo
 
 ### OpenShift Versions
 
-OpenShift versions 4.17 to 4.12 are supported by the metrics agent on ROSA.
+OpenShift versions 4.18 to 4.12 are supported by the metrics agent on ROSA.
 
 #### Architectures
 
