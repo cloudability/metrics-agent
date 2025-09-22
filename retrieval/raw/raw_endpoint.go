@@ -133,7 +133,7 @@ func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL 
 
 	_, err = io.Copy(rawRespFile, resp.Body)
 	if err != nil {
-		return filename, fmt.Errorf("error writing file: %s", rawRespFile.Name())
+		return filename, fmt.Errorf("error writing file: %s with error: %s", rawRespFile.Name(), err)
 	}
 
 	return filename, rerr
@@ -156,7 +156,7 @@ func parseAndWriteData(filename string, reader io.Reader, writer io.Writer) erro
 	}
 	_, err = io.Copy(writer, bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf("error writing file: %s", filename)
+		return fmt.Errorf("error writing file: %s with error: %s", filename, err)
 	}
 	return nil
 }
