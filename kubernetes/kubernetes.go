@@ -767,7 +767,7 @@ func handleNodeSourceError(err error) string {
 	if strings.Contains(err.Error(), "Please verify RBAC roles") {
 		nodeError = rbacError
 	}
-	errStr := "warning non-fatal error: Agent error occurred verifying node source metrics: %v\n" +
+	errStr := "Warning non-fatal error: Agent error occurred verifying node source metrics: %v\n" +
 		"For more information see: %s"
 	return nodeError + fmt.Sprintf(errStr, err, kbTroubleShootingURL)
 }
