@@ -133,9 +133,9 @@ func downloadNodeData(ctx context.Context, prefix string, config KubeAgentConfig
 		wg.Add(1)
 		go func(currentNode v1.Node) {
 			if currentNode.Spec.ProviderID == "" {
-				errMessage := "node ProviderID is not set which may be because the node is running in a " +
+				errMessage := "Node ProviderID is not set which may be because the node is running in a " +
 					"self managed environment, and this may cause inconsistent gathering of metrics data."
-				log.Warnf(errMessage)
+				log.Warnf("%s", errMessage)
 				m.Lock()
 				failedNodeList[currentNode.Name] = errors.New("provider ID for node does not exist. " +
 					"If this condition persists it will cause inconsistent cluster allocation")

@@ -109,11 +109,11 @@ const forbiddenError string = uploadURIError + ": 403"
 const uploadURIError string = "Error retrieving upload URI"
 
 // nolint lll
-const transportError string = `network transport issues are potentially blocking the agent from contacting the metrics collection API.
+const transportError string = `Network transport issues are potentially blocking the agent from contacting the metrics collection API.
 	Please confirm that the metrics-agent is able to establish a connection to: %s`
 
 // nolint lll
-const apiKeyError string = `current Cloudability API Key is expired and access needs to be re-enabled before re-provisioning the metrics-agent as detailed here: %s.
+const apiKeyError string = `Current Cloudability API Key is expired and access needs to be re-enabled before re-provisioning the metrics-agent as detailed here: %s.
 	Please contact support to re-activate the API keys.
 	Note: Be sure to use the exact same cluster name as what is currently in use.
 	***IMPORTANT*** If the cluster is managed by GKE - there are special instructions for provisioning.`
@@ -472,7 +472,7 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 	err = SendData(metricSample, ka.clusterUID, cldyMetricClient)
 	if err != nil {
 		if warnErr := handleError(err, ka.UploadRegion); warnErr != "" {
-			log.Warnf(warnErr)
+			log.Warnf("%s", warnErr)
 		}
 		log.Fatalf("error sending metrics: %v", err)
 	}
@@ -746,7 +746,7 @@ func downloadBaselineMetricExport(ctx context.Context, config KubeAgentConfig, n
 func ensureMetricServicesAvailable(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {
 	config, err := ensureNodeSource(ctx, config)
 	if err != nil {
-		log.Warnf(handleNodeSourceError(err))
+		log.Warnf("%s", handleNodeSourceError(err))
 	} else {
 		log.Infof("Node summaries connection method: %s", config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
 	}
