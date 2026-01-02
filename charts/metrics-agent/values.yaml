@@ -30,7 +30,7 @@ uploadRegion: "us-west-2"
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.14.7
+  tag: 2.14.8
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -112,8 +112,8 @@ podAnnotations: {}
 #    name: tmp
 readOnlyRootFilesystem: false
 
-drop: 
-- ALL
+drop:
+  - ALL
 
 # Extra K8s manifests to deploy,
 # NOTE: not all various extraObject deployment configurations are tested/supported. When adding extra resources
