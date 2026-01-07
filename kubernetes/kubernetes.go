@@ -472,7 +472,7 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 	err = SendData(metricSample, ka.clusterUID, cldyMetricClient)
 	if err != nil {
 		if warnErr := handleError(err, ka.UploadRegion); warnErr != "" {
-			log.Warnf(warnErr)
+			log.Warnf("%s", warnErr)
 		}
 		log.Fatalf("error sending metrics: %v", err)
 	}
@@ -746,7 +746,7 @@ func downloadBaselineMetricExport(ctx context.Context, config KubeAgentConfig, n
 func ensureMetricServicesAvailable(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {
 	config, err := ensureNodeSource(ctx, config)
 	if err != nil {
-		log.Warnf(handleNodeSourceError(err))
+		log.Warnf("%s", handleNodeSourceError(err))
 	} else {
 		log.Infof("Node summaries connection method: %s", config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
 	}
