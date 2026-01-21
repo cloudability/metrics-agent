@@ -37,6 +37,7 @@ const MEBaseURL string = "https://metrics-collector-me.cloudability.com/metricsa
 const INBaseURL string = "https://metrics-collector-in.cloudability.com/metricsample"
 const JPBaseURL string = "https://metrics-collector-jp.cloudability.com/metricsample"
 const SGBaseURL string = "https://metrics-collector-sg.cloudability.com/metricsample"
+const CABaseURL string = "https://metrics-collector-ca.cloudability.com/metricsample"
 const GovBaseURL string = "https://metrics-collector-production-gov.cloudability.com/metricsample"
 const StagingBaseURL string = "https://metrics-collector-staging.cloudability.com/metricsample"
 const defaultTimeout = 1 * time.Minute
@@ -435,6 +436,8 @@ func GetUploadURLByRegion(region string) string {
 		return INBaseURL
 	case "ap-southeast-1":
 		return SGBaseURL
+	case "ca-central-1":
+		return CABaseURL
 	case "us-gov-west-1":
 		return GovBaseURL
 	case "us-west-2-staging":
