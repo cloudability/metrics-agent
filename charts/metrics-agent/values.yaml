@@ -63,6 +63,10 @@ rbac:
 # For agent configuration options, see https://github.com/cloudability/metrics-agent/blob/master/README.md
 extraEnv: []
 
+# Leverage a PriorityClass to ensure the pod survive resource shortages
+# ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+priorityClassName: ""
+
 securityContext:
   runAsUser: 10000
 
