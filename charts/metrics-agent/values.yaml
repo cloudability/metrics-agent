@@ -59,6 +59,8 @@ serviceAccount:
 # rbac.create: true is required
 rbac:
   create: true
+  clusterRole:
+    allowKubeProxy: true
 
 # For agent configuration options, see https://github.com/cloudability/metrics-agent/blob/master/README.md
 extraEnv: []
