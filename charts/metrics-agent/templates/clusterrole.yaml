@@ -33,7 +33,9 @@ rules:
   resources:
   - "services/proxy"
   - "pods/proxy"
+{{- if .Values.rbac.clusterRole.allowKubeProxy }}
   - "nodes/proxy"
+{{- end }}
   - "nodes/stats"
   verbs:
   - "get"

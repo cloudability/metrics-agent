@@ -30,7 +30,7 @@ uploadRegion: "us-west-2"
 
 image:
   name: cloudability/metrics-agent
-  tag: 2.14.11
+  tag: 2.14.12
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -59,6 +59,8 @@ serviceAccount:
 # rbac.create: true is required
 rbac:
   create: true
+  clusterRole:
+    allowKubeProxy: true
 
 # For agent configuration options, see https://github.com/cloudability/metrics-agent/blob/master/README.md
 extraEnv: []
