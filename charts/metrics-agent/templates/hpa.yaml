@@ -1,0 +1,14 @@
+{{- if .Values.hpa.enabled }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "metrics-agent.fullname" . }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "metrics-agent.fullname" . }}
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  targetCPUUtilizationPercentage: {{ .Values.hpa.targetCPUUtilizationPercentage }}
+{{- end }}
