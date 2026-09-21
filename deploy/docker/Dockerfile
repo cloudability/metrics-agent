@@ -13,7 +13,7 @@ ENV GOOS=linux
 COPY . /go/src/${package}
 RUN go build
 
-FROM alpine:3.24.1
+FROM alpine:3.24.2
 ARG package
 ARG application
 
