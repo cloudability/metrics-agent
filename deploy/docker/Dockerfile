@@ -19,7 +19,7 @@ ARG application
 
 
 # Allow delve to run on Alpine based containers.
-RUN apk --update upgrade && apk add ca-certificates && apk add curl
+RUN apk --update upgrade && apk add --no-cache ca-certificates && apk add --no-cache curl
 
 # Remove unnecessary netcat tool
 RUN apk del netcat-openbsd && apk del netcat-openbsd-doc && rm /var/cache/apk/* && rm /usr/bin/nc
