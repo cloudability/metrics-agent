@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	_ "strconv"
 	"testing"
 	"time"
 
@@ -233,7 +232,7 @@ func TestCreateMetricSample(t *testing.T) {
 			if err != nil {
 				t.Error("unable to open gzip'ed file. ")
 			}
-			defer tgz.Close()
+			defer func() { _ = tgz.Close() }()
 
 			// clean up
 			_ = os.Remove("/tmp/" + filepath.Base(testDataDirectory) + ".tgz")
@@ -279,6 +278,86 @@ func TestCreateMetricSample(t *testing.T) {
 		}
 	})
 }
+
+func TestSafeJoin(t *testing.T) {
+	base := t.TempDir()
+
+	t.Run("valid join returns path inside base", func(t *testing.T) {
+		got, err := SafeJoin(base, "child.txt")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := filepath.Join(base, "child.txt")
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("path traversal via dotdot is rejected", func(t *testing.T) {
+		_, err := SafeJoin(base, "../../etc/passwd")
+		if err == nil {
+			t.Error("expected error for path traversal, got nil")
+		}
+	})
+
+	t.Run("absolute elem is absorbed into base by filepath.Join and accepted", func(t *testing.T) {
+		// filepath.Join(base, "/sub/file.txt") on Unix resolves to base+"/sub/file.txt"
+		// which is still inside base — not a traversal. The real absolute-path escape
+		// is when the joined result lands outside base, which dotdot achieves.
+		got, err := SafeJoin(base, "/sub/file.txt")
+		if err != nil {
+			t.Errorf("unexpected error for absolute-but-safe elem: %v", err)
+		}
+		want := filepath.Join(base, "sub", "file.txt")
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("empty elem returns base itself without error", func(t *testing.T) {
+		got, err := SafeJoin(base, "")
+		if err != nil {
+			t.Errorf("unexpected error for empty elem: %v", err)
+		}
+		if got != filepath.Clean(base) {
+			t.Errorf("got %q, want %q", got, filepath.Clean(base))
+		}
+	})
+
+	t.Run("dot elem returns base itself without error", func(t *testing.T) {
+		got, err := SafeJoin(base, ".")
+		if err != nil {
+			t.Errorf("unexpected error for dot elem: %v", err)
+		}
+		if got != filepath.Clean(base) {
+			t.Errorf("got %q, want %q", got, filepath.Clean(base))
+		}
+	})
+
+	t.Run("trailing slash in base is normalised and child is accepted", func(t *testing.T) {
+		got, err := SafeJoin(base+string(filepath.Separator), "child.txt")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := filepath.Join(base, "child.txt")
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("multi-level child path is accepted", func(t *testing.T) {
+		got, err := SafeJoin(base, "a/b/c.txt")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := filepath.Join(base, "a", "b", "c.txt")
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+
 
 // nolint: gosec
 func TestMatchOneFile(t *testing.T) {

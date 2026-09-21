@@ -105,7 +105,7 @@ func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL 
 
 	defer util.SafeClose(resp.Body.Close, &rerr)
 
-	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return filename, fmt.Errorf("invalid response %s", strconv.Itoa(resp.StatusCode))
 	}
 
@@ -199,37 +199,31 @@ func sanitizeData(to interface{}) interface{} {
 }
 
 func sanitizeNamespaceData(to interface{}) interface{} {
-	cast := to.(NamespaceList)
+	cast, _ := to.(NamespaceList)
 	for i := range cast.Items {
-		cast.Items[i].ObjectMeta.ManagedFields = nil
+		cast.Items[i].ManagedFields = nil
 	}
 	return cast
 }
 
-// nolint:gosimple
 func sanitizeSelectorMatchedResourceList(to interface{}) interface{} {
-	cast := to.(LabelSelectorMatchedResourceList)
+	cast, _ := to.(LabelSelectorMatchedResourceList)
 	for i := range cast.Items {
 
 		// stripping env var and related data from the object
-		cast.Items[i].ObjectMeta.ManagedFields = nil
-		if _, ok := cast.Items[i].ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-			delete(cast.Items[i].ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-		}
+		cast.Items[i].ManagedFields = nil
+		delete(cast.Items[i].Annotations, KubernetesLastAppliedConfig)
 	}
 	return cast
 }
 
-// nolint: gosimple
 func sanitizePodList(to interface{}) interface{} {
-	cast := to.(PodList)
+	cast, _ := to.(PodList)
 	for i := range cast.Items {
 
 		// stripping env var and related data from the object
-		cast.Items[i].ObjectMeta.ManagedFields = nil
-		if _, ok := cast.Items[i].ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-			delete(cast.Items[i].ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-		}
+		cast.Items[i].ManagedFields = nil
+		delete(cast.Items[i].Annotations, KubernetesLastAppliedConfig)
 		for j, container := range cast.Items[i].Spec.Containers {
 			cast.Items[i].Spec.Containers[j] = sanitizeContainer(container)
 		}
@@ -254,16 +248,13 @@ func sanitizeContainer(container v1.Container) v1.Container {
 	return container
 }
 
-// nolint: gosimple
 func sanitizeMapMatchedResourceList(to interface{}) interface{} {
-	cast := to.(LabelMapMatchedResourceList)
+	cast, _ := to.(LabelMapMatchedResourceList)
 	for i := range cast.Items {
 
 		// stripping env var and related data from the object
-		cast.Items[i].ObjectMeta.ManagedFields = nil
-		if _, ok := cast.Items[i].ObjectMeta.Annotations[KubernetesLastAppliedConfig]; ok {
-			delete(cast.Items[i].ObjectMeta.Annotations, KubernetesLastAppliedConfig)
-		}
+		cast.Items[i].ManagedFields = nil
+		delete(cast.Items[i].Annotations, KubernetesLastAppliedConfig)
 		cast.Items[i].Finalizers = nil
 	}
 	return cast

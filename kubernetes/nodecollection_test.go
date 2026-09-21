@@ -444,7 +444,7 @@ func TestFargateNodeDetection(t *testing.T) {
 
 	t.Run("Fargate node returns true", func(t *testing.T) {
 		// add Fargate-identifying labels
-		n.ObjectMeta.Labels = fargateLabels
+		n.Labels = fargateLabels
 		if !isFargateNode(n) {
 			t.Errorf("Should have identified node as Fargate")
 		}

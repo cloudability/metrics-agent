@@ -813,7 +813,7 @@ func newProxySpy() (*httptest.Server, *int32) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		_, err = io.Copy(w, resp.Body)
 		w.WriteHeader(http.StatusOK)
 		if err != nil {

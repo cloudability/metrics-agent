@@ -23,6 +23,18 @@ import (
 // ErrEmptyDataDir error to indicate the data directory is empty
 var ErrEmptyDataDir = errors.New("empty data directory")
 
+// SafeJoin joins base and elem with filepath.Join and returns an error if the
+// result does not reside inside base (at any depth), guarding against path
+// traversal. elem may be empty or "." to refer to base itself.
+func SafeJoin(base, elem string) (string, error) {
+	cleanBase := filepath.Clean(base)
+	result := filepath.Join(cleanBase, elem)
+	if result != cleanBase && !strings.HasPrefix(result, cleanBase+string(filepath.Separator)) {
+		return "", fmt.Errorf("path %q escapes base directory %q", result, cleanBase)
+	}
+	return result, nil
+}
+
 // IsValidURL returns true if string is a valid URL
 func IsValidURL(toTest string) bool {
 	_, err := url.ParseRequestURI(toTest)
@@ -106,7 +118,11 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scrat
 	}
 
 	sampleFilename := getExportFilename(uid)
-	destFile, err := os.Create(scratchDir + "/" + sampleFilename + ".tgz")
+	destPath, err := SafeJoin(scratchDir, sampleFilename+".tgz")
+	if err != nil {
+		return nil, fmt.Errorf("metric sample file path escapes scratch directory: %w", err)
+	}
+	destFile, err := os.Create(destPath)
 
 	if err != nil {
 		log.Errorf("Unable to create metric sample file: %v", err)
@@ -122,7 +138,7 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scrat
 
 	// cleanup directory after creating the sample
 	if cleanUp {
-		err = removeDirectoryContents(exportDirectory.Name() + "/")
+		err = removeDirectoryContents(exportDirectory.Name())
 	}
 
 	if err != nil {
@@ -221,7 +237,11 @@ func CreateMSWorkingDirectory(uid string, scratchDir string) (*os.File, error) {
 
 	t := time.Now().UTC()
 
-	ed := td + "/" + uid + "_" + t.Format("20060102150405")
+	ed, err := SafeJoin(td, uid+"_"+t.Format("20060102150405"))
+	if err != nil {
+		log.Errorf("Metric sample export directory path escapes scratch directory: %v", err)
+		return nil, err
+	}
 
 	err = os.MkdirAll(ed, os.ModePerm)
 	if err != nil {
