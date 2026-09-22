@@ -13,13 +13,13 @@ ENV GOOS=linux
 COPY . /go/src/${package}
 RUN go build
 
-FROM alpine:3.24.1
+FROM alpine:3.24.2
 ARG package
 ARG application
 
 
 # Allow delve to run on Alpine based containers.
-RUN apk --update upgrade && apk add ca-certificates && apk add curl
+RUN apk --update upgrade && apk add --no-cache ca-certificates && apk add --no-cache curl
 
 # Remove unnecessary netcat tool
 RUN apk del netcat-openbsd && apk del netcat-openbsd-doc && rm /var/cache/apk/* && rm /usr/bin/nc
