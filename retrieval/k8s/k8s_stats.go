@@ -97,7 +97,8 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 func writeK8sResourceFile(workDir *os.File, resourceName string,
 	resourceList []interface{}) (rerr error) {
 
-	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl",
+	// G304: workDir is from MkdirTemp; resourceName is an internal informer map key, not user input
+	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl", //nolint:gosec
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return errors.New("error: unable to create kubernetes metric file")

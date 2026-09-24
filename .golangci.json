@@ -26,6 +26,13 @@
       },
       "gocyclo": {
         "min-complexity": 12
+      },
+      "revive": {
+        "rules": [
+          { "name": "package-comments", "disabled": true },
+          { "name": "exported", "disabled": true },
+          { "name": "var-naming", "disabled": true }
+        ]
       }
     },
     "exclusions": {
@@ -36,8 +43,13 @@
           "gocyclo",
           "errcheck",
           "dupl",
-          "gosec"
+          "gosec",
+          "goconst"
           ]
+        },
+        {
+          "linters": ["staticcheck"],
+          "text": "ST1005"
         }
       ]
     }

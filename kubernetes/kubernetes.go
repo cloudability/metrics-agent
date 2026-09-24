@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/aws"                  //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/aws/session"          //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/service/s3"           //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/service/s3/s3manager" //nolint:staticcheck // SA1019 is fine here because of legacy support
 	"github.com/cloudability/metrics-agent/client"
 	"github.com/cloudability/metrics-agent/measurement"
 	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"

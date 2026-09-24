@@ -122,7 +122,7 @@ func CreateMetricSample(exportDirectory os.File, uid string, cleanUp bool, scrat
 	if err != nil {
 		return nil, fmt.Errorf("metric sample file path escapes scratch directory: %w", err)
 	}
-	destFile, err := os.Create(destPath)
+	destFile, err := os.Create(destPath) //nolint:gosec // G304: path is constrained by SafeJoin to be within scratchDir
 
 	if err != nil {
 		log.Errorf("Unable to create metric sample file: %v", err)
@@ -243,6 +243,7 @@ func CreateMSWorkingDirectory(uid string, scratchDir string) (*os.File, error) {
 		return nil, err
 	}
 
+	//nolint:gosec // Intentional loose permissions for shared system access
 	err = os.MkdirAll(ed, os.ModePerm)
 	if err != nil {
 		log.Errorf("Error creating metric sample export directory : %v", err)
@@ -291,7 +292,8 @@ func CopyFileContents(dst, src string) (rerr error) {
 
 	defer SafeClose(in.Close, &rerr)
 
-	out, err := os.Create(dst)
+	// G304: dst is derived from SafeJoin or filepath.Base/Dir by all callers, not user-controlled input
+	out, err := os.Create(dst) //nolint:gosec
 	if err != nil {
 		return err
 	}
@@ -370,7 +372,8 @@ func ValidateScratchDir(scratchDir string) error {
 
 // CheckIfDirEmpty checks if a directory is empty, returning an ErrEmptyDataDir error if it is
 func CheckIfDirEmpty(dirname string) (rerr error) {
-	dir, err := os.Open(dirname)
+	// G304: dirname is always an os.File.Name() from MkdirTemp or a validated export directory
+	dir, err := os.Open(dirname) //nolint:gosec
 	if err != nil {
 		return err
 	}

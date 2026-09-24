@@ -142,7 +142,7 @@ func NewTestClientWithNodes(ts *httptest.Server, labels map[string]string, numNo
 			Status: v1.NodeStatus{
 				Addresses: []v1.NodeAddress{
 					{
-						Type:    "InternalIP",
+						Type:    v1.NodeInternalIP,
 						Address: ip,
 					},
 				},
@@ -420,7 +420,7 @@ func TestFargateNodeDetection(t *testing.T) {
 		Status: v1.NodeStatus{
 			Addresses: []v1.NodeAddress{
 				{
-					Type:    "InternalIP",
+					Type:    v1.NodeInternalIP,
 					Address: "1.110.235.222",
 				},
 			},
@@ -622,7 +622,7 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 			Status: v1.NodeStatus{
 				Addresses: []v1.NodeAddress{
 					{
-						Type:    "InternalIP",
+						Type:    v1.NodeInternalIP,
 						Address: ip,
 					},
 				},

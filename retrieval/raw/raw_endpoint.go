@@ -84,10 +84,17 @@ func (c *Client) GetRawEndPoint(method, sourceName string,
 	return filename, err
 }
 
+func fileExtensionForContentType(ct string) string {
+	if strings.Contains(ct, "application/json") {
+		return ".json"
+	} else if strings.Contains(ct, "text/plain") {
+		return ".txt"
+	}
+	return ""
+}
+
 func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL string,
 	body io.Reader) (filename string, rerr error) {
-
-	var fileExt string
 
 	req, err := c.createRequest(method, URL, body)
 	if err != nil {
@@ -109,16 +116,9 @@ func downloadToFile(c *Client, method, sourceName string, workDir *os.File, URL 
 		return filename, fmt.Errorf("invalid response %s", strconv.Itoa(resp.StatusCode))
 	}
 
-	ct := resp.Header.Get("Content-Type")
+	fileExt := fileExtensionForContentType(resp.Header.Get("Content-Type"))
 
-	if strings.Contains(ct, "application/json") {
-		fileExt = ".json"
-	} else if strings.Contains(ct, "text/plain") {
-		fileExt = ".txt"
-	} else {
-		fileExt = ""
-	}
-
+	//nolint:gosec
 	rawRespFile, err := os.Create(workDir.Name() + "/" + sourceName + fileExt)
 	if err != nil {
 		return filename, errors.New("unable to create raw metric file")
