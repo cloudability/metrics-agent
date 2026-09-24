@@ -357,8 +357,6 @@ func TestSafeJoin(t *testing.T) {
 	})
 }
 
-
-
 // nolint: gosec
 func TestMatchOneFile(t *testing.T) {
 	dir := os.TempDir() + "/cldy-test" + strconv.FormatInt(

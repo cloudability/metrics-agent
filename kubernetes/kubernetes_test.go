@@ -281,8 +281,6 @@ func TestUpdateNodeBaselines(t *testing.T) {
 
 }
 
-
-
 // nolint gocyclo
 func TestCollectMetrics(t *testing.T) {
 
