@@ -15,8 +15,7 @@
       "dupl",
       "unconvert",
       "errcheck",
-      "staticcheck",
-      "gofmt"
+      "staticcheck"
     ],
     "settings": {
       "dupl": {
