@@ -142,7 +142,7 @@ func NewTestClientWithNodes(ts *httptest.Server, labels map[string]string, numNo
 			Status: v1.NodeStatus{
 				Addresses: []v1.NodeAddress{
 					{
-						Type:    "InternalIP",
+						Type:    v1.NodeInternalIP,
 						Address: ip,
 					},
 				},
@@ -420,7 +420,7 @@ func TestFargateNodeDetection(t *testing.T) {
 		Status: v1.NodeStatus{
 			Addresses: []v1.NodeAddress{
 				{
-					Type:    "InternalIP",
+					Type:    v1.NodeInternalIP,
 					Address: "1.110.235.222",
 				},
 			},
@@ -444,7 +444,7 @@ func TestFargateNodeDetection(t *testing.T) {
 
 	t.Run("Fargate node returns true", func(t *testing.T) {
 		// add Fargate-identifying labels
-		n.ObjectMeta.Labels = fargateLabels
+		n.Labels = fargateLabels
 		if !isFargateNode(n) {
 			t.Errorf("Should have identified node as Fargate")
 		}
@@ -622,7 +622,7 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 			Status: v1.NodeStatus{
 				Addresses: []v1.NodeAddress{
 					{
-						Type:    "InternalIP",
+						Type:    v1.NodeInternalIP,
 						Address: ip,
 					},
 				},

@@ -97,7 +97,8 @@ func GetK8sMetricsFromInformer(informers map[string]*cache.SharedIndexInformer,
 func writeK8sResourceFile(workDir *os.File, resourceName string,
 	resourceList []interface{}) (rerr error) {
 
-	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl",
+	// G304: workDir is from MkdirTemp; resourceName is an internal informer map key, not user input
+	file, err := os.OpenFile(workDir.Name()+"/"+resourceName+".jsonl", //nolint:gosec
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return errors.New("error: unable to create kubernetes metric file")
@@ -178,11 +179,11 @@ func shouldSkipPod(previousHour time.Time, resource *corev1.Pod) bool {
 // sanitizeData removes information from kubernetes resources for customer security purposes
 // nolint:gocyclo, gosimple
 func sanitizeData(to interface{}) interface{} {
-	switch to.(type) {
+	switch to := to.(type) {
 	case *corev1.Pod:
 		return sanitizePod(to)
 	case *v1apps.DaemonSet:
-		cast := to.(*v1apps.DaemonSet)
+		cast := to
 		cast.Spec.Template = corev1.PodTemplateSpec{}
 		cast.Spec.RevisionHistoryLimit = nil
 		cast.Spec.UpdateStrategy = v1apps.DaemonSetUpdateStrategy{}
@@ -191,14 +192,14 @@ func sanitizeData(to interface{}) interface{} {
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *v1apps.ReplicaSet:
-		cast := to.(*v1apps.ReplicaSet)
+		cast := to
 		cast.Spec.Replicas = nil
 		cast.Spec.Template = corev1.PodTemplateSpec{}
 		cast.Spec.MinReadySeconds = 0
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *v1apps.Deployment:
-		cast := to.(*v1apps.Deployment)
+		cast := to
 		cast.Spec.Template = corev1.PodTemplateSpec{}
 		cast.Spec.Replicas = nil
 		cast.Spec.Strategy = v1apps.DeploymentStrategy{}
@@ -208,7 +209,7 @@ func sanitizeData(to interface{}) interface{} {
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *v1batch.Job:
-		cast := to.(*v1batch.Job)
+		cast := to
 		cast.Spec.Template = corev1.PodTemplateSpec{}
 		cast.Spec.Parallelism = nil
 		cast.Spec.Completions = nil
@@ -221,13 +222,13 @@ func sanitizeData(to interface{}) interface{} {
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *v1batch.CronJob:
-		cast := to.(*v1batch.CronJob)
+		cast := to
 		// cronjobs have no Selector
 		cast.Spec = v1batch.CronJobSpec{}
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *corev1.Service:
-		cast := to.(*corev1.Service)
+		cast := to
 		cast.Spec.Ports = nil
 		cast.Spec.ClusterIP = ""
 		cast.Spec.ClusterIPs = nil
@@ -248,22 +249,22 @@ func sanitizeData(to interface{}) interface{} {
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *corev1.ReplicationController:
-		cast := to.(*corev1.ReplicationController)
+		cast := to
 		cast.Spec.Replicas = nil
 		cast.Spec.Template = nil
 		cast.Spec.MinReadySeconds = 0
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *corev1.PersistentVolume:
-		cast := to.(*corev1.PersistentVolume)
+		cast := to
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *corev1.PersistentVolumeClaim:
-		cast := to.(*corev1.PersistentVolumeClaim)
+		cast := to
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	case *corev1.Node:
-		cast := to.(*corev1.Node)
+		cast := to
 		sanitizeMeta(&cast.ObjectMeta)
 		return cast
 	}
@@ -271,53 +272,43 @@ func sanitizeData(to interface{}) interface{} {
 }
 
 // trimData removes unneeded kubernetes resource fields
-// nolint gocyclo, gosimple
+// nolint gocyclo
 func trimData(to interface{}) interface{} {
-	switch to.(type) {
+	switch to := to.(type) {
 	case *corev1.Pod:
 		return trimPod(to)
 	case *v1apps.DaemonSet:
-		cast := to.(*v1apps.DaemonSet)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *v1apps.ReplicaSet:
-		cast := to.(*v1apps.ReplicaSet)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *v1apps.Deployment:
-		cast := to.(*v1apps.Deployment)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *v1batch.Job:
-		cast := to.(*v1batch.Job)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *v1batch.CronJob:
-		cast := to.(*v1batch.CronJob)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *corev1.Service:
-		cast := to.(*corev1.Service)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *corev1.ReplicationController:
-		cast := to.(*corev1.ReplicationController)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *corev1.Namespace:
 		return trimNamespace(to)
 	case *corev1.PersistentVolume:
-		cast := to.(*corev1.PersistentVolume)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *corev1.PersistentVolumeClaim:
-		cast := to.(*corev1.PersistentVolumeClaim)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	case *corev1.Node:
-		cast := to.(*corev1.Node)
-		trimMeta(&cast.ObjectMeta)
-		return cast
+		trimMeta(&to.ObjectMeta)
+		return to
 	}
 	return to
 }
@@ -332,7 +323,7 @@ func trimMeta(objectMeta *metav1.ObjectMeta) {
 }
 
 func sanitizePod(to interface{}) interface{} {
-	cast := to.(*corev1.Pod)
+	cast, _ := to.(*corev1.Pod)
 	for j, container := range (*cast).Spec.Containers {
 		(*cast).Spec.Containers[j] = sanitizeContainer(container)
 	}
@@ -343,10 +334,10 @@ func sanitizePod(to interface{}) interface{} {
 }
 
 func trimPod(to interface{}) interface{} {
-	cast := to.(*corev1.Pod)
+	cast, _ := to.(*corev1.Pod)
 	// removing env var and related data from the object
-	(*cast).ObjectMeta.ManagedFields = nil
-	delete((*cast).ObjectMeta.Annotations, KubernetesLastAppliedConfig)
+	(*cast).ManagedFields = nil
+	delete((*cast).Annotations, KubernetesLastAppliedConfig)
 
 	for j, container := range (*cast).Spec.Containers {
 		(*cast).Spec.Containers[j] = trimContainer(container)
@@ -376,8 +367,8 @@ func trimContainer(container corev1.Container) corev1.Container {
 }
 
 func trimNamespace(to interface{}) interface{} {
-	cast := to.(*corev1.Namespace)
-	(*cast).ObjectMeta.ManagedFields = nil
+	cast, _ := to.(*corev1.Namespace)
+	(*cast).ManagedFields = nil
 	return cast
 }
 

@@ -3,7 +3,7 @@ module github.com/cloudability/metrics-agent
 go 1.25.0
 
 require (
-	github.com/aws/aws-sdk-go v1.40.27
+	github.com/aws/aws-sdk-go v1.55.8
 	github.com/google/cadvisor v0.48.1
 	github.com/googleapis/gnostic v0.5.5
 	github.com/onsi/ginkgo v1.16.5
@@ -49,7 +49,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
+	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
@@ -57,10 +57,10 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
-	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/term v0.43.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
@@ -83,12 +83,6 @@ replace (
 	github.com/docker/docker => github.com/docker/docker v25.0.5+incompatible
 	github.com/hashicorp/consul/api => github.com/hashicorp/consul/api v1.30.0
 
-	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.18
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.14
-	golang.org/x/crypto => golang.org/x/crypto v0.31.0
 	golang.org/x/image => golang.org/x/image v0.10.0
-	// CVE-2026-39821 requires v0.55.0, the latest direct dependencies only brings in v0.49.0
-	golang.org/x/net => golang.org/x/net v0.55.0
-	google.golang.org/grpc => google.golang.org/grpc v1.56.3
-	google.golang.org/protobuf => google.golang.org/protobuf v1.33.0
 )

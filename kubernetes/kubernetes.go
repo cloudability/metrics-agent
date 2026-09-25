@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/aws"                  //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/aws/session"          //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/service/s3"           //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/service/s3/s3manager" //nolint:staticcheck // SA1019 is fine here because of legacy support
 	"github.com/cloudability/metrics-agent/client"
 	"github.com/cloudability/metrics-agent/measurement"
 	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"
@@ -292,7 +292,7 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 	if err != nil {
 		return errors.New("failed to create temp.txt file in connectivity test")
 	}
-	defer os.Remove(file.Name())
+	defer func() { _ = os.Remove(file.Name()) }()
 
 	_, err = file.WriteString("Health Check")
 	if err != nil {
@@ -384,13 +384,19 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 }
 
 func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, error) {
-	msd := exportDir + "/" + sampleStartTime.Format(
-		"20060102150405") + "/" + strconv.FormatInt(sampleStartTime.Unix(), 10)
-	err := os.MkdirAll(msd, os.ModePerm)
+	tsDir, err := util.SafeJoin(exportDir, sampleStartTime.Format("20060102150405"))
+	if err != nil {
+		return "", nil, fmt.Errorf("metric sample directory path escapes export directory: %w", err)
+	}
+	msd, err := util.SafeJoin(tsDir, strconv.FormatInt(sampleStartTime.Unix(), 10))
+	if err != nil {
+		return "", nil, fmt.Errorf("metric sample directory path escapes export directory: %w", err)
+	}
+
+	err = os.MkdirAll(msd, os.ModePerm)
 	if err != nil {
 		return msd, nil, fmt.Errorf("error creating metric sample directory : %v", err)
 	}
-	//nolint gosec
 	metricSampleDir, err := os.Open(msd)
 	if err != nil {
 		return msd, metricSampleDir, fmt.Errorf("unable to open metric sample export directory")
@@ -416,7 +422,11 @@ func fetchNodeBaselines(msd, exportDirectory string) error {
 		if strings.HasPrefix(info.Name(), "baseline-summary") ||
 			strings.HasPrefix(info.Name(), "baseline-container") ||
 			strings.HasPrefix(info.Name(), "baseline-cadvisor") {
-			err = os.Rename(filePath, filepath.Join(msd, info.Name()))
+			dest, err := util.SafeJoin(msd, info.Name())
+			if err != nil {
+				return fmt.Errorf("baseline file destination path escapes metric sample directory: %w", err)
+			}
+			err = os.Rename(filePath, dest)
 			if err != nil {
 				return err
 			}
@@ -436,7 +446,14 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 		}
 		if strings.HasPrefix(info.Name(), "stats-") {
 			nodeName, extension := extractNodeNameAndExtension("stats", info.Name())
-			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s%s", nodeName, extension)
+			if strings.ContainsRune(nodeName, filepath.Separator) {
+				return fmt.Errorf("node name %q contains path separator", nodeName)
+			}
+			baselineNodeMetric, err := util.SafeJoin(path.Dir(exportDirectory),
+				fmt.Sprintf("baseline%s%s", nodeName, extension))
+			if err != nil {
+				return fmt.Errorf("baseline node metric path escapes export directory: %w", err)
+			}
 
 			// update baseline metric for this node with most recent sample from this collection
 			err = util.CopyFileContents(baselineNodeMetric, filePath)
@@ -847,7 +864,10 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 
 	now := time.Now()
 
-	exportFile := workDir.Name() + "/agent-measurement.json"
+	exportFile, err := util.SafeJoin(workDir.Name(), "agent-measurement.json")
+	if err != nil {
+		return fmt.Errorf("agent measurement path escapes working directory: %w", err)
+	}
 
 	m.Tags["cluster_uid"] = config.clusterUID
 	m.Values["agent_version"] = cldyVersion.VERSION
@@ -942,17 +962,20 @@ func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, names
 		if strings.Contains(pod.Name, "metrics-agent") && time.Since(pod.Status.StartTime.Time) > (time.Minute*3) {
 			for _, c := range pod.Status.ContainerStatuses {
 
-				f, err := os.Create(msExportDirectory.Name() + "/agent.diag")
+				diagPath, err := util.SafeJoin(msExportDirectory.Name(), "agent.diag")
+				if err != nil {
+					return fmt.Errorf("diagnostics path escapes export directory: %w", err)
+				}
+				f, err := os.Create(diagPath)
 				if err != nil {
 					return err
 				}
 
 				defer util.SafeClose(f.Close, &err)
 
-				_, err = f.WriteString(
-					fmt.Sprintf(
-						"Agent Diagnostics for Pod: %v container: %v restarted %v times \n state: %+v \n Previous runtime log: \n",
-						pod.Name, c.Name, c.RestartCount, c.LastTerminationState))
+				_, err = fmt.Fprintf(f,
+					"Agent Diagnostics for Pod: %v container: %v restarted %v times \n state: %+v \n Previous runtime log: \n",
+					pod.Name, c.Name, c.RestartCount, c.LastTerminationState)
 				if err != nil {
 					return err
 				}

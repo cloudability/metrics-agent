@@ -198,8 +198,87 @@ func TestCreateAgentStatusMetric(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error creating agent Status Metric: %v", err)
 		}
-		os.RemoveAll(tD.Name())
+		_ = os.RemoveAll(tD.Name())
 	})
+
+}
+
+func TestCreateMSD(t *testing.T) {
+	base := t.TempDir()
+	now := time.Now().UTC()
+
+	t.Run("creates directory and returns valid path", func(t *testing.T) {
+		msd, f, err := createMSD(base, now)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		t.Cleanup(func() {
+			if err := f.Close(); err != nil {
+				t.Errorf("failed to close msd file: %v", err)
+			}
+		})
+		if !strings.HasPrefix(msd, base) {
+			t.Errorf("msd %q does not start with base %q", msd, base)
+		}
+		if _, statErr := os.Stat(msd); statErr != nil {
+			t.Errorf("msd directory not created: %v", statErr)
+		}
+	})
+}
+
+func TestFetchNodeBaselines(t *testing.T) {
+	msd := t.TempDir()
+	exportDir := t.TempDir()
+
+	// place a baseline file in the export directory parent (where fetchNodeBaselines looks)
+	baselineFile := filepath.Join(exportDir, "baseline-summary-node0.json")
+	if err := os.WriteFile(baselineFile, []byte("{}"), 0644); err != nil {
+		t.Fatalf("failed to create baseline file: %v", err)
+	}
+
+	// fetchNodeBaselines walks path.Dir(exportDirectory); exportDir IS the parent here
+	// so we pass a sub-path so path.Dir resolves to exportDir
+	subDir := filepath.Join(exportDir, "sub")
+	if err := os.MkdirAll(subDir, os.ModePerm); err != nil {
+		t.Fatalf("failed to create sub dir: %v", err)
+	}
+
+	t.Run("moves baseline files into msd", func(t *testing.T) {
+		if err := fetchNodeBaselines(msd, subDir); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		dest := filepath.Join(msd, "baseline-summary-node0.json")
+		if _, err := os.Stat(dest); err != nil {
+			t.Errorf("baseline file not moved to msd: %v", err)
+		}
+	})
+}
+
+func TestUpdateNodeBaselines(t *testing.T) {
+	msd := t.TempDir()
+	exportDir := t.TempDir()
+
+	// place a stats file in msd
+	statsFile := filepath.Join(msd, "stats-summary-node0.json")
+	if err := os.WriteFile(statsFile, []byte("{}"), 0644); err != nil {
+		t.Fatalf("failed to create stats file: %v", err)
+	}
+
+	subDir := filepath.Join(exportDir, "sub")
+	if err := os.MkdirAll(subDir, os.ModePerm); err != nil {
+		t.Fatalf("failed to create sub dir: %v", err)
+	}
+
+	t.Run("writes baseline file next to export directory", func(t *testing.T) {
+		if err := updateNodeBaselines(msd, subDir); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		dest := filepath.Join(exportDir, "baseline-summary-node0.json")
+		if _, err := os.Stat(dest); err != nil {
+			t.Errorf("baseline file not written: %v", err)
+		}
+	})
+
 }
 
 // nolint gocyclo
@@ -555,43 +634,43 @@ func getMockInformers(clusterVersion float64, parseMetricsData bool,
 	stopCh chan struct{}) (map[string]*cache.SharedIndexInformer, error) {
 	// create mock informers for each resource we collect k8s metrics on
 	replicationControllers := fcache.NewFakeControllerSource()
-	rcinformer := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
+	rcinformer, _ := cache.NewSharedInformer(replicationControllers, &v1.ReplicationController{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	services := fcache.NewFakeControllerSource()
-	sinformer := cache.NewSharedInformer(services, &v1.Service{}, 1*time.Second).(cache.SharedIndexInformer)
+	sinformer, _ := cache.NewSharedInformer(services, &v1.Service{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	nodes := fcache.NewFakeControllerSource()
-	ninformer := cache.NewSharedInformer(nodes, &v1.Node{}, 1*time.Second).(cache.SharedIndexInformer)
+	ninformer, _ := cache.NewSharedInformer(nodes, &v1.Node{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	pods := fcache.NewFakeControllerSource()
-	pinformer := cache.NewSharedInformer(pods, &v1.Pod{}, 1*time.Second).(cache.SharedIndexInformer)
+	pinformer, _ := cache.NewSharedInformer(pods, &v1.Pod{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	persistentVolumes := fcache.NewFakeControllerSource()
-	pvinformer := cache.NewSharedInformer(persistentVolumes, &v1.PersistentVolume{}, 1*time.Second).(cache.SharedIndexInformer)
+	pvinformer, _ := cache.NewSharedInformer(persistentVolumes, &v1.PersistentVolume{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	persistentVolumeClaims := fcache.NewFakeControllerSource()
-	pvcinformer := cache.NewSharedInformer(persistentVolumeClaims, &v1.PersistentVolumeClaim{}, 1*time.Second).(cache.SharedIndexInformer)
+	pvcinformer, _ := cache.NewSharedInformer(persistentVolumeClaims, &v1.PersistentVolumeClaim{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	replicaSets := fcache.NewFakeControllerSource()
-	rsinformer := cache.NewSharedInformer(replicaSets, &v1apps.ReplicaSet{}, 1*time.Second).(cache.SharedIndexInformer)
+	rsinformer, _ := cache.NewSharedInformer(replicaSets, &v1apps.ReplicaSet{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	daemonSets := fcache.NewFakeControllerSource()
-	dsinformer := cache.NewSharedInformer(daemonSets, &v1apps.DaemonSet{}, 1*time.Second).(cache.SharedIndexInformer)
+	dsinformer, _ := cache.NewSharedInformer(daemonSets, &v1apps.DaemonSet{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	deployments := fcache.NewFakeControllerSource()
-	dinformer := cache.NewSharedInformer(deployments, &v1apps.Deployment{}, 1*time.Second).(cache.SharedIndexInformer)
+	dinformer, _ := cache.NewSharedInformer(deployments, &v1apps.Deployment{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	namespaces := fcache.NewFakeControllerSource()
-	nainformer := cache.NewSharedInformer(namespaces, &v1.Namespace{}, 1*time.Second).(cache.SharedIndexInformer)
+	nainformer, _ := cache.NewSharedInformer(namespaces, &v1.Namespace{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	jobs := fcache.NewFakeControllerSource()
-	jinformer := cache.NewSharedInformer(jobs, &v1batch.Job{}, 1*time.Second).(cache.SharedIndexInformer)
+	jinformer, _ := cache.NewSharedInformer(jobs, &v1batch.Job{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	var cjinformer cache.SharedIndexInformer
 	var cronJobs *fcache.FakeControllerSource
 	if clusterVersion > 1.20 {
 		cronJobs = fcache.NewFakeControllerSource()
-		cjinformer = cache.NewSharedInformer(cronJobs, &v1batch.CronJob{}, 1*time.Second).(cache.SharedIndexInformer)
+		cjinformer, _ = cache.NewSharedInformer(cronJobs, &v1batch.CronJob{}, 1*time.Second).(cache.SharedIndexInformer)
 	}
 
 	mockInformers := map[string]*cache.SharedIndexInformer{

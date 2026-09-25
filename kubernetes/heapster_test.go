@@ -152,6 +152,6 @@ func TestHandleBaselineHeapsterMetrics(t *testing.T) {
 	})
 
 	// cleanup
-	os.RemoveAll(msExportDirectory)
+	_ = os.RemoveAll(msExportDirectory)
 
 }
