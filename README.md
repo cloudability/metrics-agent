@@ -2,7 +2,7 @@
 
 The metrics-agent collects allocation metrics from a Kubernetes cluster system and sends the metrics to cloudability to help you gain visibility, reduce costs, and increase efficiency across your infrastructure.  The agent is designed to run as a container in each cluster inside your orchestration system.
 
-[![Actions Status](https://github.com/cloudability/metrics-agent/workflows/Master/badge.svg)](https://github.com/cloudability/metrics-agent/actions)
+[![Actions Status](https://github.com/cloudability/metrics-agent/workflows/Deploy/badge.svg)](https://github.com/cloudability/metrics-agent/actions)
 [![Actions Status](https://github.com/cloudability/metrics-agent/workflows/Metrics-Agent/badge.svg)](https://github.com/cloudability/metrics-agent/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cloudability/metrics-agent)](https://goreportcard.com/report/github.com/cloudability/metrics-agent)
 
@@ -138,6 +138,45 @@ We're using [go modules](https://github.com/golang/go/wiki/Modules) for Go depen
 ### Source Code Analysis
 
 We're using [golangci-lint](https://github.com/golangci/golangci-lint) for static source code analysis.
+
+### Git hooks (pre-commit)
+
+This project uses [pre-commit](https://pre-commit.com/) to enforce checks (linting, version-bump) before every commit.
+
+**Prerequisite:** `pre-commit` must be available on your `PATH`.  Install it once with your package manager of choice:
+
+```sh
+# macOS
+brew install pre-commit
+
+# or via pip
+pip3 install pre-commit
+```
+
+**Register the hooks** after cloning (only needed once per local checkout):
+
+```sh
+make install-hooks
+```
+
+This installs the hooks defined in [`.pre-commit-config.yaml`](.pre-commit-config.yaml) into your local `.git/hooks/` directory.  If `pre-commit` is not already on your `PATH`, the target will install it automatically via `pip3`.
+
+> **Note:** `make install-tools` calls `make install-hooks` automatically, so contributors who run `install-tools` as part of their setup do not need to run `install-hooks` separately.
+
+### Bumping the release version
+
+The `bump-release-version` target keeps [`version/version.go`](version/version.go), [`charts/metrics-agent/Chart.yaml`](charts/metrics-agent/Chart.yaml), and [`charts/metrics-agent/values.yaml`](charts/metrics-agent/values.yaml) in sync:
+
+1. Reads the current version from `version/version.go`.
+2. Fetches the latest published GitHub release tag (requires the [`gh`](https://cli.github.com/) CLI to be authenticated).
+3. If the local version is **less than or equal to** the published version, it auto-increments the patch segment in `version/version.go`.
+4. Propagates the resolved version into the Helm chart files.
+
+It is called automatically by the pre-commit hook on every commit, but can also be run manually at any time:
+
+```sh
+make bump-release-version
+```
 
 ## Contributing code
 
