@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: bump-chart-versions
+        name: Bump chart versions to match version/version.go
+        language: system
+        entry: make bump-release-version
+        stages: [pre-commit]
+        pass_filenames: false
+        always_run: true

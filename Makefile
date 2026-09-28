@@ -116,9 +116,57 @@ download-deps:
 	@echo Download go.mod dependencies
 	@go mod download
 
-install-tools: download-deps
+install-tools: download-deps install-hooks
 	@echo Installing tools from tools/tools.go
 	@cat ./tools/tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
+
+# Install the pre-commit framework and register the Git hooks defined in .pre-commit-config.yaml.
+# Run once after cloning: make install-hooks
+install-hooks:
+	@which pre-commit > /dev/null 2>&1 || pip3 install pre-commit
+	pre-commit install
+
+# Propagate RELEASE-VERSION from version/version.go into Chart.yaml and values.yaml.
+# Before propagating, compare the local version against the latest published GitHub release.
+# If local <= published, bump version/version.go to published + 1 (patch).
+# Called automatically by the pre-commit hook; can also be run manually.
+bump-release-version:
+	@LOCAL_VER="$(RELEASE-VERSION)"; \
+	echo "Local version:    $$LOCAL_VER"; \
+	PUBLISHED_TAG=$$(gh release view --repo cloudability/metrics-agent --json tagName --jq '.tagName' 2>/dev/null || true); \
+	PUBLISHED_VER=$$(echo "$$PUBLISHED_TAG" | sed -E 's/^[^0-9]*//'); \
+	if [ -z "$$PUBLISHED_VER" ]; then \
+		echo "Warning: could not retrieve latest published release; keeping local version $$LOCAL_VER"; \
+	else \
+		echo "Published version: $$PUBLISHED_VER"; \
+		NEED_BUMP=$$(awk -v local="$$LOCAL_VER" -v pub="$$PUBLISHED_VER" 'BEGIN { \
+			n = split(local, la, "."); split(pub, pa, "."); \
+			for (i = 1; i <= n; i++) { \
+				if (la[i]+0 > pa[i]+0) { print 0; exit } \
+				if (la[i]+0 < pa[i]+0) { print 1; exit } \
+			} \
+			print 1 \
+		}'); \
+		if [ "$$NEED_BUMP" = "1" ]; then \
+			PATCH=$$(echo "$$PUBLISHED_VER" | awk -F. '{print $$3+1}'); \
+			MAJOR_MINOR=$$(echo "$$PUBLISHED_VER" | awk -F. '{print $$1"."$$2}'); \
+			NEW_VER="$$MAJOR_MINOR.$$PATCH"; \
+			echo "Local version $$LOCAL_VER <= published $$PUBLISHED_VER — bumping version/version.go to $$NEW_VER"; \
+			sed -i.bak -E "s/^var[[:space:]]VERSION[[:space:]]=[[:space:]]\"[^\"]+\"/var VERSION = \"$$NEW_VER\"/" version/version.go; \
+			rm -f version/version.go.bak; \
+			LOCAL_VER="$$NEW_VER"; \
+		else \
+			echo "Local version $$LOCAL_VER > published $$PUBLISHED_VER — no version bump needed"; \
+		fi; \
+	fi; \
+	echo "Bumping chart files to match release version $$LOCAL_VER"; \
+	sed -i.bak -E "s/^(version:[[:space:]]+).*/\1$$LOCAL_VER/"         charts/metrics-agent/Chart.yaml; \
+	sed -i.bak -E "s/^(appVersion:[[:space:]]+).*/\1$$LOCAL_VER/"      charts/metrics-agent/Chart.yaml; \
+	sed -i.bak -E "s/^([[:space:]]+tag:[[:space:]]+).*/\1$$LOCAL_VER/" charts/metrics-agent/values.yaml; \
+	rm -f charts/metrics-agent/Chart.yaml.bak charts/metrics-agent/values.yaml.bak; \
+	echo "Done. Files updated:"; \
+	grep -E '^(version|appVersion):' charts/metrics-agent/Chart.yaml; \
+	grep 'tag:' charts/metrics-agent/values.yaml
 
 fmt:
 	gofmt -w .
@@ -155,4 +203,4 @@ test-e2e-1.32: container-build-single-platform install-tools
 # E2E test the latest 4 versions (can remove the older tests)
 test-e2e-all: test-e2e-1.35 test-e2e-1.34 test-e2e-1.33 test-e2e-1.32
 
-.PHONY: test version
+.PHONY: test version bump-version install-hooks
