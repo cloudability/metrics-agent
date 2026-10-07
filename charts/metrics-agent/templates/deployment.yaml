@@ -22,6 +22,9 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
       serviceAccountName: {{ include "metrics-agent.serviceAccountName" . }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       securityContext: {{- if not .Values.openShift }} {{- toYaml .Values.securityContext | nindent 8 }} {{- end }}
       containers:
         - name: {{ .Chart.Name }}
