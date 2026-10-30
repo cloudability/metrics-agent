@@ -18,7 +18,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.22'
+          go-version: '1.26.x'
       - uses: actions/checkout@v2
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -44,28 +44,25 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.9.2
 
       - name: Configure Git
         run: |
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.1.0
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-  slackFinish:
-    name: Notify Finish
-    needs: helmRelease
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: technote-space/workflow-conclusion-action@v2
-      - uses: 8398a7/action-slack@v3
-        with:
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-          status: ${{ env.WORKFLOW_CONCLUSION }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-
+        run: |
+          export CR_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          owner=$(cut -d '/' -f 1 <<< "$GITHUB_REPOSITORY")
+          repo=$(cut -d '/' -f 2 <<< "$GITHUB_REPOSITORY")
+          
+          release=1.8.1
+          filename=chart-releaser_1.8.1_linux_amd64.tar.gz
+          wget https://github.com/helm/chart-releaser/releases/download/v${release}/${filename}
+          cosign verify-blob --certificate-oidc-issuer "https://token.actions.githubusercontent.com" --certificate-identity https://github.com/helm/chart-releaser/.github/workflows/release.yaml@refs/tags/v${release} --cert https://github.com/helm/chart-releaser/releases/download/v${release}/${filename}.pem --signature https://github.com/helm/chart-releaser/releases/download/v${release}/${filename}.sig $filename
+          tar -xf $filename cr
+          ./cr package charts/metrics-agent
+          ./cr upload --owner "$owner" --git-repo "$repo" --packages-with-index --push --skip-existing
+          ./cr index --owner "$owner" --git-repo "$repo" --packages-with-index --index-path . --push
 

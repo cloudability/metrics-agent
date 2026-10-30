@@ -34,6 +34,10 @@ const DefaultBaseURL string = "https://metrics-collector.cloudability.com/metric
 const EUBaseURL string = "https://metrics-collector-eu.cloudability.com/metricsample"
 const AUBaseURL string = "https://metrics-collector-au.cloudability.com/metricsample"
 const MEBaseURL string = "https://metrics-collector-me.cloudability.com/metricsample"
+const INBaseURL string = "https://metrics-collector-in.cloudability.com/metricsample"
+const JPBaseURL string = "https://metrics-collector-jp.cloudability.com/metricsample"
+const SGBaseURL string = "https://metrics-collector-sg.cloudability.com/metricsample"
+const CABaseURL string = "https://metrics-collector-ca.cloudability.com/metricsample"
 const GovBaseURL string = "https://metrics-collector-production-gov.cloudability.com/metricsample"
 const StagingBaseURL string = "https://metrics-collector-staging.cloudability.com/metricsample"
 const defaultTimeout = 1 * time.Minute
@@ -53,20 +57,20 @@ var /* const */ validToken = regexp.MustCompile(`^\w+$`)
 
 // Configuration represents configurable values for the Cloudability Client
 type Configuration struct {
-	Timeout       time.Duration
-	Token         string
-	MaxRetries    int
-	BaseURL       string
-	ProxyURL      url.URL
-	ProxyAuth     string
-	ProxyInsecure bool
-	Verbose       bool
-	Region        string
+	Timeout                         time.Duration
+	Token                           string
+	MaxRetries                      int
+	BaseURL                         string
+	ProxyURL                        url.URL
+	ProxyAuth                       string
+	ProxyInsecure                   bool
+	UseProxyForGettingUploadURLOnly bool
+	Verbose                         bool
+	Region                          string
 }
 
 // NewHTTPMetricClient will configure a new instance of a Cloudability client.
 func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
-
 	if !validToken.MatchString(cfg.Token) {
 		return nil, errors.New("token format is invalid (only alphanumeric are allowed). Please check you " +
 			"are using your Containers Insights API Key (not Frontdoor). This can be found in the YAML after " +
@@ -109,7 +113,7 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 
 		netTransport = &http.Transport{
 			Dial:                (&net.Dialer{Timeout: cfg.Timeout}).Dial,
-			Proxy:               http.ProxyURL(&cfg.ProxyURL),
+			Proxy:               BuildProxyFunc(cfg),
 			ProxyConnectHeader:  ConnectHeader,
 			TLSHandshakeTimeout: cfg.Timeout,
 			TLSClientConfig: &tls.Config{
@@ -266,6 +270,7 @@ func (c httpMetricClient) retryWithBackoff(
 	return resp, err
 }
 
+// nolint:revive
 func (c httpMetricClient) buildAndDoRequest(
 	metricFile *os.File,
 	metricSampleURL,
@@ -425,6 +430,14 @@ func GetUploadURLByRegion(region string) string {
 		return MEBaseURL
 	case "us-west-2":
 		return DefaultBaseURL
+	case "ap-northeast-1":
+		return JPBaseURL
+	case "ap-south-1":
+		return INBaseURL
+	case "ap-southeast-1":
+		return SGBaseURL
+	case "ca-central-1":
+		return CABaseURL
 	case "us-gov-west-1":
 		return GovBaseURL
 	case "us-west-2-staging":
@@ -432,5 +445,25 @@ func GetUploadURLByRegion(region string) string {
 	default:
 		log.Warnf("Region %s is not supported. Defaulting to us-west-2 region.", region)
 		return DefaultBaseURL
+	}
+}
+
+func BuildProxyFunc(cfg Configuration) func(*http.Request) (*url.URL, error) {
+	return func(request *http.Request) (*url.URL, error) {
+		// outbound proxy not set
+		if cfg.ProxyURL.Host == "" {
+			return nil, nil
+		}
+
+		if cfg.UseProxyForGettingUploadURLOnly {
+			// agent configured to only use proxy for GetUploadURL requests
+			if request.URL.Path == "/metricsample" {
+				return &cfg.ProxyURL, nil
+			}
+			return nil, nil
+		}
+
+		// proxy enabled for both requests
+		return &cfg.ProxyURL, nil
 	}
 }

@@ -6,3 +6,5 @@ vendor/**
 .vscode
 .idea
 /testdata/e2e
+mise.toml
+.playground/

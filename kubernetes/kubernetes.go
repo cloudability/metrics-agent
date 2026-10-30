@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/aws"                  //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/aws/session"          //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/service/s3"           //nolint:staticcheck // SA1019 is fine here because of legacy support
+	"github.com/aws/aws-sdk-go/service/s3/s3manager" //nolint:staticcheck // SA1019 is fine here because of legacy support
 	"github.com/cloudability/metrics-agent/client"
 	"github.com/cloudability/metrics-agent/measurement"
 	k8s_stats "github.com/cloudability/metrics-agent/retrieval/k8s"
@@ -49,46 +49,48 @@ type ClusterVersion struct {
 
 // KubeAgentConfig K8s agent configuration
 type KubeAgentConfig struct {
-	APIKey                 string
-	BearerToken            string
-	BearerTokenPath        string
-	Cert                   string
-	ClusterName            string
-	ClusterHostURL         string
-	clusterUID             string
-	HeapsterURL            string
-	Key                    string
-	OutboundProxyAuth      string
-	OutboundProxy          string
-	provisioningID         string
-	ForceKubeProxy         bool
-	Insecure               bool
-	OutboundProxyInsecure  bool
-	UseInClusterConfig     bool
-	PollInterval           int
-	ConcurrentPollers      int
-	CollectionRetryLimit   uint
-	failedNodeList         map[string]error
-	AgentStartTime         time.Time
-	Clientset              kubernetes.Interface
-	ClusterVersion         ClusterVersion
-	HeapsterProxyURL       url.URL
-	OutboundProxyURL       url.URL
-	HTTPClient             http.Client
-	NodeClient             raw.Client
-	InClusterClient        raw.Client
-	msExportDirectory      *os.File
-	TLSClientConfig        rest.TLSClientConfig
-	Namespace              string
-	ScratchDir             string
-	NodeMetrics            EndpointMask
-	Informers              map[string]*cache.SharedIndexInformer
-	InformerResyncInterval int
-	ParseMetricData        bool
-	HTTPSTimeout           int
-	UploadRegion           string
-	CustomS3UploadBucket   string
-	CustomS3Region         string
+	APIKey                          string
+	BearerToken                     string
+	BearerTokenPath                 string
+	Cert                            string
+	ClusterName                     string
+	ClusterHostURL                  string
+	clusterUID                      string
+	HeapsterURL                     string
+	Key                             string
+	OutboundProxyAuth               string
+	OutboundProxy                   string
+	UseProxyForGettingUploadURLOnly bool
+	provisioningID                  string
+	ForceKubeProxy                  bool
+	Insecure                        bool
+	OutboundProxyInsecure           bool
+	UseInClusterConfig              bool
+	PollInterval                    int
+	ConcurrentPollers               int
+	CollectionRetryLimit            uint
+	failedNodeList                  map[string]error
+	AgentStartTime                  time.Time
+	Clientset                       kubernetes.Interface
+	ClusterVersion                  ClusterVersion
+	HeapsterProxyURL                url.URL
+	OutboundProxyURL                url.URL
+	HTTPClient                      http.Client
+	NodeClient                      raw.Client
+	InClusterClient                 raw.Client
+	msExportDirectory               *os.File
+	TLSClientConfig                 rest.TLSClientConfig
+	Namespace                       string
+	ScratchDir                      string
+	NodeMetrics                     EndpointMask
+	Informers                       map[string]*cache.SharedIndexInformer
+	InformerResyncInterval          int
+	ParseMetricData                 bool
+	HTTPSTimeout                    int
+	UploadRegion                    string
+	CustomS3UploadBucket            string
+	CustomS3Region                  string
+	APIKeyFilepath                  string
 }
 
 const uploadInterval time.Duration = 10
@@ -121,7 +123,7 @@ const rbacError string = `RBAC role in the Cloudability namespace may need to be
 	***IMPORTANT*** If the cluster is managed by GKE - there are special instructions for provisioning.`
 
 // CollectKubeMetrics Collects metrics from Kubernetes on a predetermined interval
-// nolint: gocyclo
+// nolint gocyclo
 func CollectKubeMetrics(config KubeAgentConfig) {
 
 	log.Infof("Starting Cloudability Kubernetes Metric Agent version: %v", cldyVersion.VERSION)
@@ -136,7 +138,9 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 	kubeAgent := newKubeAgent(ctx, config)
 
 	customS3Mode := isCustomS3UploadEnvsSet(&kubeAgent)
-
+	if !customS3Mode {
+		kubeAgent.APIKey = getAPIKey(config)
+	}
 	// Log start time
 	kubeAgent.AgentStartTime = time.Now()
 
@@ -217,14 +221,42 @@ func CollectKubeMetrics(config KubeAgentConfig) {
 
 }
 
+func getAPIKey(config KubeAgentConfig) string {
+	key := getKeyFromFileVolume(config.APIKeyFilepath)
+	// key from volume is empty, attempt to pull from environment variable
+	if key == "" {
+		// both keys are empty, stop agent
+		if config.APIKey == "" {
+			log.Fatalf("CLOUDABILITY_API_KEY is not mounted as a secret or present in environment variables. " +
+				"Please see README for details.")
+		}
+		log.Warnf("no CLOUDABILITY_API_KEY found in volume but was found in environment variables. " +
+			"Best practice is to use a secret and mount volume, see README for details.")
+		// fallback to environment key
+		return config.APIKey
+	}
+	// inform customers who have set both
+	if config.APIKey != "" {
+		log.Warnf("CLOUDABILITY_API_KEY is found in both volume and environment variables." +
+			" Suggest to remove the CLOUDABILITY_API_KEY from environment variables.")
+	}
+	return key
+}
+
+// getKeyFromFileVolume attempts to gather the api key from filepath
+func getKeyFromFileVolume(filepath string) string {
+	key, err := os.ReadFile(filepath)
+	if err != nil {
+		log.Warnf("error attempting to collect cloudability api key from file: %s with err: %v", filepath, err)
+		return ""
+	}
+	return string(key)
+}
+
 // isCustomS3UploadEnvsSet checks to see if the agent has a custom S3 location and S3 region to upload to
 // if both these variables are not set, default upload to Apptio S3
 func isCustomS3UploadEnvsSet(ka *KubeAgentConfig) bool {
 	if ka.CustomS3Region == "" && ka.CustomS3UploadBucket == "" {
-		if ka.APIKey == "" {
-			log.Fatalf("Invalid agent configuration. CLOUDABILITY_API_KEY is required " +
-				"when not using CLOUDABILITY_CUSTOM_S3_BUCKET & CLOUDABILITY_CUSTOM_S3_REGION")
-		}
 		return false
 	}
 	if ka.CustomS3UploadBucket == "" || ka.CustomS3Region == "" {
@@ -260,7 +292,7 @@ func performConnectionChecks(ka *KubeAgentConfig) error {
 	if err != nil {
 		return errors.New("failed to create temp.txt file in connectivity test")
 	}
-	defer os.Remove(file.Name())
+	defer func() { _ = os.Remove(file.Name()) }()
 
 	_, err = file.WriteString("Health Check")
 	if err != nil {
@@ -307,6 +339,7 @@ func newKubeAgent(ctx context.Context, config KubeAgentConfig) KubeAgentConfig {
 	return config
 }
 
+// nolint revive
 func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentConfig,
 	clientset kubernetes.Interface, nodeSource NodeSource) (rerr error) {
 
@@ -351,13 +384,19 @@ func (ka KubeAgentConfig) collectMetrics(ctx context.Context, config KubeAgentCo
 }
 
 func createMSD(exportDir string, sampleStartTime time.Time) (string, *os.File, error) {
-	msd := exportDir + "/" + sampleStartTime.Format(
-		"20060102150405") + "/" + strconv.FormatInt(sampleStartTime.Unix(), 10)
-	err := os.MkdirAll(msd, os.ModePerm)
+	tsDir, err := util.SafeJoin(exportDir, sampleStartTime.Format("20060102150405"))
+	if err != nil {
+		return "", nil, fmt.Errorf("metric sample directory path escapes export directory: %w", err)
+	}
+	msd, err := util.SafeJoin(tsDir, strconv.FormatInt(sampleStartTime.Unix(), 10))
+	if err != nil {
+		return "", nil, fmt.Errorf("metric sample directory path escapes export directory: %w", err)
+	}
+
+	err = os.MkdirAll(msd, os.ModePerm)
 	if err != nil {
 		return msd, nil, fmt.Errorf("error creating metric sample directory : %v", err)
 	}
-	//nolint gosec
 	metricSampleDir, err := os.Open(msd)
 	if err != nil {
 		return msd, metricSampleDir, fmt.Errorf("unable to open metric sample export directory")
@@ -383,7 +422,11 @@ func fetchNodeBaselines(msd, exportDirectory string) error {
 		if strings.HasPrefix(info.Name(), "baseline-summary") ||
 			strings.HasPrefix(info.Name(), "baseline-container") ||
 			strings.HasPrefix(info.Name(), "baseline-cadvisor") {
-			err = os.Rename(filePath, filepath.Join(msd, info.Name()))
+			dest, err := util.SafeJoin(msd, info.Name())
+			if err != nil {
+				return fmt.Errorf("baseline file destination path escapes metric sample directory: %w", err)
+			}
+			err = os.Rename(filePath, dest)
 			if err != nil {
 				return err
 			}
@@ -403,7 +446,14 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 		}
 		if strings.HasPrefix(info.Name(), "stats-") {
 			nodeName, extension := extractNodeNameAndExtension("stats", info.Name())
-			baselineNodeMetric := path.Dir(exportDirectory) + fmt.Sprintf("/baseline%s%s", nodeName, extension)
+			if strings.ContainsRune(nodeName, filepath.Separator) {
+				return fmt.Errorf("node name %q contains path separator", nodeName)
+			}
+			baselineNodeMetric, err := util.SafeJoin(path.Dir(exportDirectory),
+				fmt.Sprintf("baseline%s%s", nodeName, extension))
+			if err != nil {
+				return fmt.Errorf("baseline node metric path escapes export directory: %w", err)
+			}
 
 			// update baseline metric for this node with most recent sample from this collection
 			err = util.CopyFileContents(baselineNodeMetric, filePath)
@@ -419,15 +469,17 @@ func updateNodeBaselines(msd, exportDirectory string) error {
 	return nil
 }
 
+// nolint govet
 func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 	cldyMetricClient, err := client.NewHTTPMetricClient(client.Configuration{
-		Token:         ka.APIKey,
-		Verbose:       false,
-		ProxyURL:      ka.OutboundProxyURL,
-		ProxyAuth:     ka.OutboundProxyAuth,
-		ProxyInsecure: ka.OutboundProxyInsecure,
-		Timeout:       time.Duration(ka.HTTPSTimeout) * time.Second,
-		Region:        ka.UploadRegion,
+		Token:                           ka.APIKey,
+		Verbose:                         false,
+		ProxyURL:                        ka.OutboundProxyURL,
+		ProxyAuth:                       ka.OutboundProxyAuth,
+		ProxyInsecure:                   ka.OutboundProxyInsecure,
+		Timeout:                         time.Duration(ka.HTTPSTimeout) * time.Second,
+		Region:                          ka.UploadRegion,
+		UseProxyForGettingUploadURLOnly: ka.UseProxyForGettingUploadURLOnly,
 	})
 
 	if err != nil {
@@ -437,7 +489,7 @@ func (ka KubeAgentConfig) sendMetrics(metricSample *os.File) {
 	err = SendData(metricSample, ka.clusterUID, cldyMetricClient)
 	if err != nil {
 		if warnErr := handleError(err, ka.UploadRegion); warnErr != "" {
-			log.Warnf(warnErr)
+			log.Warnf("%s", warnErr)
 		}
 		log.Fatalf("error sending metrics: %v", err)
 	}
@@ -453,6 +505,7 @@ func (ka KubeAgentConfig) sendMetricsBasedOnUploadMode(customS3Mode bool, metric
 	}
 }
 
+// nolint revive
 func (ka KubeAgentConfig) sendMetricsToCustomS3(metricSample *os.File) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:     aws.String(ka.CustomS3Region),
@@ -619,6 +672,7 @@ func updateConfig(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig,
 	return updatedConfig, err
 }
 
+// nolint revive
 func updateConfigurationForServices(ctx context.Context, config KubeAgentConfig) (
 	KubeAgentConfig, error) {
 
@@ -705,10 +759,11 @@ func downloadBaselineMetricExport(ctx context.Context, config KubeAgentConfig, n
 	return err
 }
 
+// nolint govet
 func ensureMetricServicesAvailable(ctx context.Context, config KubeAgentConfig) (KubeAgentConfig, error) {
 	config, err := ensureNodeSource(ctx, config)
 	if err != nil {
-		log.Warnf(handleNodeSourceError(err))
+		log.Warnf("%s", handleNodeSourceError(err))
 	} else {
 		log.Infof("Node summaries connection method: %s", config.NodeMetrics.Options(NodeStatsSummaryEndpoint))
 	}
@@ -809,7 +864,10 @@ func createAgentStatusMetric(workDir *os.File, config KubeAgentConfig, sampleSta
 
 	now := time.Now()
 
-	exportFile := workDir.Name() + "/agent-measurement.json"
+	exportFile, err := util.SafeJoin(workDir.Name(), "agent-measurement.json")
+	if err != nil {
+		return fmt.Errorf("agent measurement path escapes working directory: %w", err)
+	}
 
 	m.Tags["cluster_uid"] = config.clusterUID
 	m.Values["agent_version"] = cldyVersion.VERSION
@@ -904,17 +962,20 @@ func fetchDiagnostics(ctx context.Context, clientset kubernetes.Interface, names
 		if strings.Contains(pod.Name, "metrics-agent") && time.Since(pod.Status.StartTime.Time) > (time.Minute*3) {
 			for _, c := range pod.Status.ContainerStatuses {
 
-				f, err := os.Create(msExportDirectory.Name() + "/agent.diag")
+				diagPath, err := util.SafeJoin(msExportDirectory.Name(), "agent.diag")
+				if err != nil {
+					return fmt.Errorf("diagnostics path escapes export directory: %w", err)
+				}
+				f, err := os.Create(diagPath)
 				if err != nil {
 					return err
 				}
 
 				defer util.SafeClose(f.Close, &err)
 
-				_, err = f.WriteString(
-					fmt.Sprintf(
-						"Agent Diagnostics for Pod: %v container: %v restarted %v times \n state: %+v \n Previous runtime log: \n",
-						pod.Name, c.Name, c.RestartCount, c.LastTerminationState))
+				_, err = fmt.Fprintf(f,
+					"Agent Diagnostics for Pod: %v container: %v restarted %v times \n state: %+v \n Previous runtime log: \n",
+					pod.Name, c.Name, c.RestartCount, c.LastTerminationState)
 				if err != nil {
 					return err
 				}

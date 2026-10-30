@@ -40,6 +40,7 @@ func TestSanity(t *testing.T) {
 	}
 }
 
+// nolint:gosec
 func TestMarshalJSON(t *testing.T) {
 	t.Parallel()
 

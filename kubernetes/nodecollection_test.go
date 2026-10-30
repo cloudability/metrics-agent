@@ -126,6 +126,7 @@ func NewTestClient(ts *httptest.Server, labels map[string]string) *fake.Clientse
 	return NewTestClientWithNodes(ts, labels, 1)
 }
 
+// nolint: gosec
 func NewTestClientWithNodes(ts *httptest.Server, labels map[string]string, numNodes int) *fake.Clientset {
 	s := strings.Split(ts.Listener.Addr().String(), ":")
 	ip := s[0]
@@ -141,7 +142,7 @@ func NewTestClientWithNodes(ts *httptest.Server, labels map[string]string, numNo
 			Status: v1.NodeStatus{
 				Addresses: []v1.NodeAddress{
 					{
-						Type:    "InternalIP",
+						Type:    v1.NodeInternalIP,
 						Address: ip,
 					},
 				},
@@ -419,7 +420,7 @@ func TestFargateNodeDetection(t *testing.T) {
 		Status: v1.NodeStatus{
 			Addresses: []v1.NodeAddress{
 				{
-					Type:    "InternalIP",
+					Type:    v1.NodeInternalIP,
 					Address: "1.110.235.222",
 				},
 			},
@@ -443,7 +444,7 @@ func TestFargateNodeDetection(t *testing.T) {
 
 	t.Run("Fargate node returns true", func(t *testing.T) {
 		// add Fargate-identifying labels
-		n.ObjectMeta.Labels = fargateLabels
+		n.Labels = fargateLabels
 		if !isFargateNode(n) {
 			t.Errorf("Should have identified node as Fargate")
 		}
@@ -500,6 +501,7 @@ func TestDownloadNodeData(t *testing.T) {
 	})
 }
 
+// nolint:revive
 func TestDownloadNodeDataRetries(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 	var callCount uint
@@ -540,6 +542,7 @@ type testNodeSource struct {
 	Nodes []v1.Node
 }
 
+// nolint:revive
 func (tns testNodeSource) GetReadyNodes(ctx context.Context) ([]v1.Node, error) {
 	returnCodes := []int{200, 200, 200, 400, 400, 400, 200, 200, 200, 400}
 
@@ -554,11 +557,13 @@ func (tns testNodeSource) GetReadyNodes(ctx context.Context) ([]v1.Node, error) 
 	return nodes, nil
 }
 
+// nolint:revive
 func (tns testNodeSource) NodeAddress(node *v1.Node) (string, int32, error) {
 	return "", int32(0), nil
 }
 
 // launchTLSTestServer takes a slice of http status codes (int) to return
+// nolint:revive
 func launchTLSTestServer(responseCodes []int) *httptest.Server {
 	callCount := 0
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -573,6 +578,7 @@ func launchTLSTestServer(responseCodes []int) *httptest.Server {
 
 // setupTestNodeDownloaderClients returns commonly-needed configs and clients
 // for testing node downloads
+// nolint: gosec
 func setupTestNodeDownloaderClients(ts *httptest.Server,
 	cs *fake.Clientset,
 	retries uint) (*os.File, testNodeSource, KubeAgentConfig) {
@@ -616,7 +622,7 @@ func setupTestNodeDownloaderClients(ts *httptest.Server,
 			Status: v1.NodeStatus{
 				Addresses: []v1.NodeAddress{
 					{
-						Type:    "InternalIP",
+						Type:    v1.NodeInternalIP,
 						Address: ip,
 					},
 				},

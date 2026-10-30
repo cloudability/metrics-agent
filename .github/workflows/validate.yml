@@ -9,12 +9,12 @@ jobs:
     steps:
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.22'
+          go-version: '1.26.x'
       - uses: actions/checkout@v2
       - name: Install tools
         run: |
           make install-tools
-          GO111MODULE=on go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.1
+          GO111MODULE=on go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2
       - name: Lint
         run: make lint
       - name: Run Tests
@@ -27,24 +27,8 @@ jobs:
     steps:
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.22'
+          go-version: '1.26.x'
       - uses: actions/checkout@v2
       - name: run e2e AMD tests
         run: make test-e2e-all
-
-
-  slackFinish:
-    name: Notify Finish
-    needs: test_e2e
-    runs-on: ubuntu-22.04
-    if: always()
-    steps:
-      - uses: technote-space/workflow-conclusion-action@v2
-      - uses: 8398a7/action-slack@v3
-        with:
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-          status: ${{ env.WORKFLOW_CONCLUSION }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
 

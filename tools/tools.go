@@ -11,5 +11,4 @@ import (
 	_ "github.com/prometheus/common/expfmt"
 	_ "github.com/prometheus/prom2json"
 	_ "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
-	_ "sigs.k8s.io/kind"
 )

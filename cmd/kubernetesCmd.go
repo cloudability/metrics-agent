@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// nolint:revive
 var (
 	config       kubernetes.KubeAgentConfig
 	requiredArgs = []string{
@@ -33,7 +34,7 @@ func init() {
 		&config.APIKey,
 		"api_key",
 		"",
-		"Cloudability API Key - required",
+		"Cloudability API Key - required if api key is not stored in volume mount",
 	)
 	kubernetesCmd.PersistentFlags().StringVar(
 		&config.ClusterName,
@@ -82,6 +83,13 @@ func init() {
 		"outbound_proxy_insecure",
 		false,
 		"When true, does not verify TLS certificates when using the outbound proxy. Default: False",
+	)
+	kubernetesCmd.PersistentFlags().BoolVar(
+		&config.UseProxyForGettingUploadURLOnly,
+		"use_proxy_for_getting_upload_url_only",
+		false,
+		"When true, the specified proxy will be set for requests to get upload urls for metrics, but not for "+
+			"actually uploading metrics. Default: False",
 	)
 	kubernetesCmd.PersistentFlags().BoolVar(
 		&config.Insecure,
@@ -150,6 +158,12 @@ func init() {
 		"",
 		"The AWS region that the custom s3 bucket is in",
 	)
+	kubernetesCmd.PersistentFlags().StringVar(
+		&config.APIKeyFilepath,
+		"api_key_filepath",
+		"",
+		"Recommended - The file path where the api key is stored",
+	)
 
 	//nolint gas
 	_ = viper.BindPFlag("api_key", kubernetesCmd.PersistentFlags().Lookup("api_key"))
@@ -162,6 +176,9 @@ func init() {
 	_ = viper.BindPFlag("outbound_proxy", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy"))
 	_ = viper.BindPFlag("outbound_proxy_auth", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_auth"))
 	_ = viper.BindPFlag("outbound_proxy_insecure", kubernetesCmd.PersistentFlags().Lookup("outbound_proxy_insecure"))
+	_ = viper.BindPFlag(
+		"use_proxy_for_getting_upload_url_only",
+		kubernetesCmd.PersistentFlags().Lookup("use_proxy_for_getting_upload_url_only"))
 	_ = viper.BindPFlag("insecure", kubernetesCmd.PersistentFlags().Lookup("insecure"))
 	_ = viper.BindPFlag("retrieve_node_summaries", kubernetesCmd.PersistentFlags().Lookup("retrieve_node_summaries"))
 	_ = viper.BindPFlag("get_all_container_stats", kubernetesCmd.PersistentFlags().Lookup("get_all_container_stats"))
@@ -177,32 +194,35 @@ func init() {
 	_ = viper.BindPFlag("upload_region", kubernetesCmd.PersistentFlags().Lookup("upload_region"))
 	_ = viper.BindPFlag("custom_s3_bucket", kubernetesCmd.PersistentFlags().Lookup("custom_s3_bucket"))
 	_ = viper.BindPFlag("custom_s3_region", kubernetesCmd.PersistentFlags().Lookup("custom_s3_region"))
+	_ = viper.BindPFlag("api_key_filepath", kubernetesCmd.PersistentFlags().Lookup("api_key_filepath"))
 	viper.SetEnvPrefix("cloudability")
 	viper.AutomaticEnv()
 
 	RootCmd.AddCommand(kubernetesCmd)
 
 	config = kubernetes.KubeAgentConfig{
-		APIKey:                 viper.GetString("api_key"),
-		ClusterName:            viper.GetString("cluster_name"),
-		PollInterval:           viper.GetInt("poll_interval"),
-		CollectionRetryLimit:   viper.GetUint("collection_retry_limit"),
-		OutboundProxy:          viper.GetString("outbound_proxy"),
-		OutboundProxyAuth:      viper.GetString("outbound_proxy_auth"),
-		OutboundProxyInsecure:  viper.GetBool("outbound_proxy_insecure"),
-		Insecure:               viper.GetBool("insecure"),
-		Cert:                   viper.GetString("certificate_file"),
-		Key:                    viper.GetString("key_file"),
-		ConcurrentPollers:      viper.GetInt("number_of_concurrent_node_pollers"),
-		ForceKubeProxy:         viper.GetBool("force_kube_proxy"),
-		Namespace:              viper.GetString("namespace"),
-		ScratchDir:             viper.GetString("scratch_dir"),
-		InformerResyncInterval: viper.GetInt("informer_resync_interval"),
-		ParseMetricData:        viper.GetBool("parse_metric_data"),
-		HTTPSTimeout:           viper.GetInt("https_client_timeout"),
-		UploadRegion:           viper.GetString("upload_region"),
-		CustomS3UploadBucket:   viper.GetString("custom_s3_bucket"),
-		CustomS3Region:         viper.GetString("custom_s3_region"),
+		APIKey:                          viper.GetString("api_key"),
+		ClusterName:                     viper.GetString("cluster_name"),
+		PollInterval:                    viper.GetInt("poll_interval"),
+		CollectionRetryLimit:            viper.GetUint("collection_retry_limit"),
+		OutboundProxy:                   viper.GetString("outbound_proxy"),
+		OutboundProxyAuth:               viper.GetString("outbound_proxy_auth"),
+		OutboundProxyInsecure:           viper.GetBool("outbound_proxy_insecure"),
+		UseProxyForGettingUploadURLOnly: viper.GetBool("use_proxy_for_getting_upload_url_only"),
+		Insecure:                        viper.GetBool("insecure"),
+		Cert:                            viper.GetString("certificate_file"),
+		Key:                             viper.GetString("key_file"),
+		ConcurrentPollers:               viper.GetInt("number_of_concurrent_node_pollers"),
+		ForceKubeProxy:                  viper.GetBool("force_kube_proxy"),
+		Namespace:                       viper.GetString("namespace"),
+		ScratchDir:                      viper.GetString("scratch_dir"),
+		InformerResyncInterval:          viper.GetInt("informer_resync_interval"),
+		ParseMetricData:                 viper.GetBool("parse_metric_data"),
+		HTTPSTimeout:                    viper.GetInt("https_client_timeout"),
+		UploadRegion:                    viper.GetString("upload_region"),
+		CustomS3UploadBucket:            viper.GetString("custom_s3_bucket"),
+		CustomS3Region:                  viper.GetString("custom_s3_region"),
+		APIKeyFilepath:                  viper.GetString("api_key_filepath"),
 	}
 
 }

@@ -9,6 +9,7 @@ import (
 )
 
 // RootCmd is the cobra root command to be executed
+// nolint:revive
 var RootCmd = &cobra.Command{
 	Use:              "metrics-agent [command] [flags]",
 	Short:            "Starts the Cloudability Metrics Agent",
