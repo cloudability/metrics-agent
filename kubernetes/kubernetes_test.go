@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/cloudability/metrics-agent/retrieval/k8s"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cloudability/metrics-agent/retrieval/k8s"
 
 	"k8s.io/client-go/tools/cache"
 
@@ -52,7 +53,6 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 	}
 
 	t.Run("ensure that an updated agentConfig with services if running is returned", func(t *testing.T) {
-		selfLink := "http://localhost"
 		servicePort := 8080
 		config.Clientset = fake.NewSimpleClientset(&v1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -61,7 +61,6 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 				Labels: map[string]string{
 					"tag": "",
 				},
-				SelfLink: selfLink,
 			},
 			Spec: v1.ServiceSpec{
 				Ports: []v1.ServicePort{
@@ -80,7 +79,6 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 
 	t.Run("ensure that an updated agentConfig with services if running without defined serviceport is returned",
 		func(t *testing.T) {
-			selfLink := "http://localhost"
 			config.Clientset = fake.NewSimpleClientset(&v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "heapster",
@@ -88,7 +86,6 @@ func TestUpdateConfigurationForServices(t *testing.T) {
 					Labels: map[string]string{
 						"tag": "",
 					},
-					SelfLink: selfLink,
 				},
 			})
 

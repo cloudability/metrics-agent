@@ -9,12 +9,12 @@ jobs:
     steps:
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
       - uses: actions/checkout@v2
       - name: Install tools
         run: |
           make install-tools
-          GO111MODULE=on go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2
+          GO111MODULE=on go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
       - name: Lint
         run: make lint
       - name: Run Tests
@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
       - uses: actions/checkout@v2
       - name: run e2e AMD tests
         run: make test-e2e-all
