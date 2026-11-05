@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -565,11 +566,19 @@ func (tns testNodeSource) NodeAddress(node *v1.Node) (string, int32, error) {
 // launchTLSTestServer takes a slice of http status codes (int) to return
 // nolint:revive
 func launchTLSTestServer(responseCodes []int) *httptest.Server {
+	var mu sync.Mutex
 	callCount := 0
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// handlers run concurrently, so claim a response code atomically
+		mu.Lock()
+		code := 0
 		if callCount < len(responseCodes) {
-			w.WriteHeader(responseCodes[callCount])
+			code = responseCodes[callCount]
 			callCount++
+		}
+		mu.Unlock()
+		if code != 0 {
+			w.WriteHeader(code)
 		}
 	}))
 
