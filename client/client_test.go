@@ -791,7 +791,7 @@ func Test_SendMetrics_ProxyScenarios(t *testing.T) {
 			}
 
 			if *actualProxyHitCount != tc.expectedProxyHitCount {
-				t.Errorf("Actual proxy hits: %p, expected: %d", actualProxyHitCount, tc.expectedProxyHitCount)
+				t.Errorf("Actual proxy hits: %d, expected: %d", *actualProxyHitCount, tc.expectedProxyHitCount)
 			}
 		})
 	}
