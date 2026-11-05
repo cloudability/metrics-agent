@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -98,7 +97,6 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 	}
 
 	netTransport := &http.Transport{
-		Dial:                (&net.Dialer{Timeout: cfg.Timeout}).Dial,
 		TLSHandshakeTimeout: cfg.Timeout,
 	}
 
@@ -112,7 +110,6 @@ func NewHTTPMetricClient(cfg Configuration) (MetricClient, error) {
 		}
 
 		netTransport = &http.Transport{
-			Dial:                (&net.Dialer{Timeout: cfg.Timeout}).Dial,
 			Proxy:               BuildProxyFunc(cfg),
 			ProxyConnectHeader:  ConnectHeader,
 			TLSHandshakeTimeout: cfg.Timeout,

@@ -24,7 +24,6 @@ func TestGetHeapsterURL(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "heapster",
 				Namespace: "kube-system",
-				SelfLink:  "/api/v1/namespaces/kube-system/pods/heapster-6d9d49d496-5scrb",
 			},
 		}
 		_, _ = cs.CoreV1().Pods("kube-system").Create(context.TODO(), pod, metav1.CreateOptions{})
@@ -46,7 +45,6 @@ func TestGetHeapsterURL(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "heapster",
 				Namespace: "kube-system",
-				SelfLink:  "/api/v1/namespaces/kube-system/services/heapster",
 			},
 		}
 		_, _ = cs.CoreV1().Services("kube-system").Create(context.TODO(), service, metav1.CreateOptions{})
